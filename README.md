@@ -137,8 +137,7 @@ npm run build
 
 ### WebUI / Themes
 
-The component ships without a built-in frontend. Place your WebUI (containing at least `index.html`) into
-`foo_ui_webview2_resources/dist/` under the foobar2000 components directory, then restart foobar2000 to load it. You can build custom themes on top of `sdk/` (`foo-webview-sdk`).
+The component ships without a built-in frontend. Place your WebUI under your foobar2000 **profile** directory at `webview-ui\<template>\`, with `index.html` as the required entry point at the template root (e.g. `<profile>\webview-ui\default\index.html`). `<template>` defaults to `default` and can be managed / switched from the component's preferences page. The legacy location `<component dir>\foo_ui_webview2_resources\dist\` is still supported for backward compatibility. Restart foobar2000 to load it. You can build custom themes on top of `sdk/` (`foo-webview-sdk`).
 
 ---
 

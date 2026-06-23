@@ -137,8 +137,7 @@ npm run build
 
 ### WebUI / 主题
 
-组件本身不内置前端界面。将你的 WebUI（至少包含 `index.html`）放入 foobar2000 组件目录下的
-`foo_ui_webview2_resources/dist/`，重启 foobar2000 即可加载。可基于 `sdk/`（`foo-webview-sdk`）构建自定义主题。
+组件本身不内置前端界面。请把你的 WebUI 放入 foobar2000 的 **profile** 目录下的 `webview-ui\<模板名>\`，并以 `index.html` 作为模板根目录的入口文件（例如 `<profile>\webview-ui\default\index.html`）。`<模板名>` 默认为 `default`，可在组件的「首选项」页中管理 / 切换。为向后兼容，旧路径 `<组件目录>\foo_ui_webview2_resources\dist\` 仍受支持。重启 foobar2000 即可加载。可基于 `sdk/`（`foo-webview-sdk`）构建自定义主题。
 
 ---
 
