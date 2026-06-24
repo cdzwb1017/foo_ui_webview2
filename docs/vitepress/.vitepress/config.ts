@@ -64,6 +64,17 @@ export default defineConfig({
     // Logo
     logo: '/favicon.svg',
 
+    // GitHub 链接（导航栏右上角图标，文档站 ↔ 仓库 跨站互链）
+    socialLinks: [
+      { icon: 'github', link: 'https://github.com/NereaFantasia/foo_ui_webview2' }
+    ],
+
+    // 每页底部「在 GitHub 上编辑此页」（额外回链仓库）
+    editLink: {
+      pattern: 'https://github.com/NereaFantasia/foo_ui_webview2/edit/main/docs/vitepress/:path',
+      text: '在 GitHub 上编辑此页'
+    },
+
     // 导航栏
     nav: [
       { text: '入门', link: '/guide/overview' },
