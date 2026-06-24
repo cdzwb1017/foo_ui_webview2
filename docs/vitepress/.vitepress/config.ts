@@ -1,9 +1,19 @@
 import { defineConfig } from 'vitepress'
 
+// 站点 SEO 常量（GitHub Pages 子路径部署，head 内必须用绝对 URL）
+const SITE_URL = 'https://nereafantasia.github.io/foo_ui_webview2/'
+const SITE_DESCRIPTION =
+  'foobar2000 WebView2 UI 插件：用 HTML/CSS/JavaScript + Vue/React 构建 foobar2000 自定义界面，支持 Windows 11 Mica/Acrylic 原生效果、200+ API、Web Components 与 MCP AI 集成。'
+
 export default defineConfig({
   lang: 'zh-CN',
   title: 'foo_ui_webview2',
-  description: 'foobar2000 WebView2 UI Plugin API 文档',
+  description: SITE_DESCRIPTION,
+
+  // 自动生成 sitemap.xml（提交到 Google Search Console / Bing Webmaster 必需）
+  sitemap: {
+    hostname: SITE_URL,
+  },
 
   // 使用绝对路径，确保子目录页面的 CSS/JS 引用正确
   base: '/foo_ui_webview2/',
@@ -23,12 +33,28 @@ export default defineConfig({
   head: [
     ['meta', { name: 'theme-color', content: '#0ea5e9' }],
     ['meta', { name: 'theme-color', content: '#0d1117', media: '(prefers-color-scheme: dark)' }],
+    ['meta', { name: 'keywords', content: 'foobar2000, foobar2000 webview2, foobar2000 web ui, foobar2000 custom ui, foobar2000 theme, foobar2000 skin, webview2, web components, mica, acrylic, windows 11, foobar2000 sdk, foobar2000 mcp, music player ui' }],
+    ['meta', { name: 'author', content: 'NereaFantasia' }],
+
+    // Open Graph（分享到 Facebook / Discord / 微信等的预览卡片）
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'foo_ui_webview2 文档' }],
-    ['meta', { property: 'og:description', content: 'foobar2000 WebView2 UI Plugin — 使用 HTML/CSS/JavaScript 构建自定义界面' }],
+    ['meta', { property: 'og:site_name', content: 'foo_ui_webview2' }],
+    ['meta', { property: 'og:title', content: 'foo_ui_webview2 — foobar2000 WebView2 UI 插件' }],
+    ['meta', { property: 'og:description', content: SITE_DESCRIPTION }],
+    ['meta', { property: 'og:url', content: SITE_URL }],
+    ['meta', { property: 'og:locale', content: 'zh_CN' }],
+
+    // Twitter Card（无大图，使用文字摘要卡片）
+    ['meta', { name: 'twitter:card', content: 'summary' }],
+    ['meta', { name: 'twitter:title', content: 'foo_ui_webview2 — foobar2000 WebView2 UI 插件' }],
+    ['meta', { name: 'twitter:description', content: SITE_DESCRIPTION }],
+
     // 注意：VitePress 不会给 head 内的 href 自动加 base 前缀，必须手写完整路径，
     // 否则部署到 GitHub Pages 子路径时 favicon 404
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/foo_ui_webview2/favicon.svg' }],
+
+    // Google Search Console 站点验证
+    ['meta', { name: 'google-site-verification', content: 'kqICJvELP7gyAV9Ol8QqbRhYUP0KQ3jBIiA94foqztY' }],
   ],
 
   themeConfig: {
