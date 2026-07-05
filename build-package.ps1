@@ -334,11 +334,41 @@ if (Test-Path $PackagePath) {
 }
 
 # 创建 ZIP (fb2k-component 就是 ZIP 格式)
-# 较新 PowerShell 的 Compress-Archive 仅接受 .zip 目标扩展名，会拒绝 .fb2k-component；
-# 改用 .NET ZipFile（不校验扩展名，输出同为标准 zip，行为等效）。
+# 必须用正斜杠作为条目路径分隔符（ZIP APPNOTE）。Windows 上
+# ZipFile.CreateFromDirectory 会写入反斜杠 (x64\foo.dll)，导致 foobar2000
+# 安装时无法识别 x64/ 架构子目录、不会用 x64 DLL 覆盖根目录，最终在
+# x64 foobar2000 上加载根目录的 x86 DLL → "Not a valid Win32 application"。
+Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
-[System.IO.Compression.ZipFile]::CreateFromDirectory(
-    $TempDir, $PackagePath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+
+function New-ZipArchiveForwardSlash {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceDir,
+        [Parameter(Mandatory = $true)][string]$ZipPath,
+        [System.IO.Compression.CompressionLevel]$Level = [System.IO.Compression.CompressionLevel]::Optimal
+    )
+    if (Test-Path $ZipPath) { Remove-Item $ZipPath -Force }
+    $sourceFull = (Resolve-Path $SourceDir).Path.TrimEnd('\', '/')
+    $zip = [System.IO.Compression.ZipFile]::Open(
+        $ZipPath, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        Get-ChildItem -Path $SourceDir -Recurse | ForEach-Object {
+            $rel = $_.FullName.Substring($sourceFull.Length).TrimStart('\', '/').Replace('\', '/')
+            if ([string]::IsNullOrEmpty($rel)) { return }
+            if ($_.PSIsContainer) {
+                if (-not $rel.EndsWith('/')) { $rel += '/' }
+                [void]$zip.CreateEntry($rel)
+            } else {
+                [void][System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile(
+                    $zip, $_.FullName, $rel, $Level)
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+}
+
+New-ZipArchiveForwardSlash -SourceDir $TempDir -ZipPath $PackagePath
 
 # 清理 fb2k-component 临时目录
 Remove-Item $TempDir -Recurse -Force
@@ -382,9 +412,7 @@ if ($IncludeSDK) {
         if (Test-Path $SdkZipPath) {
             Remove-Item $SdkZipPath -Force
         }
-        Add-Type -AssemblyName System.IO.Compression.FileSystem
-        [System.IO.Compression.ZipFile]::CreateFromDirectory(
-            $SdkTempDir, $SdkZipPath, [System.IO.Compression.CompressionLevel]::Optimal, $false)
+        New-ZipArchiveForwardSlash -SourceDir $SdkTempDir -ZipPath $SdkZipPath
         Write-Host "      SDK ZIP 创建完成" -ForegroundColor Green
     }
 
