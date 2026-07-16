@@ -1,64 +1,96 @@
-# fb.jitQueue JIT 即时队列
+# fb.jitQueue Just-in-Time Queue
 
-本页是 `fb.jitQueue` 的 SDK 视角文档入口。
+`fb.jitQueue` controls the streaming preload queue used for adaptive playback. It is separate from `fb.queue`, which represents the foobar2000 playback queue.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
+
+### getState()
+
+Signature: `fb.jitQueue.getState(): Promise<JitQueueStateInfo>`
+
+Returns the current queue state, including `isActive`, `state`, `currentTrackId`, `nextTrackId`, `bufferSize`, and `shadowPlaylist`.
+
+```javascript
+const state = await fb.jitQueue.getState();
+```
+
+### enqueueNext(opts)
+
+Signature: `fb.jitQueue.enqueueNext(opts: JitQueueEnqueueNextParams): Promise<BaseResponse & { bufferSize?: number }>`
+
+Queues the next adaptive-playback item. `opts` accepts `trackId`, `title`, and `url`. URLs longer than 2048 characters resolve with `success: false`.
+
+```javascript
+await fb.jitQueue.enqueueNext({
+	trackId: 'track-42',
+	title: 'Next track',
+	url: 'https://media.example.com/next.flac'
+});
+```
+
+### playNow(opts)
+
+Signature: `fb.jitQueue.playNow(opts: JitQueuePlayNowParams): Promise<BaseResponse & { shadowPlaylist?: number }>`
+
+Starts the supplied item immediately. It accepts the same `trackId`, `title`, and `url` fields as `enqueueNext()`, including the 2048-character URL limit.
+
+```javascript
+await fb.jitQueue.playNow({
+	trackId: 'track-41',
+	title: 'Current track',
+	url: 'https://media.example.com/current.flac'
+});
+```
 
 ### clear()
 
-签名：`fb.jitQueue.clear(...args): Promise<unknown>`
+Signature: `fb.jitQueue.clear(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `jitQueue.clear` 调用结果。
+Clears the buffered just-in-time queue.
 
 ```javascript
-const result = await fb.jitQueue.clear();
+await fb.jitQueue.clear();
 ```
 
 ### notifyEmpty()
 
-签名：`fb.jitQueue.notifyEmpty(...args): Promise<unknown>`
+Signature: `fb.jitQueue.notifyEmpty(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `jitQueue.notifyEmpty` 调用结果。
+Notifies the host that the producer has no more items to enqueue.
 
 ```javascript
-const result = await fb.jitQueue.notifyEmpty();
+await fb.jitQueue.notifyEmpty();
 ```
 
-### preloadBatch()
+### preloadBatch(opts)
 
-签名：`fb.jitQueue.preloadBatch(...args): Promise<unknown>`
+Signature: `fb.jitQueue.preloadBatch(opts: JitQueuePreloadBatchParams): Promise<BaseResponse & { tracksAdded?: number; invalidCount?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| Field | Type | Description |
+| --- | --- | --- |
+| `urls` | `string[]` | URLs to preload |
+| `startIndex` | `number` | Optional starting index |
+| `replace` | `boolean` | Whether to replace the existing preload list; defaults to `true` |
 
-返回值：底层 `jitQueue.preloadBatch` 调用结果。
+Each URL is limited to 2048 characters. Invalid entries are skipped and included in `invalidCount`.
 
 ```javascript
-const result = await fb.jitQueue.preloadBatch();
+const result = await fb.jitQueue.preloadBatch({
+	urls: ['https://media.example.com/1.flac', 'https://media.example.com/2.flac'],
+	startIndex: 0,
+	replace: true
+});
 ```
 
 ### skip()
 
-签名：`fb.jitQueue.skip(...args): Promise<unknown>`
+Signature: `fb.jitQueue.skip(): Promise<BaseResponse & { currentTrackId?: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `jitQueue.skip` 调用结果。
+Skips to the next buffered item.
 
 ```javascript
 const result = await fb.jitQueue.skip();
@@ -66,16 +98,22 @@ const result = await fb.jitQueue.skip();
 
 ### stop()
 
-签名：`fb.jitQueue.stop(...args): Promise<unknown>`
+Signature: `fb.jitQueue.stop(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `jitQueue.stop` 调用结果。
+Stops just-in-time playback. The SDK facade does not expose the host's optional `clearBuffer` argument, so the host default applies.
 
 ```javascript
-const result = await fb.jitQueue.stop();
+await fb.jitQueue.stop();
 ```
+
+## Events
+
+Subscribe through `fb.on()` using colon-separated event names:
+
+- `jitQueue:needNext` — `{ currentTrackId, reason }`
+- `jitQueue:trackChanged` — `{ trackId, title }`
+- `jitQueue:listExhausted` — `{ lastTrackId }`
+- `jitQueue:preloadComplete` — `{ count, startIndex, replace }`
+- `jitQueue:error` — `{ trackId, error, url? }` or `{ trackId, error, path? }`
 
 <!-- END AUTO-GENERATED SDK STUBS -->

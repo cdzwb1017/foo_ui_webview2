@@ -1,25 +1,29 @@
 # fb.titleformat Titleformat
 
-本页是 `fb.titleformat` 的 SDK 视角文档入口。
+`fb.titleformat` evaluates foobar2000 Title Formatting expressions for one or more tracks. The namespace also exposes `eval()`, `evalBatch()`, `evalFields()`, and `getBuiltinFields()`.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stub
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### evalFieldsBatch()
 
-签名：`fb.titleformat.evalFieldsBatch(...args): Promise<unknown>`
+Signature: `fb.titleformat.evalFieldsBatch(paths: string[], fields: Record<string, string>): Promise<TitleformatFieldsBatchResult>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| paths | string[] | Yes | Track paths to evaluate |
+| fields | Record<string, string> | Yes | Map from each output key to its Title Formatting pattern |
 
-返回值：底层 `titleformat.evalFieldsBatch` 调用结果。
+Returns aggregate counts and one result per path. The host compiles the merged expression once before applying it across the batch.
 
 ```javascript
-const result = await fb.titleformat.evalFieldsBatch();
+const result = await fb.titleformat.evalFieldsBatch(
+	['E:\\Music\\one.flac', 'E:\\Music\\two.flac'],
+	{ artist: '%artist%', title: '%title%' }
+);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

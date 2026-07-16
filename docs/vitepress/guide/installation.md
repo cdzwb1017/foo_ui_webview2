@@ -1,96 +1,114 @@
-# 安装配置 
+# Installation
 
-## 系统要求 
+## System requirements
 
-| 项目 | 要求 |
+| Item | Requirement |
 | --- | --- |
-| 操作系统 | Windows 10/11 (64-bit) |
-| foobar2000 | v2.0 或更高版本 (64-bit) |
-| WebView2 Runtime | 通常已预装于 Windows 10/11；如未安装，请从 Microsoft 官网 下载 |
+| OS | Windows 10/11 (64-bit) |
+| foobar2000 | v2.0 or later (64-bit) |
+| WebView2 Runtime | Usually preinstalled on Windows 10/11; otherwise download from Microsoft |
 
-::: tip 提示
-foobar2000 v2.0 是 64 位版本的分水岭。如果你使用的是 v1.x 版本，请先升级到 v2.0+。
+::: tip Note
+foobar2000 v2.0 is the 64-bit cutoff. If you still run v1.x, upgrade to v2.0+ first.
 :::
 
-1. **下载安装包** — 从发布页面下载 `foo_ui_webview2.fb2k-component` 文件
-2. **双击安装** — foobar2000 会自动弹出安装确认对话框
-3. **确认安装** — 点击 `Yes`，foobar2000 会自动将组件复制到正确位置
-4. **重启 foobar2000**
-5. **选择 UI** — `File` → `Preferences` → `Display` → `Default User Interface` → 选择 `WebView UI`
+## Install the component package
+
+1. **Download the package** — get `foo_ui_webview2-<version>.fb2k-component` from the release page (the filename includes the component version, for example `foo_ui_webview2-1.9.0.fb2k-component`)
+2. **Install through foobar2000** — open or double-click the package so foobar2000 shows its component install confirmation
+3. **Confirm** — click `Yes` and let foobar2000 install the package contents
+4. **Restart foobar2000**
+5. **Select the UI** — `File → Preferences → Display → Default User Interface` → choose `Webview2 UI`
 
 ::: info INFO
-`.fb2k-component` 是 foobar2000 官方的组件安装包格式，实质是一个包含 DLL 文件的压缩包。
+`.fb2k-component` is the official foobar2000 component package format. Install it with foobar2000's component installer; do not treat the package as a plain zip that you unpack by hand into the profile.
 :::
 
-## 安装方式二：手动安装 DLL 
+## Manual binary install (not recommended)
 
-1. 下载 `foo_ui_webview2.dll`
-2. 复制到 foobar2000 的 `components` 子目录（目标路径：`<foobar2000>\components\foo_ui_webview2.dll`）
-3. 重启 foobar2000 并选择 WebView UI
+Release packages contain architecture-specific binaries (`foo_ui_webview2.dll`, `WebView2Loader.dll`, and an `x64/` layout). Copying only a single DLL into an arbitrary `components` folder is incomplete and layout-dependent.
 
-## 验证安装 
+Prefer the official `.fb2k-component` install path above. Manual extraction is unsupported documentation for advanced recovery only and is not a recommended install method.
 
-安装成功后，你应该看到：
+## Verify installation
 
-- foobar2000 界面变为 WebView UI 的默认皮肤
-- 菜单栏出现 `View` → `WebView UI` 选项
-- `File` → `Preferences` → `Tools` → `WebView UI` 偏好设置页面
+After a successful install you should see:
 
-## 目录结构 
+- The Default User Interface list includes `Webview2 UI`
+- Menu entry `View → WebView2 UI → Show/Hide Window`
+- Preferences page `File → Preferences → Display → WebView2 UI`
+- Advanced branch `File → Preferences → Advanced → Tools → WebView2 UI`
+
+## Resource root and templates
+
+User-editable frontend resources live under the profile resource root:
 
 ```text
-foobar2000/
-├── foobar2000.exe
-├── components/
-│   └── foo_ui_webview2.dll      # 插件主文件
-└── profile/
-    └── foo_ui_webview2/
-        ├── index.html           # 前端入口页面
-        ├── sdk/
-        │   ├── bridge.js        # SDK 核心（fb.* 命名空间）
-        │   ├── components.js    # Web Components
-        │   └── smp-compat.js    # SMP 兼容层
-        ├── configuration/
-        │   ├── settings.json    # 用户设置
-        │   └── cache/           # 缓存目录
-        └── ...                  # 你的前端资产（CSS、图片等）
+profile/
+└── webview-ui/                      # resource root
+    ├── default/                     # common default template
+    │   └── index.html
+    └── <active-template>/           # global active template
+        └── index.html
 ```
 
-::: tip SDK 文件部署
-插件安装后会自动在 `profile/foo_ui_webview2/` 目录创建默认的 `index.html` 和 `sdk/` 目录。你的前端文件也放在此目录下，HTML 中通过相对路径引用 SDK 文件：
+Resolution order used by the component:
+
+1. Panel-level override: `panelConfig.templateName` → `profile/webview-ui/<templateName>/`
+2. Global active template: `profile/webview-ui/<active-template>/`
+3. Packaged component resources: `foo_ui_webview2_resources/dist`
+4. Compatibility fallback: `profile/webview-ui/default/`
+
+`default` is the usual starter template name, not a permanent or exclusive contract. Creating a template seeds a template directory and a starter `index.html`; it does **not** deploy an SDK tree.
+
+## Obtaining the SDK
+
+The component injects native `window.fb2k`. The higher-level `fb.*` wrappers come from the separate npm package `foo-webview-sdk` (or a versioned SDK ZIP release asset). The component does **not** automatically create `sdk/` under the profile.
+
+### Bundler / ESM
+
+```bash
+npm install foo-webview-sdk
+```
+
+```js
+import fb from 'foo-webview-sdk'
+// or public subpaths such as 'foo-webview-sdk/bridge' / 'foo-webview-sdk/components'
+await fb.player.play()
+```
+
+### No bundler (IIFE globals)
+
+Copy built IIFE files from the package/SDK ZIP into your theme directory, then load the paths you actually copied:
 
 ```html
-<!-- index.html -->
-<!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>My WebView UI Theme</title>
-  </head>
-  <body>
-    <!-- 加载 SDK -->
-    <script src="./sdk/bridge.js"></script>
-    <script src="./sdk/components.js"></script>
-    <!-- 你的主题脚本 -->
-    <script src="./theme.js"></script>
-  </body>
-</html>
+<!-- Example layout after you copy the built IIFE files into ./sdk/dist/ -->
+<script src="./sdk/dist/bridge.global.js"></script>
+<script src="./sdk/dist/components.global.js"></script>
 ```
-:::
 
-## 后台模式 (Background Mode) 
+Those `./sdk/dist/...` paths are a post-copy example layout, not a directory created by the component installer.
 
-后台模式允许 WebView UI 与 Default UI 或 Columns UI 同时使用。
+| Surface | Requires SDK files? |
+| --- | --- |
+| Native `window.fb2k.invoke` / `window.fb2k.on` | No |
+| `fb.*` wrappers and Web Components helpers | Yes (`foo-webview-sdk`) |
 
-**启用步骤：**
+## Background mode
 
-1. `Preferences` → `Advanced` → `Tools` → `WebView UI` → `Enable Background Mode`
-2. `Preferences` → `Display` → `Default User Interface` → 选择其他 UI
-3. 重启 foobar2000
-4. `View` → `WebView UI` → `Show/Hide Window`
+Background mode lets WebView2 UI run alongside Default UI or Columns UI.
 
-**使用场景：**
+**Enable steps:**
 
-- 将 WebView UI 作为歌词、封面等辅助信息窗口
-- 使用 Default UI 管理播放列表，同时用 WebView UI 显示可视化效果
-- 在后台运行自定义脚本
+1. `Preferences → Advanced → Tools → WebView2 UI` → `Enable Background Mode`
+2. `Preferences` → `Display` → `Default User Interface` → choose another UI
+3. Restart foobar2000
+4. `View → WebView2 UI → Show/Hide Window`
+
+Visibility depends on background-mode settings and the last Show/Hide state. When no independent WebView window exists (panel-only cases), the same menu entry may open Preferences instead of toggling a window.
+
+**Typical uses:**
+
+- Use WebView2 UI as a lyrics/artwork companion window
+- Keep Default UI for playlist management while WebView2 UI shows visualizations
+- Run custom scripts in a companion window while another UI remains primary

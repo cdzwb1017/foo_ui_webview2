@@ -1,79 +1,91 @@
-# 运行模式 
+# Panel Modes
 
-> foo_ui_webview2 支持三种运行模式，适应不同的使用场景。
+> foo_ui_webview2 supports three run modes for different deployment scenarios.
 
-## 概述 
+## Overview
 
-| 模式 | 类名 | 接口 | 说明 |
+| Mode | Class | Interface | Notes |
 | --- | --- | --- | --- |
-| 独立窗口 | MainWindow | - | 替换默认 UI，完整窗口控制 |
-| DUI 面板 | WebViewDuiElement | ui_element | 嵌入 Default UI 布局 |
-| CUI 面板 | WebViewCuiPanel | uie::window | 嵌入 Columns UI 布局 |
+| Standalone window | MainWindow | - | Replaces the default UI with full window control |
+| DUI panel | WebViewDuiElement | ui_element | Embeds into Default UI layouts |
+| CUI panel | WebViewCuiPanel | uie::window | Embeds into Columns UI layouts |
 
-所有模式共享相同的 API 和前端代码，但**面板模式下部分窗口控制 API 不可用**。
+All modes share the same APIs and frontend code, but **some window-control APIs are unavailable in panel modes**.
 
-## 独立窗口模式 (Standalone) 
+## Standalone mode
 
-WebView UI 完全替换 foobar2000 的默认界面。
+`Webview2 UI` fully replaces foobar2000's default UI when selected as the Default User Interface.
 
-- 完整的窗口控制权（最大化、最小化、关闭、拖拽）
-- 支持 DWM 效果（Mica、Acrylic）
-- 支持自定义标题栏和全屏模式
-- 所有 Window API 均可用
+- Full window control (maximize, minimize, close, drag)
+- DWM effects (`window.setMica`, `window.setAcrylic`)
+- Custom caption bar and fullscreen
+- All Window APIs available
 
-## DUI 面板模式 (Default UI) 
+## DUI panel mode (Default UI)
 
-将 WebView2 作为 Default UI 布局中的一个 UI Element。
+Use WebView2 as a UI Element inside Default UI.
 
-**使用方法：**
+**How to use:**
 
-1. 确保当前使用 Default UI
+1. Make sure Default UI is active
 2. `View` → `Layout` → `Enable Layout Editing Mode`
-3. 右键空白区域 → `Add new UI element` → `WebView2 Panel`
+3. Right-click empty space → `Add new UI element` → `WebView2 Panel`
 
-**注意事项：**
+**Notes:**
 
-- 在布局编辑模式下修改面板配置后，WebView 会自动隐藏直到退出编辑模式
-- 配置对话框独立于面板宿主窗口，布局变更不影响对话框生命周期
+- After changing panel config in layout editing mode, WebView hides until you leave editing mode
+- The config dialog is independent of the panel host window; layout changes do not tear down the dialog
+- A panel may set `templateName` to load `profile/webview-ui/<templateName>/` instead of the global active template
 
-## CUI 面板模式 (Columns UI) 
+## CUI panel mode (Columns UI)
 
-将 WebView2 作为 Columns UI 布局中的一个 Panel。
+Use WebView2 as a Panel inside Columns UI.
 
-**使用方法：**
+**How to use:**
 
-1. 确保已安装 Columns UI 组件
+1. Install the Columns UI component
 2. `View` → `Columns UI` → `Layout`
-3. 从面板列表中添加 `WebView2 Panel`
+3. Add `WebView2 Panel` from the panel list
 
-## 模式检测 
+## Mode detection
+
+Actively call `window.getMode` at startup and whenever you need the current host mode. Read `mode`, `panelMode`, and `windowId` from the result.
+
+DUI/CUI panels may also emit `panel:initialized` with the same three fields as an asynchronous notification. Standalone mode does **not** wait for that event — treat the event as complementary, not as a replacement for `window.getMode`.
 
 ```javascript
-let currentMode = 'standalone';
-let isPanelMode = false;
+async function detectMode() {
+    const info = await fb2k.invoke('window.getMode');
+    // info.mode: 'standalone' | 'dui' | 'cui' | ...
+    // info.panelMode: boolean
+    // info.windowId: string
+    return info;
+}
 
+// Optional async notification for DUI/CUI panels
 fb2k.on('panel:initialized', (data) => {
-    currentMode = data.mode;      // 'dui' | 'cui'
-    isPanelMode = data.panelMode; // true
+    // data.mode, data.panelMode, data.windowId
+    if (data.panelMode) {
+        document.body.classList.add('panel-mode');
+        document.body.classList.add(`mode-${data.mode}`);
+    }
 });
 
-// 超时后假定为独立窗口模式
-setTimeout(() => {
-    if (!isPanelMode) {
-        console.log('当前为独立窗口模式');
-    }
-}, 1000);
+const current = await detectMode();
+console.log(current.mode, current.panelMode, current.windowId);
 ```
 
-## API 兼容性矩阵 
+## API compatibility matrix
 
-| API | 独立窗口 | DUI 面板 | CUI 面板 |
+| API | Standalone | DUI panel | CUI panel |
 | --- | --- | --- | --- |
 | window.minimize | ✓ | ✗ | ✗ |
 | window.maximize | ✓ | ✗ | ✗ |
 | window.setMica | ✓ | ✗ | ✗ |
-| window.setDwmEffect | ✓ | ✗ | ✗ |
+| window.setAcrylic | ✓ | ✗ | ✗ |
+| window.setCornerPreference | ✓ | ✗ | ✗ |
 | window.startDrag | ✓ | ✗ | ✗ |
+| window.getMode | ✓ | ✓ | ✓ |
 | playback.* | ✓ | ✓ | ✓ |
 | playlist.* | ✓ | ✓ | ✓ |
 | library.* | ✓ | ✓ | ✓ |
@@ -81,10 +93,17 @@ setTimeout(() => {
 | config.* | ✓ | ✓ | ✓ |
 | metadata.* | ✓ | ✓ | ✓ |
 
-## 最佳实践 
+There is no combined DWM effect setter API. Use the registered helpers window.setMica and window.setAcrylic.
+
+## Best practices
 
 ```javascript
-// 根据模式添加 CSS 类
+const modeInfo = await fb2k.invoke('window.getMode');
+if (modeInfo.panelMode) {
+    document.body.classList.add('panel-mode');
+    document.body.classList.add(`mode-${modeInfo.mode}`);
+}
+
 fb2k.on('panel:initialized', (data) => {
     if (data.panelMode) {
         document.body.classList.add('panel-mode');
@@ -94,7 +113,7 @@ fb2k.on('panel:initialized', (data) => {
 ```
 
 ```css
-/* 面板模式隐藏不需要的元素 */
+/* Hide chrome that only makes sense in standalone mode */
 .panel-mode .title-bar,
 .panel-mode .window-controls {
     display: none !important;

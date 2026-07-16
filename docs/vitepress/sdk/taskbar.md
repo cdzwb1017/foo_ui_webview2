@@ -1,53 +1,63 @@
-# fb.taskbar 任务栏
+# fb.taskbar Windows Taskbar
 
-本页是 `fb.taskbar` 的 SDK 视角文档入口。
+`fb.taskbar` controls thumbnail-toolbar buttons, progress, overlay icons, and taskbar flashing for the current window.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### flash()
 
-签名：`fb.taskbar.flash(...args): Promise<unknown>`
+Signature: `fb.taskbar.flash(options?: { count?: number; interval?: number }): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| options.count | number | No | Number of flashes. Defaults to 3 |
+| options.interval | number | No | Flash interval in milliseconds; omission uses the system default |
 
-返回值：底层 `taskbar.flash` 调用结果。
+Returns the result of the underlying `taskbar.flash` call.
 
 ```javascript
-const result = await fb.taskbar.flash();
+const result = await fb.taskbar.flash({ count: 3 });
 ```
 
 ### setOverlayIcon()
 
-签名：`fb.taskbar.setOverlayIcon(...args): Promise<unknown>`
+Signature: `fb.taskbar.setOverlayIcon(options?: { icon?: string | null; description?: string }): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| options.icon | string \| null | No | Base64 ICO payload. Omit or pass `null` to clear the overlay |
+| options.description | string | No | Accessible icon description |
 
-返回值：底层 `taskbar.setOverlayIcon` 调用结果。
+Returns the result of the underlying `taskbar.setOverlayIcon` call.
 
 ```javascript
-const result = await fb.taskbar.setOverlayIcon();
+const result = await fb.taskbar.setOverlayIcon({ icon, description: 'Paused' });
 ```
 
 ### setThumbnailButtons()
 
-签名：`fb.taskbar.setThumbnailButtons(...args): Promise<unknown>`
+Signature: `fb.taskbar.setThumbnailButtons(buttons: ThumbnailButton[]): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| buttons | ThumbnailButton[] | Yes | Up to seven buttons with `id`, `tooltip`, optional `icon`, and optional state flags |
 
-返回值：底层 `taskbar.setThumbnailButtons`, `taskbar.updateButton`, `taskbar.setProgress` 调用结果。
+Installs the thumbnail toolbar once for the window. Use `updateButton(options)` for later state changes; it cannot add or remove buttons. Button clicks emit `taskbar:buttonClicked` with `{ id }`. `setProgress({ state, value? })` accepts `none`, `indeterminate`, `normal`, `error`, or `paused`; `value` is a 0-1 fraction for determinate states.
 
 ```javascript
-const result = await fb.taskbar.setThumbnailButtons();
+const result = await fb.taskbar.setThumbnailButtons([
+    { id: 'play-pause', tooltip: 'Play or pause' }
+]);
+```
+
+Update an existing thumbnail-toolbar button without reinstalling the toolbar:
+
+```javascript
+await fb.taskbar.updateButton({ id: 'play', tooltip: 'Pause', enabled: true });
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

@@ -1,78 +1,78 @@
-# H. 元数据与搜索 
+# H. Metadata and Search
 
 ## `<fb-properties-panel>` {#fb-properties-panel}
 
-曲目属性面板。分组显示 metadata、technical、location 信息。
+Read-only track properties panel grouped into metadata, technical information, and file location.
 
 ```html
 <fb-properties-panel></fb-properties-panel>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| path | string | — | 指定路径，默认当前曲目 |
-| groups | string | 'metadata,technical,location' | 显示分组 |
-| track-path | string | — | 只读反映：当前曲目路径 |
+| `path` | string | current track | Explicit track path; suppresses track-change reloads |
+| `groups` | string | `'metadata,technical,location'` | Comma-separated subset of groups to render |
+| `track-path` | string | — | Read-only reflection of the loaded track path |
 
 **CSS Parts:** `container`, `group`, `group-title`, `row`, `label`, `value`
 
-**分组内容：**
+**Group Contents:**
 
 - **metadata** — TITLE, ARTIST, ALBUM, ALBUMARTIST, DATE, GENRE, TRACKNUMBER, COMMENT
-- **technical** — 编解码器, 比特率, 采样率, 声道, 时长
-- **location** — 文件路径
+- **technical** — codec, bitrate, sample rate, channels, duration
+- **location** — absolute file path
 
 ## `<fb-search-bar>` {#fb-search-bar}
 
-搜索栏，支持去抖与最小长度过滤。Enter 键立即搜索（无视去抖）。
+Debounced media-library search input with a minimum-length filter. Enter searches immediately and bypasses the debounce delay; an empty query is ignored.
 
 ```html
-<fb-search-bar placeholder="搜索曲目..." debounce="300" min-length="2">
+<fb-search-bar placeholder="Search tracks..." debounce="300" min-length="2">
   <span slot="icon">🔍</span>
 </fb-search-bar>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| placeholder | string | '搜索媒体库...' | 输入框占位文本 |
-| debounce | string | '300' | 去抖延迟毫秒数 |
-| min-length | string | '2' | 最小查询长度 |
+| `placeholder` | string | `'Search library...'` | Input placeholder |
+| `debounce` | string | `'300'` | Keystroke debounce delay in milliseconds |
+| `min-length` | string | `'2'` | Minimum query length for debounced input searches |
 
 **CSS Parts:** `container`, `input`
-**Slots:** `icon`（默认 🔍）
+**Slots:** `icon` (default: 🔍)
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-search', e => {
-  console.log('搜索:', e.detail.query);
+  console.log('Search:', e.detail.query);
 });
 el.addEventListener('fb-search-result', e => {
-  console.log('结果:', e.detail.count, '首匹配', e.detail.query);
-  console.log('曲目:', e.detail.tracks);
+  console.log('Results:', e.detail.count, 'for', e.detail.query);
+  console.log('Tracks:', e.detail.tracks);
 });
 ```
 
 ## `<fb-console>` {#fb-console}
 
-控制台日志面板，自动轮询更新，所有日志行经 `_escHtml` 转义。
+foobar2000 console viewer. It polls for updates and escapes every rendered log line.
 
 ```html
 <fb-console></fb-console>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| max-lines | string | '200' | 最大行数 |
-| auto-scroll | boolean | true | 自动滚动到底部 |
-| refresh | string | '1000' | 轮询间隔毫秒数 |
+| `max-lines` | string | `'200'` | Maximum number of lines requested per poll |
+| `auto-scroll` | string | enabled | Set to the exact string `false` to disable scrolling to the bottom |
+| `refresh` | string | `'1000'` | Poll interval in milliseconds |
 
 **CSS Parts:** `container`, `line`
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-console-update', e => {
-  console.log('日志更新:', e.detail.lineCount, '行');
+  console.log('Console update:', e.detail.lineCount, 'lines');
 });
 ```

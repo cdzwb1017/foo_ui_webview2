@@ -1,25 +1,39 @@
-# fb.event 跨窗口事件
+# fb.event Cross-Window Events
 
-本页是 `fb.event` 的 SDK 视角文档入口。
+`fb.event` emits application-defined events to connected windows. Subscribe to those event names through `fb.on()`, `fb.once()`, or `fb.off()`.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### emitTo()
+### emit(eventName, payload?, excludeSelf?)
 
-签名：`fb.event.emitTo(...args): Promise<unknown>`
+Signature: `fb.event.emit(eventName: string, payload?: unknown, excludeSelf?: boolean): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `event.emitTo` 调用结果。
+Broadcasts an event to every connected window. Set `excludeSelf` to `true` to omit the originating window; it defaults to `false`.
 
 ```javascript
-const result = await fb.event.emitTo();
+await fb.event.emit('theme:accentChanged', { color: '#4cc2ff' }, true);
+```
+
+### emitTo(eventName, payload, targetWindowId)
+
+Signature: `fb.event.emitTo(eventName: string, payload: unknown, targetWindowId: string): Promise<BaseResponse>`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `eventName` | `string` | Yes | Custom event name |
+| `payload` | `unknown` | Yes | JSON-serializable event payload |
+| `targetWindowId` | `string` | Yes | Destination window ID |
+
+```javascript
+await fb.event.emitTo(
+	'theme:focusSearch',
+	{ selectAll: true },
+	targetWindowId
+);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

@@ -1,30 +1,30 @@
-# Metadata 工具 
+# Metadata and Rating Tools
 
-元数据读写与评分管理。共 12 个工具。
+Twelve tools read and write metadata, manage artwork, remove fields, and get or set ratings.
 
-## 读取 
+## Reading
 
 ### fb2k_metadata_read 
 
-读取文件元数据（结构化格式：tags + info 分离）。
+Reads file metadata in a structured result with separate `tags` and `info` objects.
 
-- **Bridge 方法**: `metadata.read`
+- **Bridge method**: `metadata.read`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
+| `path` | string | Yes | Audio file path |
 
-**返回值**:
+**Example result:**
 
 ```json
 {
   "success": true,
   "path": "D:\\\\Music\\\\track.flac",
   "tags": {
-    "TITLE": "天ノ弱",
-    "ARTIST": "164 feat. GUMI",
-    "ALBUM": "天ノ弱",
-    "GENRE": ["Vocaloid", "J-Pop"]
+    "TITLE": "Redo",
+    "ARTIST": "Mili",
+    "ALBUM": "Millennium Mother",
+    "GENRE": ["Alternative", "Electronic"]
   },
   "info": {
     "duration": 263.5,
@@ -36,148 +36,150 @@
 }
 ```
 
-::: tip 多值标签
-当一个标签有多个值时（如多个艺术家），返回字符串数组而非单个字符串。
+::: tip Multi-value tags
+A tag with multiple values is returned as a string array rather than a single string.
 :::
 
 ### fb2k_metadata_read_by_path 
 
-按路径读取元数据（扁平格式）。
+Reads metadata by path in a flat result.
 
-- **Bridge 方法**: `metadata.readByPath`
+- **Bridge method**: `metadata.readByPath`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
+| `path` | string | Yes | Audio file path |
 
 ### fb2k_metadata_read_raw 
 
-直接从文件读取原始元数据，绕过 metadb 缓存。
+Reads metadata directly from the file, bypassing the metadb cache.
 
-- **Bridge 方法**: `metadata.readRaw`
+- **Bridge method**: `metadata.readRaw`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径，支持 \|subsong:N 或 #N 格式 |
-| cueIndex | integer | ? | CUE 子曲目索引（覆盖路径中的 subsong 标记） |
+| `path` | string | Yes | Audio file path; supports `|subsong:N` or `#N` |
+| `cueIndex` | integer | No | CUE sub-track index; overrides the subsong marker in `path` |
 
-::: tip 与 `metadata.read` 的区别
-`readRaw` 确保从文件直接读取最新数据，而 `read` 可能返回缓存的元数据。当写入后需要立即验证时使用此方法。
+::: tip Compared with `metadata.read`
+`readRaw` reads from the file instead of the metadb cache. It is useful when a caller needs to inspect the file-level state after a write.
 :::
 
 ### fb2k_metadata_read_batch 
 
-批量读取多个文件的元数据。
+Reads metadata for multiple files in one call.
 
-- **Bridge 方法**: `metadata.readBatch`
+- **Bridge method**: `metadata.readBatch`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | array | ? | 文件路径数组 |
+| `paths` | string[] | Yes | Audio file paths |
 
-## 写入 
+## Writing
 
 ### fb2k_metadata_write 
 
-写入元数据标签。值为 `null` 或空字符串时删除标签。
+Writes metadata tags. A `null` or empty-string value removes the tag.
 
-- **Bridge 方法**: `metadata.write`
+- **Bridge method**: `metadata.write`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| tags | object | ? | 键值对，如 {"TITLE": "新标题", "ARTIST": "新艺术家"} |
+| `path` | string | Yes | Audio file path |
+| `tags` | object | Yes | Tag key-value pairs, for example `{ "TITLE": "New title" }` |
 
-::: warning WARNING
-写入操作会直接修改文件。请确保文件可写且已备份。
+::: warning File modification
+Metadata writes modify the target file. Ensure the file is writable and preserve a backup when appropriate.
 :::
 
 ### fb2k_metadata_write_batch 
 
-批量写入元数据。
+Writes metadata for multiple files.
 
-- **Bridge 方法**: `metadata.writeBatch`
+- **Bridge method**: `metadata.writeBatch`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| items | array | ? | [{ path, tags }] 格式的数组 |
+| `items` | object[] | Yes | Write items containing `path` and `tags` |
 
-## 封面嵌入 
+## Artwork writing
 
 ### fb2k_metadata_embed_artwork 
 
-将封面图片嵌入到文件中。
+Writes artwork into an audio file's tag container, to a sibling file, or to both targets.
 
-- **Bridge 方法**: `metadata.embedArtwork`
+- **Bridge method**: `metadata.embedArtwork`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| imageData | string | ? | base64 编码的图片数据 |
-| type | string | ? | 封面类型（front / back / disc / icon / artist，默认 front） |
+| `path` | string | Yes | Audio file path; supports `|subsong:N` |
+| `imageData` | string | Yes | Base64-encoded JPEG, PNG, WebP, GIF, or BMP data |
+| `type` | string | No | `front`, `back`, `disc`, `icon`, or `artist`; default `front` |
+| `target` | string | No | `embedded`, `file`, or `all`; default `embedded` |
+| `filename` | string | No | Plain filename for a file target; path separators and `..` are rejected by the Bridge |
 
 ### fb2k_metadata_remove_embedded_art 
 
-移除嵌入的封面图片。
+Removes embedded artwork from an audio file.
 
-- **Bridge 方法**: `metadata.removeEmbeddedArt`
+- **Bridge method**: `metadata.removeEmbeddedArt`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| type | string | ? | 要移除的封面类型（省略时需配合 removeAll） |
-| removeAll | boolean | ? | 是否移除所有类型的封面（默认 false） |
+| `path` | string | Yes | Audio file path |
+| `type` | string | No | `front`, `back`, `disc`, `icon`, or `artist` |
+| `removeAll` | boolean | No | Remove every artwork type; default `false` |
 
-## 标签删除 
+## Field removal
 
 ### fb2k_metadata_remove_tag 
 
-移除指定标签。
+Removes specified metadata tags.
 
-- **Bridge 方法**: `metadata.removeTag`
+- **Bridge method**: `metadata.removeTag`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| tags | array | ? | 要移除的标签名数组 |
+| `path` | string | Yes | Audio file path |
+| `tags` | string[] | Yes | Tag names to remove |
 
 ### fb2k_metadata_remove_field 
 
-移除指定字段。
+Removes specified metadata fields. This maps to the Bridge alias `metadata.removeField`.
 
-- **Bridge 方法**: `metadata.removeField`
+- **Bridge method**: `metadata.removeField`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| tags | array | ? | 要移除的字段名数组 |
+| `path` | string | Yes | Audio file path |
+| `tags` | string[] | Yes | Field names to remove |
 
-## 评分 
+## Ratings
 
 ### fb2k_rating_set 
 
-设置曲目评分。优先使用 foo_playcount 的上下文菜单，回退到写入 RATING 标签。
+Sets a track rating. The Bridge first uses the foo_playcount context-menu path and falls back to the `RATING` tag.
 
-- **Bridge 方法**: `rating.set`
+- **Bridge method**: `rating.set`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| rating | integer | ? | 评分值（0=清除, 1–5） |
-| path | string | ? | 文件路径（省略时使用当前播放或选中的曲目） |
-| cueIndex | integer | ? | CUE 子曲目索引 |
+| `rating` | integer | Yes | `0` to `5`; `0` means unrated |
+| `path` | string | No | Track path; when omitted, the Bridge resolves the current or selected track |
+| `cueIndex` | integer | No | CUE sub-track index |
 
 ### fb2k_rating_get 
 
-获取曲目评分。优先读取 foo_playcount 统计数据，回退到 RATING 标签。
+Gets a track rating, reading foo_playcount statistics first and falling back to the `RATING` tag.
 
-- **Bridge 方法**: `rating.get`
+- **Bridge method**: `rating.get`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径 |
-| cueIndex | integer | ? | CUE 子曲目索引 |
+| `path` | string | Yes | Track file path |
+| `cueIndex` | integer | No | CUE sub-track index |
 
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -188,7 +190,7 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| rating | integer | 评分值（0=未评分, 1–5） |
-| storage | string | 数据来源（"stats" = foo_playcount, "file" = RATING 标签） |
+| `rating` | integer | `0` for unrated or `1` to `5` |
+| `storage` | string | `stats` for foo_playcount or `file` for the `RATING` tag |

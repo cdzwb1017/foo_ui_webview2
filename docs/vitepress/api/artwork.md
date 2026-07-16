@@ -1,293 +1,215 @@
-# Artwork API 
+# Artwork API
 
-专辑封面获取。支持 `fb2k://` 协议 URL、Base64 dataUrl、批量获取等多种方式。共 13 个 API。
+English API reference for the `artwork` family.
 
-> 此 API 命名空间为 `artwork.*`，不支持别名。
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-## 封面获取方式对比 
+## artwork
 
-| 方法 | 返回格式 | 适用场景 | 推荐度 |
+### artwork.getAvailableArtwork
+
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1371`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| artwork.getFb2kUrl() | fb2k:// URL | 当前播放曲目 | ★★★★★ |
-| artwork.getFb2kUrlByPath() | fb2k:// URL | 任意曲目懒加载 | ★★★★★ |
-| artwork.getFb2kUrlByPathBatch() | fb2k:// URL 数组 | 批量封面 | ★★★★★ |
-| artwork.getCurrent() | Base64 dataUrl | 需要立即显示 | ★★★ |
-| artwork.getForTrack() | Base64 dataUrl | 单曲封面+缩放 | ★★★ |
+| `path` | `string` | No | Optional; default . |
 
-### artwork.getFb2kUrl 
+**Returns**: `{"artworks":"...","available":"...","error":"...","sources":"...","success":true}`
 
-获取当前播放曲目的 `fb2k://artwork/...` URL。v1.1.7 新增
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| type | string | ✗ | 封面类型: front, back, disc, artist, icon |
-| maxSize | number | ✗ | 图片最大边长（像素） |
-
-```javascript
-const result = await fb2k.invoke('artwork.getFb2kUrl', { maxSize: 300 });
-if (result.available) document.getElementById('cover').src = result.dataUrl;
+```js
+const result = await fb2k.invoke('artwork.getAvailableArtwork', { path: /* value */ });
 ```
 
-### artwork.getFb2kUrlByPath 
+### artwork.getAvailableTypes
 
-根据曲目路径生成 `fb2k://artwork/...` URL。v1.1.7 新增
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1361`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 曲目文件路径 |
-| type | string | ✗ | 封面类型 |
-| maxSize | number | ✗ | 最大边长 |
+| `path` | `string` | No | Optional; default . |
 
-```javascript
-// 推荐：通过 API 获取 URL（最安全）
-const result = await fb2k.invoke('artwork.getFb2kUrlByPath', {
-    path: trackPath, type: 'front', maxSize: 300
-});
-img.src = result.dataUrl;
+**Returns**: `{"error":"...","success":true,"types":"..."}`
 
-// 或手动拼接（使用 query param 格式，避免 Chromium 路径规范化问题）
-function getCoverUrl(trackPath, maxSize = 300) {
-    return `fb2k://artwork/?path=${encodeURIComponent(trackPath)}&type=front&maxSize=${maxSize}`;
-}
+```js
+const result = await fb2k.invoke('artwork.getAvailableTypes', { path: /* value */ });
 ```
 
-### artwork.getFb2kUrlByPathBatch 
+### artwork.getBatch
 
-批量返回多个曲目的 `fb2k://` URL。纯字符串拼接，无 SDK 访问，性能极佳。
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1370`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | string[] | ✓ | 曲目路径数组 |
-| type | string | ✗ | 封面类型 |
-| maxSize | number | ✗ | 最大边长 |
+| `paths` | `array` | Yes | Required. |
+| `type` | `string` | No | Optional; default front. |
 
-```javascript
-// 100 张封面，单次 IPC 往返 (~2ms)
-const tracks = await fb2k.invoke('playlist.getTracks', { count: 100 });
-const result = await fb2k.invoke('artwork.getFb2kUrlByPathBatch', {
-    paths: tracks.tracks.map(t => t.absolutePath),
-    type: 'front', maxSize: 300
-});
+**Returns**: `{"artworks":"...","error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('artwork.getBatch', { paths: /* value */, type: /* value */ });
 ```
 
-### fb2k:// URL 格式参考 
+### artwork.getByPath
 
-`fb2k://artwork/?path={encodedPath}&type={type}&maxSize={size}`
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1358`.
 
-::: tip 新格式（v1.4.0+）
-路径放在 query string 的 `path` 参数中，避免 Chromium URL 规范化解码 `%5C`/`%2F` 导致 Windows 路径损坏。 旧格式 `fb2k://artwork/{encodedPath}?type=...` 仍向后兼容。
-:::
-
-| 用途 | maxSize | 预计大小 |
-| --- | --- | --- |
-| 播放列表缩略图 | 50-100 | 2-5 KB |
-| 专辑网格 | 200-300 | 10-20 KB |
-| 当前播放封面 | 400-600 | 30-60 KB |
-| 高清大图 | 1000+ | 100-500 KB |
-
-## Base64 封面 
-
-### artwork.getCurrent 
-
-获取当前播放曲目的封面图片。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| type | string | ✗ | front, back, disc, artist, icon |
+| `path` | `string` | No | Optional; default . |
+| `type` | `string` | No | Optional; default front. |
 
-**返回值**（成功）:
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","mimeType":"...","path":"...","size":"...","type":"..."}`
 
-```json
-{
-    "available": true,
-    "type": "front",
-    "source": "now_playing_manager",
-    "mimeType": "image/jpeg",
-    "size": 123456,
-    "dataUrl": "data:image/jpeg;base64,..."
-}
+```js
+const result = await fb2k.invoke('artwork.getByPath', { path: /* value */, type: /* value */ });
 ```
 
-**返回值**（失败）: `{ "available": false, "reason": "no_track" }`
+### artwork.getByPlaylistItem
 
-| source 值 | 说明 |
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1360`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `index` | `integer` | No | Optional; default -1. |
+| `playlist` | `integer` | No | Optional; default -1. |
+| `type` | `string` | No | Optional; default front. |
+
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","index":"...","mimeType":"...","playlist":"...","size":"...","type":"..."}`
+
+```js
+const result = await fb2k.invoke('artwork.getByPlaylistItem', { index: /* value */, playlist: /* value */, type: /* value */ });
+```
+
+### artwork.getCurrent
+
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1356`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `string` | No | Optional; default front. |
+
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","mimeType":"...","path":"...","reason":"...","size":"...","source":"...","type":"..."}`
+
+| `source` value | Meaning |
 | --- | --- |
-| now_playing_manager | 最快，缓存 |
-| album_art_manager_v2 | 更全面 |
-| extractor | 直接提取 |
+| `now_playing_manager` | Cached current front-cover artwork. |
+| `album_art_manager_v2` | Artwork resolved by the album-art manager fallback. |
+| `extractor` | Artwork resolved directly by the file extractor fallback. |
 
-### artwork.getByPath 
-
-通过文件路径获取封面。直接使用 `album_art_extractor` 提取器。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-| type | string | ✗ | 图片类型 |
-
-::: tip 路径 Contract (Phase 9)
-
-- **支持**: 原生路径、`file://` 前缀、`path|subsong:N`（subsong 会被剥离，提取器以文件级别操作）
-- **拒绝**: `file-relative://` 路径会返回显式错误，请改用 `artwork.getByPlaylistItem`
-- 路径会在内部自动规范化（canonical path）
-
-:::
-
-### artwork.getForTrack 
-
-获取指定曲目的封面。支持嵌入式封面和外部封面文件。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 曲目文件路径 |
-| type | string | ✗ | 图片类型 |
-
-**返回值**:
-
-```json
-{
-    "available": true,
-    "type": "front",
-    "mimeType": "image/jpeg",
-    "width": 200,
-    "height": 200,
-    "size": 15234,
-    "dataUrl": "data:image/jpeg;base64,..."
-}
+```js
+const result = await fb2k.invoke('artwork.getCurrent', { type: /* value */ });
 ```
 
-::: tip 性能建议
-列表/网格视图中使用 `artwork.getCurrent` 或 `artwork.getByPlaylistItem` 的 `maxSize: 200` 可将数据传输量从 ~2MB 减少到 ~15KB。`artwork.getForTrack` 不支持 `maxSize` 参数。
-:::
+### artwork.getFb2kUrl
 
-::: warning width / height 限制
-`width` 和 `height` 仅对 **PNG** 格式封面返回实际尺寸。JPEG、GIF、BMP、WebP 格式返回值为 `0`。
-:::
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1363`.
 
-::: warning WARNING
-如果曲目路径是 `file-relative://` 格式，请使用 `artwork.getByPlaylistItem`。
-:::
-
-### artwork.getByPlaylistItem 
-
-通过播放列表索引获取封面。推荐用于播放列表中的曲目，能正确处理相对路径。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| playlist | number | ✗ | 播放列表索引 |
-| index | number | ✗ | 曲目索引（默认 0） |
-| type | string | ✗ | 图片类型 |
+| `maxSize` | `integer` | No | Optional; default 0. |
+| `type` | `string` | No | Optional; default front. |
 
-### artwork.getAvailableTypes 
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","reason":"...","type":"..."}`
 
-获取曲目可用的封面类型列表。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✗ | 音频文件路径（省略则使用当前播放曲目） |
-
-**返回值**: `{ "types": ["front", "back", "disc"] }`
-
-### artwork.getAvailableArtwork 
-
-获取曲目所有可用的封面类型及来源。同时检查嵌入式封面和外部封面文件（cover.jpg/folder.jpg 等）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "available": true,
-    "artworks": [
-        { "type": "front", "source": "embedded" }
-    ],
-    "sources": ["embedded", "folder:cover.jpg"]
-}
+```js
+const result = await fb2k.invoke('artwork.getFb2kUrl', { maxSize: /* value */, type: /* value */ });
 ```
 
-### artwork.getFolderImages 
+### artwork.getFb2kUrlByPath
 
-获取文件夹中所有图片文件。
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1364`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| directory | string | ✓ | 文件夹路径 |
+| `maxSize` | `integer` | No | Optional; default 0. |
+| `path` | `string` | No | Optional; default . |
+| `type` | `string` | No | Optional; default front. |
 
-支持的图片格式: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","path":"...","type":"..."}`
 
-**返回值**:
-
-```json
-{
-    "success": true,
-    "images": [
-        { "name": "cover.jpg", "path": "C:\\\\Music\\\\Album\\\\cover.jpg", "size": 123456 }
-    ]
-}
+```js
+const result = await fb2k.invoke('artwork.getFb2kUrlByPath', { maxSize: /* value */, path: /* value */, type: /* value */ });
 ```
 
-### artwork.getLyrics 
+### artwork.getFb2kUrlByPathBatch
 
-获取曲目的歌词（从元数据标签中读取）。显式传入 path 时会自动规范化路径。
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1372`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✗ | 音频文件路径（省略则使用当前播放曲目） |
+| `items` | `array` | No | Optional; default omitted. |
+| `maxSize` | `integer` | No | Optional; default 0. |
+| `paths` | `array` | No | Optional; default omitted. |
+| `type` | `string` | No | Optional; default front. |
 
-**返回值**（找到时）:
+**Returns**: `{"artworks":"...","error":"...","success":true}`
 
-```json
-{
-    "available": true,
-    "tag": "LYRICS",
-    "lyrics": "[00:12.34]First line...",
-    "synced": false
-}
+```js
+const result = await fb2k.invoke('artwork.getFb2kUrlByPathBatch', { items: /* value */, maxSize: /* value */, paths: /* value */, type: /* value */ });
 ```
 
-**返回值**（未找到）: `{ "available": false }`
+### artwork.getFolderImages
 
-支持的歌词标签: `LYRICS`, `UNSYNCED LYRICS`, `UNSYNCEDLYRICS`, `SYNCEDLYRICS`, `SYNCED LYRICS`
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1373`.
 
-### artwork.getMetadata 
-
-获取曲目的基本元数据信息。显式传入 path 时会自动规范化路径。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✗ | 音频文件路径（省略则使用当前播放曲目） |
+| `directory` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","images":"...","success":true}`
 
-```json
-{
-    "title": "Let It Be",
-    "artist": "The Beatles",
-    "album": "Let It Be",
-    "albumArtist": "The Beatles",
-    "year": "1970",
-    "genre": "Rock",
-    "trackNumber": "6",
-    "discNumber": "1",
-    "hasEmbedded": true,
-    "hasLyrics": true
-}
+```js
+const result = await fb2k.invoke('artwork.getFolderImages', { directory: /* value */ });
 ```
 
-### artwork.getBatch（DEPRECATED）
+### artwork.getForTrack
 
-::: danger 已废弃
-请迁移到 `artwork.getFb2kUrlByPathBatch`。此 API 仍返回 Base64 dataUrl，性能较差。
-:::
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1359`.
 
-```javascript
-// ❌ 旧方式
-const result = await fb2k.invoke('artwork.getBatch', { paths });
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Optional; default . |
+| `type` | `string` | No | Optional; default front. |
 
-// ✅ 新方式
-const result = await fb2k.invoke('artwork.getFb2kUrlByPathBatch', { paths, type: 'front' });
+**Returns**: `{"available":"...","dataUrl":"...","error":"...","height":"...","mimeType":"...","path":"...","size":"...","type":"...","width":"..."}`
+
+```js
+const result = await fb2k.invoke('artwork.getForTrack', { path: /* value */, type: /* value */ });
 ```
+
+### artwork.getLyrics
+
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1366`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Optional; default . |
+
+**Returns**: `{"available":"...","error":"...","lyrics":"...","synced":"...","tag":"..."}`
+
+```js
+const result = await fb2k.invoke('artwork.getLyrics', { path: /* value */ });
+```
+
+### artwork.getMetadata
+
+Public API method. Runtime authority: `src/api/ArtworkApi.cpp:1368`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Optional; default . |
+
+**Returns**: `{"album":"...","albumArtist":"...","artist":"...","available":true,"discNumber":"...","error":"...","genre":"...","hasEmbedded":true,"hasLyrics":true,"title":"...","trackNumber":"...","year":"..."}`
+
+```js
+const result = await fb2k.invoke('artwork.getMetadata', { path: /* value */ });
+```
+
+## Contract notes
+
+- Valid artwork `type` values are `front` (also `cover_front`), `back` (also `cover_back`), `disc`, `icon`, and `artist`. Omitted `type` means `front`; an unknown value returns `INVALID_PARAMS`.
+- `artwork.getByPath` and `artwork.getForTrack` accept native paths, `file://` paths, and `path|subsong:N`. They reject `file-relative://` because an extractor has no playlist context; use `artwork.getByPlaylistItem` for those items.
+- Direct artwork reads return a `data:image/...` URL. `artwork.getFb2kUrl` and its path variants instead return a `fb2k://artwork/` URL in the `dataUrl` field. `maxSize` is applied only when it is greater than `0`.
+- `artwork.getFb2kUrlByPathBatch` requires exactly one array input named `paths` or `items`. Array entries may be strings or objects with a `path` member. It has no top-level `path` parameter. The result is `{ success, artworks }`, with one `available`/`error` result for each supplied entry.
+- `artwork.getAvailableArtwork` reports embedded items and external source labels such as `folder:cover.jpg`. The implementation opens files through `album_art_extractor`; absence of artwork is represented by `available: false`, not necessarily an error.
+- `artwork.getFolderImages` reads a directory and returns matching `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, and `.webp` files. Its `directory` argument is subject to the runtime `Read` security level.

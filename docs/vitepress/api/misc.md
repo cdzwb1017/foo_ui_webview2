@@ -1,673 +1,697 @@
-# 其他 API
+# Misc API
 
-v1.2.0 新增。提供系统路径查询和常用 UI 命令。
+English API reference for the `clipboard`, `console`, `log`, `menu`, `misc`, `panel`, `system`, `test` family.
 
-## Misc API - 系统路径与命令
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-### misc.getFoobarPath 
+## clipboard
 
-获取 foobar2000 安装目录路径。
+### clipboard.read
 
-**返回值**: `{ "path": "C:\\\\...\\\\foobar2000", "value": "C:\\\\...\\\\foobar2000" }`
+Public API method. Runtime authority: `src/api/ClipboardApi.cpp:319`.
 
-::: tip TIP
-`value` 是 `path` 的别名，两者值相同。
-:::
+_No parameters._
 
-```javascript
-const result = await fb2k.invoke('misc.getFoobarPath');
-console.log('安装目录:', result.path);
+**Returns**: `{"files":[],"hasFiles":true,"hasImage":true,"hasText":true,"success":true,"text":"..."}`
+
+```js
+const result = await fb2k.invoke('clipboard.read');
 ```
 
-### misc.getProfilePath 
+### clipboard.write
 
-获取用户配置文件目录路径。
+Public API method. Runtime authority: `src/api/ClipboardApi.cpp:322`.
 
-**返回值**: `{ "path": "C:\\\\...\\\\foobar2000\\\\profile", "value": "C:\\\\...\\\\foobar2000\\\\profile" }`
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `text` | `string` | No | Optional; default . |
 
-```javascript
-const result = await fb2k.invoke('misc.getProfilePath');
-console.log('配置目录:', result.path);
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('clipboard.write', { text: /* value */ });
 ```
 
-### misc.getComponentPath 
+### clipboard.writeFiles
 
-获取插件组件目录路径。
+Public API method. Runtime authority: `src/api/ClipboardApi.cpp:328`.
 
-**返回值**: `{ "path": "C:\\\\...\\\\foobar2000\\\\user-components\\\\foo_ui_webview2", "value": "..." }`
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `paths` | `array` | Yes | Required. |
 
-```javascript
+**Returns**: `{"error":"...","fileCount":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('clipboard.writeFiles', { paths: /* value */ });
+```
+
+### clipboard.writeHTML
+
+Public API method. Runtime authority: `src/api/ClipboardApi.cpp:325`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `html` | `string` | No | Optional; default . |
+| `plainText` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","htmlWritten":"...","success":true,"textWritten":"..."}`
+
+```js
+const result = await fb2k.invoke('clipboard.writeHTML', { html: /* value */, plainText: /* value */ });
+```
+
+## console
+
+### console.error
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:308`.
+
+Provide one of `message` or `args`. Empty payloads fail with `message is required`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `string` | No | Optional log text. Non-string values are serialized. |
+| `args` | `array` | No | Optional argument list joined with spaces when `message` is omitted. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('console.error', { message: 'failed to load artwork' });
+```
+
+### console.log
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:302`.
+
+Provide one of `message` or `args`. Empty payloads fail with `message is required`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `string` | No | Optional log text. Non-string values are serialized. |
+| `args` | `array` | No | Optional argument list joined with spaces when `message` is omitted. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('console.log', { message: 'track started' });
+```
+
+### console.warn
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:305`.
+
+Provide one of `message` or `args`. Empty payloads fail with `message is required`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `string` | No | Optional log text. Non-string values are serialized. |
+| `args` | `array` | No | Optional argument list joined with spaces when `message` is omitted. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('console.warn', { args: ['retry', 3] });
+```
+
+## log
+
+### log.clear
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:317`.
+
+_No parameters._
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('log.clear');
+```
+
+### log.read
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:314`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `lines` | `integer` | No | Optional; default 100. |
+
+**Returns**: `{"content":"...","error":"...","lineCount":"...","lines":"...","success":true,"totalLines":"..."}`
+
+```js
+const result = await fb2k.invoke('log.read', { lines: /* value */ });
+```
+
+### log.write
+
+Public API method. Runtime authority: `src/api/ConsoleApi.cpp:311`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `message` | `string` | No | Optional; default omitted. |
+| `args` | `array` | No | Optional; default []. |
+| `file` | `string` | No | Optional; default omitted. |
+| `level` | `string` | No | Optional; default info. |
+| `append` | `boolean` | No | Optional; default true. |
+| `timestamp` | `boolean` | No | Optional; default true. |
+
+**Returns**: `{"error":"...","path":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('log.write', { message: /* value */, args: /* value */, append: /* value */, file: /* value */, level: /* value */, timestamp: /* value */ });
+```
+
+## menu
+
+### menu.close
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1141-1146`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `reason` | `string` | No | `api` | Optional close reason passed to the overlay host; default `api`. |
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('menu.close', { reason: 'api' });
+```
+
+### menu.getContextMenu
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1318`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `handles` | `array` | No | Optional; default []. |
+| `i18n` | `boolean` | No | Optional; default true. |
+| `locale` | `string` | No | Optional; default auto. |
+| `mode` | `string` | No | Optional; default auto. |
+| `withAvailability` | `boolean` | No | Optional; default true. |
+
+**Returns**: `{"Failed to initialize context menu":"...","error":"...","i18n":"...","items":"...","locale":"...","mode":"...","success":true,"withAvailability":"..."}`
+
+```js
+const result = await fb2k.invoke('menu.getContextMenu', { i18n: /* value */, locale: /* value */, mode: /* value */, withAvailability: /* value */, handles: /* value */ });
+```
+
+### menu.getMainMenu
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1317`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `i18n` | `boolean` | No | Optional; default true. |
+| `locale` | `string` | No | Optional; default auto. |
+| `root` | `string` | No | Optional; default . |
+| `withAvailability` | `boolean` | No | Optional; default true. |
+
+**Returns**: `{"error":"...","fallback":"...","items":[],"success":true}`
+
+```js
+const result = await fb2k.invoke('menu.getMainMenu', { i18n: /* value */, locale: /* value */, root: /* value */, withAvailability: /* value */ });
+```
+
+### menu.runContextCommand
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1316`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","guid":"...","itemCount":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('menu.runContextCommand', { command: /* value */ });
+```
+
+### menu.runContextCommandById
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1319`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `integer` | No | Optional; default -1. |
+| `mode` | `string` | No | Optional; default auto. |
+| `handles` | `array` | No | Optional; default []. |
+
+**Returns**: `{"Failed to initialize context menu":"...","error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('menu.runContextCommandById', { id: /* value */, mode: /* value */, handles: /* value */ });
+```
+
+### menu.runMainMenuCommand
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1315`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `command` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","guid":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('menu.runMainMenuCommand', { command: /* value */ });
+```
+
+### menu.show
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1321`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `items` | `array` | No | Optional; default omitted. |
+| `x` | `integer` | No | Optional; default -1. |
+| `y` | `integer` | No | Optional; default -1. |
+
+**Returns**: `{"error":"...","menuId":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('menu.show', { items: /* value */, x: /* value */, y: /* value */ });
+```
+
+### menu.showNativePopup
+
+Public API method. Runtime authority: `src/api/MenuApi.cpp:1320`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `handles` | `array` | No | Optional; default []. |
+| `mode` | `string` | No | Optional; default playlist. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('menu.showNativePopup', { handles: /* value */, mode: /* value */ });
+```
+
+## misc
+
+### misc.exit
+
+Public API method. Runtime authority: `src/api/MiscApi.cpp:132`.
+
+_No parameters._
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('misc.exit');
+```
+
+### misc.getComponentPath
+
+Public API method. Runtime authority: `src/api/MiscApi.cpp:126`.
+
+_No parameters._
+
+**Returns**: `{"path":"...","value":"..."}`
+
+```js
 const result = await fb2k.invoke('misc.getComponentPath');
-console.log('插件目录:', result.path);
 ```
 
-### misc.showConsole 
+### misc.getFoobarPath
 
-显示 foobar2000 控制台窗口。
+Public API method. Runtime authority: `src/api/MiscApi.cpp:124`.
 
-**返回值**: `{ "success": true }`
+_No parameters._
 
-```javascript
-await fb2k.invoke('misc.showConsole');
+**Returns**: `{"path":"...","value":"..."}`
+
+```js
+const result = await fb2k.invoke('misc.getFoobarPath');
 ```
 
-### misc.showPreferences 
+### misc.getProfilePath
 
-打开 foobar2000 首选项对话框。
+Public API method. Runtime authority: `src/api/MiscApi.cpp:125`.
 
-**返回值**: `{ "success": true }`
+_No parameters._
 
-```javascript
-await fb2k.invoke('misc.showPreferences');
+**Returns**: `{"path":"...","value":"..."}`
+
+```js
+const result = await fb2k.invoke('misc.getProfilePath');
 ```
 
-### misc.showLibrarySearch 
+### misc.restart
 
-打开媒体库搜索 UI。
+Public API method. Runtime authority: `src/api/MiscApi.cpp:131`.
 
-| 参数 | 类型 | 必填 | 描述 |
+_No parameters._
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('misc.restart');
+```
+
+### misc.showConsole
+
+Public API method. Runtime authority: `src/api/MiscApi.cpp:127`.
+
+_No parameters._
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('misc.showConsole');
+```
+
+### misc.showLibrarySearch
+
+Public API method. Runtime authority: `src/api/MiscApi.cpp:129`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| query | string | ✗ | 搜索关键词 |
+| `query` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "query": "..." }`
+**Returns**: `{"query":"...","success":true}`
 
-### misc.showPopupMessage 
-
-显示弹出消息对话框。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | string | ✓ | 消息内容 |
-| title | string | ✗ | 标题（默认 "Message"） |
-
-### misc.restart 
-
-重启 foobar2000。
-
-**返回值**: `{ "success": true }`
-
-### misc.exit 
-
-退出 foobar2000。
-
-**返回值**: `{ "success": true }`
-
-```javascript
-// 获取路径
-const { path } = await fb2k.invoke('misc.getFoobarPath');
-console.log('foobar2000 path:', path);
-
-// 显示控制台
-await fb2k.invoke('misc.showConsole');
-
-// 弹出消息
-await fb2k.invoke('misc.showPopupMessage', { message: 'Hello!', title: 'Test' });
+```js
+const result = await fb2k.invoke('misc.showLibrarySearch', { query: /* value */ });
 ```
 
-v1.2.0 新增。提供主菜单和上下文菜单的执行和查询。
+### misc.showPopupMessage
 
-## Menu API - 菜单
+Public API method. Runtime authority: `src/api/MiscApi.cpp:130`.
 
-### menu.runMainMenuCommand 
-
-执行主菜单命令。支持路径形式、命令名或 GUID。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| command | string | ✓ | 菜单路径、命令名或 GUID |
+| `message` | `string` | No | Optional; default . |
+| `msg` | `string` | No | Optional; default . |
+| `title` | `string` | No | Optional; default Message. |
 
-```javascript
-// 路径形式
-await fb2k.invoke('menu.runMainMenuCommand', { command: 'File/Preferences' });
-// 命令名
-await fb2k.invoke('menu.runMainMenuCommand', { command: 'Preferences' });
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('misc.showPopupMessage', { message: /* value */, msg: /* value */, title: /* value */ });
+```
+## Owner-family behavior and limits
+
+- `clipboard.writeFiles` accepts media-read-authorized paths. `clipboard.writeHTML` writes HTML plus a plain-text fallback; `clipboard.read` reports only formats currently available from the Windows clipboard.
+- `console.log`, `console.warn`, `console.error`, and `log.write` require one of `message` or `args`. `log.write.file`, when accepted, is only a leaf `.log` or `.txt` filename under the profile directory; paths, traversal and Windows reserved device names are rejected by the runtime.
+- `menu.getContextMenu` and `menu.runContextCommandById` use `mode` to select `handles`, `nowPlaying`, `selection`, or `playlist` context. In `handles` mode, every path is media-access validated before a handle is created. `menu.showNativePopup` uses screen cursor coordinates and returns before the native menu is displayed.
+- `menu.show` opens the self-drawn overlay after resource validation. `menu.close` only closes the active overlay; `menu.__*` endpoints are internal and are not public APIs.
+- `misc.showPopupMessage` accepts `message`, falling back to `msg`, and defaults `title` to `"Message"`. The restart and exit methods request the corresponding foobar2000 standard command.
+- `panel.setConfig` changes only its documented panel fields. `system.*` reports registered runtime and plugin information; `test.*` is diagnostic surface rather than application behavior.
+
+### misc.showPreferences
+
+Public API method. Runtime authority: `src/api/MiscApi.cpp:128`.
+
+_No parameters._
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('misc.showPreferences');
 ```
 
-### menu.runContextCommand 
+## panel
 
-执行上下文菜单命令（作用于当前选择/播放的曲目）。
+### panel.getConfig
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| command | string | ✓ | 命令名或 GUID |
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2470`.
 
-```javascript
-await fb2k.invoke('menu.runContextCommand', { command: 'Playback Statistics/Rating/5' });
+_No parameters._
+
+**Returns**: `{"config":{},"success":true}`
+
+```js
+const result = await fb2k.invoke('panel.getConfig');
 ```
 
-### menu.getMainMenu 
+### panel.setConfig
 
-获取主菜单树结构。
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2471`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| root | string | ✗ | 根菜单名（如 "File"、"Playback"），空则返回全部 |
-| i18n | boolean | ✗ | 是否返回本地化名称 |
-| locale | string | ✗ | 目标区域设置（配合 i18n 使用） |
-| withAvailability | boolean | ✗ | 是否返回命令可用性状态 |
+| `enableDragDrop` | `boolean` | No | Optional; default omitted. |
+| `grabFocus` | `boolean` | No | Optional; default omitted. |
+| `panelName` | `string` | No | Optional; default omitted. |
+| `transparentBackground` | `boolean` | No | Optional; default omitted. |
 
-**返回值**: `{ "success": true, "root": "File", "items": [...] }`
+**Returns**: `{"changed":"...","error":"...","success":true}`
 
-每个 item 包含 `type`（"command"/"submenu"/"separator"）、`label`、`flags`、`guid`、`path`、`children` 等字段。
-
-### menu.getContextMenu 
-
-获取上下文菜单树结构。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| mode | string | ✗ | "auto"/"handles"/"playlist"/"nowPlaying" |
-| handles | string[] | ✗ | 曲目路径数组（mode=handles 时必填） |
-| i18n | boolean | ✗ | 是否返回本地化名称 |
-| locale | string | ✗ | 目标区域设置（配合 i18n 使用） |
-| withAvailability | boolean | ✗ | 是否返回命令可用性状态 |
-
-**返回值**: `{ "success": true, "mode": "nowPlaying", "items": [...] }`
-
-### menu.runContextCommandById 
-
-通过 commandId 执行上下文菜单命令（配合 `menu.getContextMenu` 使用）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| id | number | ✓ | 菜单项 commandId |
-| mode | string | ✗ | 同 getContextMenu |
-| handles | string[] | ✗ | 同 getContextMenu |
-
-```javascript
-// 获取菜单树并执行
-const menu = await fb2k.invoke('menu.getContextMenu', { mode: 'nowPlaying' });
-// 找到目标 item 后执行
-await fb2k.invoke('menu.runContextCommandById', { id: item.commandId, mode: 'nowPlaying' });
+```js
+const result = await fb2k.invoke('panel.setConfig', { enableDragDrop: /* value */, grabFocus: /* value */, panelName: /* value */, transparentBackground: /* value */ });
 ```
 
-### menu.showNativePopup 
+## system
 
-在光标位置弹出 foobar2000 原生上下文菜单（Win32 TrackPopupMenu）。支持播放列表选中项、当前播放曲目或指定曲目列表。
+### system.getApiStats
 
-| 参数 | 类型 | 必填 | 描述 |
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:490`.
+
+_No parameters._
+
+**Returns**: `{"registered":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('system.getApiStats');
+```
+
+### system.getApisByNamespace
+
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:454`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| mode | string | ✗ | 菜单模式: "playlist"（默认，当前选中项）、"nowPlaying"（当前播放曲目）、"handles"（指定曲目） |
-| handles | string[] | ✗ | 曲目路径数组（仅 mode: "handles" 时必填） |
+| `namespace` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: JSON object from the runtime handler.
 
-::: tip 提示
-菜单通过 Win32 `SetTimer` 延迟执行，以避免在 WebView2 桥接回调中阻塞。坐标始终使用系统光标位置（最可靠，不受 DPI/CSS 像素差异影响）。
-:::
-
-```javascript
-// 播放列表选中项的原生右键菜单
-await fb2k.invoke('menu.showNativePopup', { mode: 'playlist' });
-
-// 当前播放曲目的原生右键菜单
-await fb2k.invoke('menu.showNativePopup', { mode: 'nowPlaying' });
-
-// 指定曲目的原生右键菜单
-await fb2k.invoke('menu.showNativePopup', {
-    mode: 'handles',
-    handles: ['C:\\\\Music\\\\song.flac']
-});
+```js
+const result = await fb2k.invoke('system.getApisByNamespace', { namespace: /* value */ });
 ```
 
-## System API 
+### system.getDPI
 
-API 发现机制和外部插件注册管理。
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2426`.
 
-### system.listAvailableApis 
+_No parameters._
 
-列出所有可用 API，包括内置和外部插件注册的 API。
+**Returns**: `{"dpi":"...","scale":"..."}`
 
-| 参数 | 类型 | 必填 | 描述 |
+```js
+const result = await fb2k.invoke('system.getDPI');
+```
+
+### system.getLocale
+
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2429`.
+
+_No parameters._
+
+**Returns**: `{"country":"...","language":"...","locale":"..."}`
+
+```js
+const result = await fb2k.invoke('system.getLocale');
+```
+
+### system.getRegisteredPlugins
+
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:496`.
+
+_No parameters._
+
+**Returns**: `{"registered":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('system.getRegisteredPlugins');
+```
+
+### system.getTheme
+
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2425`.
+
+_No parameters._
+
+**Returns**: `{"accentColor":"...","darkMode":"...","isDark":"...","transparency":"..."}`
+
+```js
+const result = await fb2k.invoke('system.getTheme');
+```
+
+### system.isPluginRegistered
+
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:509`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| includeInternal | boolean | ✗ | 是否包含内部 API（默认 true） |
-| includeExternal | boolean | ✗ | 是否包含外部插件 API |
+| `namespace` | `string` | No | Optional; default . |
 
-### system.getApisByNamespace 
+**Returns**: `{"registered":"...","success":true}`
 
-获取指定命名空间下的所有 API。
+```js
+const result = await fb2k.invoke('system.isPluginRegistered', { namespace: /* value */ });
+```
 
-| 参数 | 类型 | 必填 | 描述 |
+### system.listAvailableApis
+
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:438`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| namespace | string | ✓ | 命名空间名称 |
+| `includeExternal` | `boolean` | No | Optional; default true. |
+| `includeInternal` | `boolean` | No | Optional; default true. |
 
-### system.searchApis 
+**Returns**: JSON object from the runtime handler.
 
-搜索 API（支持方法名和描述的模糊匹配）。
+```js
+const result = await fb2k.invoke('system.listAvailableApis', { includeExternal: /* value */, includeInternal: /* value */ });
+```
 
-| 参数 | 类型 | 必填 | 描述 |
+### system.searchApis
+
+Public API method. Runtime authority: `src/api/PluginRegistry.cpp:472`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| query | string | ✓ | 搜索关键词 |
+| `query` | `string` | No | Optional; default . |
 
-### system.getApiStats 
+**Returns**: JSON object from the runtime handler.
 
-获取 API 统计信息。返回内置/外部 API 数量及命名空间列表。
+```js
+const result = await fb2k.invoke('system.searchApis', { query: /* value */ });
+```
 
-### system.getRegisteredPlugins 
+## test
 
-获取所有已注册的外部插件列表。
+### test.echo
 
-### system.isPluginRegistered 
+Public API method. Runtime authority: `src/api/PlaybackApi.cpp:697`.
 
-检查指定插件是否已注册。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| namespace | string | ✓ | 插件命名空间 |
+| `message` | `json` | No | Optional; default omitted. |
 
-```javascript
-const result = await fb2k.invoke('system.isPluginRegistered', { namespace: 'my_plugin' });
-if (result.registered) {
-    await fb2k.invoke('my_plugin.doSomething');
-}
+**Returns**: `{"echo":"...","input":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('test.echo', { message: /* value */ });
 ```
 
-### system.getTheme 
+### test.ping
 
-获取系统主题信息。
+Public API method. Runtime authority: `src/api/PlaybackApi.cpp:698`.
 
-**返回值**: `{ "darkMode": true, "accentColor": "#0078D4", "transparency": true }`
+_No parameters._
 
-```javascript
-const theme = await fb2k.invoke('system.getTheme');
-console.log(theme.darkMode ? '深色模式' : '浅色模式');
-```
+**Returns**: `{"pong":"...","timestamp":"..."}`
 
-### system.getDPI 
-
-获取当前窗口的 DPI 缩放信息。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "dpi": 144,
-    "scale": 1.5
-}
-```
-
-| 字段 | 类型 | 描述 |
-| --- | --- | --- |
-| dpi | number | 原始 DPI 值（96 = 100%） |
-| scale | number | 缩放比例（1.0 = 100%） |
-
-### system.getLocale 
-
-获取系统区域设置信息。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "locale": "zh-CN",
-    "language": "中文(简体)",
-    "country": "中国"
-}
-```
-
-```javascript
-const locale = await fb2k.invoke('system.getLocale');
-console.log(`区域: ${locale.locale}, 语言: ${locale.language}`);
-```
-
-## Test API 
-
-### test.echo 
-
-回显传入的消息，用于测试 bridge 连接。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | any | - | 要回显的内容 |
-
-**返回值**: `{ "echo": "hello", "input": { "message": "hello" } }`
-
-```javascript
-const result = await fb2k.invoke('test.echo', { message: 'hello' });
-console.log(result.echo); // "hello"
-```
-
-### test.ping 
-
-心跳检测，返回当前服务端时间戳。
-
-- **参数**: 无
-
-**返回值**: `{ "pong": true, "timestamp": 1707500000 }`
-
-```javascript
+```js
 const result = await fb2k.invoke('test.ping');
-console.log('pong:', result.timestamp);
 ```
 
-## Panel API - 面板配置 
+## Phase 3 contract supplements
 
-### panel.getConfig 
+The sections below close public-contract findings from the strict parameter audit without replacing existing explanations.
 
-获取当前面板的配置信息。
+<!-- phase3-supplement:log.write -->
+### Contract supplement: `log.write`
 
-- **参数**: 无
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConsoleApi.cpp:140-221`.
 
-**返回值**:
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `message` | `string` | No | omitted | Optional; default omitted. |
+| `args` | `array` | No | `[]` | Optional; default []. |
+| `file` | `string` | No | omitted | Optional; default omitted. |
+| `level` | `string` | No | `info` | Optional; default info. |
+| `append` | `boolean` | No | `true` | Optional; default true. |
+| `timestamp` | `boolean` | No | `true` | Optional; default true. |
 
-```json
-{
-    "success": true,
-    "config": {
-        "panelName": "MyPanel",
-        "templateName": "default",
-        "edgeStyle": "none",
-        "urlOverride": "",
-        "transparentBackground": false,
-        "grabFocus": true,
-        "enableDragDrop": false,
-        "enableDevTools": false
-    }
-}
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `error` | `string` | Yes |
+| `success` | `boolean` | No |
+| `path` | `json` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('log.write', { message: /* value */, args: /* value */, file: /* value */, level: /* value */, append: /* value */, timestamp: /* value */ });
 ```
+<!-- phase3-supplement:menu.getContextMenu -->
+### Contract supplement: `menu.getContextMenu`
 
-### panel.setConfig 
+Phase 3 verified contract supplement. Runtime authority: `src/api/MenuApi.cpp:980-1024`.
 
-设置面板配置。仅允许修改白名单字段。
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `handles` | `array` | No | `[]` | Optional; default []. |
+| `i18n` | `boolean` | No | `true` | Optional; default true. |
+| `locale` | `string` | No | `auto` | Optional; default auto. |
+| `mode` | `string` | No | `auto` | Optional; default auto. |
+| `withAvailability` | `boolean` | No | `true` | Optional; default true. |
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| panelName | string | ✗ | 面板名称 |
-| transparentBackground | boolean | ✗ | 透明背景 |
-| grabFocus | boolean | ✗ | 是否获取焦点 |
-| enableDragDrop | boolean | ✗ | 启用拖放 |
+#### Return fields
 
-::: warning WARNING
-`enableDevTools`、`urlOverride`、`templateName` 仅可通过配置对话框修改。
-:::
+| Field | Type | Optional |
+| --- | --- | --- |
+| `error` | `string` | Yes |
+| `success` | `boolean` | No |
+| `i18n` | `json` | No |
+| `items` | `json` | No |
+| `locale` | `json` | No |
+| `mode` | `json` | No |
+| `withAvailability` | `json` | No |
 
-**返回值**: `{ "success": true, "changed": true }`
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
 
-## Clipboard API - 剪贴板 (4 个 API) 
-
-### clipboard.read 
-
-读取剪贴板内容。支持检测文本、文件列表、图片。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "hasText": true,
-    "hasImage": false,
-    "hasFiles": true,
-    "text": "剪贴板文本",
-    "files": ["C:\\\\Music\\\\song.flac"]
-}
+```js
+const result = await fb2k.invoke('menu.getContextMenu', { handles: /* value */, i18n: /* value */, locale: /* value */, mode: /* value */, withAvailability: /* value */ });
 ```
+<!-- phase3-supplement:menu.runContextCommandById -->
+### Contract supplement: `menu.runContextCommandById`
 
-```javascript
-const clip = await fb2k.invoke('clipboard.read');
-if (clip.hasText) console.log('文本:', clip.text);
-if (clip.hasFiles) console.log('文件:', clip.files);
+Phase 3 verified contract supplement. Runtime authority: `src/api/MenuApi.cpp:1024-1045`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `id` | `integer` | No | `-1` | Optional; default -1. |
+| `mode` | `string` | No | `auto` | Optional; default auto. |
+| `handles` | `array` | No | `[]` | Optional; default []. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `error` | `string` | Yes |
+| `success` | `boolean` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('menu.runContextCommandById', { id: /* value */, mode: /* value */, handles: /* value */ });
 ```
+<!-- phase3-supplement:misc.showPopupMessage -->
+### Contract supplement: `misc.showPopupMessage`
 
-### clipboard.write 
+Phase 3 verified contract supplement. Runtime authority: `src/api/MiscApi.cpp:97-105`.
 
-写入文本到剪贴板。
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `message` | `string` | No | `` | Optional; default . |
+| `msg` | `string` | No | `` | Optional; default . |
+| `title` | `string` | No | `Message` | Optional; default Message. |
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| text | string | ✓ | 要写入的文本 |
+#### Return fields
 
-**返回值**: `{ "success": true }`
+| Field | Type | Optional |
+| --- | --- | --- |
+| `success` | `boolean` | No |
 
-### clipboard.writeHTML 
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
 
-写入 HTML 到剪贴板。同时设置 CF_HTML 和 CF_UNICODETEXT 格式。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| html | string | ✓ | HTML 内容 |
-| plainText | string | ✗ | 纯文本备用（默认使用 html 原值） |
-
-**返回值**: `{ "success": true }`
-
-```javascript
-await fb2k.invoke('clipboard.writeHTML', {
-    html: '<b>艺术家</b> - <i>专辑</i>',
-    plainText: '艺术家 - 专辑'
-});
+```js
+const result = await fb2k.invoke('misc.showPopupMessage', { message: /* value */, msg: /* value */, title: /* value */ });
 ```
-
-### clipboard.writeFiles 
-
-写入文件列表到剪贴板（CF_HDROP 格式，可粘贴到资源管理器）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| paths | string[] | ✓ | 文件路径数组 |
-
-**返回值**: `{ "success": true, "fileCount": 3 }`
-
-```javascript
-await fb2k.invoke('clipboard.writeFiles', {
-    paths: ['C:\\\\Music\\\\song1.flac', 'C:\\\\Music\\\\song2.flac']
-});
-```
-
-## Console & Log API - 日志 (6 个 API) 
-
-### console.log 
-
-输出普通日志到 foobar2000 控制台。前缀 `[WebView]`。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | string/any | ✗ | 日志内容（非字符串自动 JSON 序列化） |
-| args | any[] | ✗ | 参数数组（空格拼接，与 message 二选一） |
-
-**返回值**: `{ "success": true }`
-
-```javascript
-await fb2k.invoke('console.log', { message: '普通日志' });
-await fb2k.invoke('console.log', { args: ['用户:', userName, '播放次数:', 42] });
-```
-
-### console.warn 
-
-输出警告日志到 foobar2000 控制台。前缀为 `[WebView][WARN]`。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | string/any | ✗ | 警告内容 |
-| args | any[] | ✗ | 参数数组 |
-
-**返回值**: `{ "success": true }`
-
-### console.error 
-
-输出错误日志到 foobar2000 控制台。前缀为 `[WebView][ERROR]`。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | string/any | ✗ | 错误内容 |
-| args | any[] | ✗ | 参数数组 |
-
-**返回值**: `{ "success": true }`
-
-### log.write 
-
-写入日志文件。默认写入 `%profile%\\webview_ui.log`。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| message | string | ✓ | 日志内容 |
-| level | string | ✗ | 日志级别（默认 info） |
-| append | boolean | ✗ | 是否追加（默认 true） |
-| timestamp | boolean | ✗ | 是否添加时间戳（默认 true） |
-| file | string | ✗ | 自定义文件名（仅允许文件名，无路径分隔符）。扩展名限 .log / .txt（其他扩展名静默回退到默认日志文件），禁止 Windows 保留设备名和 .. 路径遍历 |
-
-**返回值**: `{ "success": true, "path": "C:\\\\...\\\\webview_ui.log" }`
-
-```javascript
-await fb2k.invoke('log.write', {
-    message: '播放开始',
-    level: 'info',
-    file: 'playback.log'
-});
-```
-
-### log.read 
-
-读取日志文件内容。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| lines | number | ✗ | 返回最后 N 行（默认 100） |
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "content": "...",
-    "lines": ["[2026-02-10 12:00:00.123][INFO] ..."],
-    "lineCount": 50,
-    "totalLines": 200
-}
-```
-
-### log.clear 
-
-清空日志文件。
-
-- **参数**: 无
-
-**返回值**: `{ "success": true }`
-
-## Lyrics API - 歌词 (3 个 API) 
-
-### lyrics.get 
-
-获取曲目歌词。支持嵌入式歌词和外部 .lrc/.txt 文件。显式传入路径时会自动规范化（canonical path），支持 `path|subsong:N` 格式。支持按歌词类型和文件格式过滤。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✗ | 音频文件路径（省略则使用当前播放曲目） |
-| source | string | ✗ | 来源: "embedded", "file", "any"（默认 "any"） |
-| type | string | ✗ | 歌词类型: "synced", "unsynced", "any"（默认 "any"） |
-| format | string | ✗ | 文件格式（仅 source=file 时生效）: "lrc", "txt", "any"（默认 "any"） |
-
-**返回值**（找到时）:
-
-```json
-{
-    "success": true,
-    "available": true,
-    "path": "C:\\\\Music\\\\song.flac",
-    "source": "embedded",
-    "lyrics": "[00:12.34]First line...",
-    "synced": true
-}
-```
-
-**返回值**（未找到）: `{ "success": true, "available": false, "path": "..." }`
-
-> 搜索顺序：嵌入式标签（LYRICS / UNSYNCED LYRICS / SYNCEDLYRICS / UNSYNCEDLYRICS）→ 外部 .lrc → 外部 .txt
-
-> 外部文件模式返回额外字段 `sourcePath`。type 过滤下嵌入模式返回额外字段 `tagName`。
-
-```javascript
-const result = await fb2k.invoke('lyrics.get', { source: 'any' });
-if (result.available) {
-    console.log(result.synced ? 'LRC 同步歌词' : '纯文本歌词');
-    console.log(result.lyrics);
-}
-
-// 仅获取同步歌词
-const synced = await fb2k.invoke('lyrics.get', { type: 'synced' });
-
-// 读取 .txt 格式歌词
-const txt = await fb2k.invoke('lyrics.get', { format: 'txt' });
-```
-
-### lyrics.save 
-
-保存歌词到外部文件（.lrc/.txt）、音频文件内嵌标签和/或配置文件夹。支持一次调用同时写入多个目标。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-| lyrics | string | ✓ | 歌词内容 |
-| target | string \| string[] | ✗ | 保存目标: "file"（默认）/ "embedded" / "config" / "all"，或数组 ["file","config"] |
-| filename | string | ✗ | 自定义文件名（默认与音频同名） |
-| tagName | string | ✗ | 嵌入标签名（默认 "LYRICS"，仅 target 含 embedded） |
-| format | string | ✗ | 文件格式: "lrc"（默认）/ "txt"（仅 target 含 file/config） |
-
-**Target 说明**: `"file"` 保存到音轨同目录，`"embedded"` 写入标签，`"config"` 保存到 `%profile%\lyrics\`，`"all"` 三种全部。
-
-**返回值**（单目标）: `{ "success": true, "savedTo": "C:\\\\Music\\\\song.lrc" }`
-
-**返回值**（多目标）:
-
-```json
-{
-    "success": true,
-    "results": {
-        "file": { "success": true, "savedTo": "C:\\\\Music\\\\song.lrc" },
-        "embedded": { "success": true, "path": "...", "tagsApplied": { "LYRICS": "..." } },
-        "config": { "success": true, "savedTo": "...\\\\lyrics\\\\song.lrc" }
-    }
-}
-```
-
-```javascript
-// 保存到 .lrc 文件
-await fb2k.invoke('lyrics.save', {
-    path: 'C:\\\\Music\\\\song.flac',
-    lyrics: '[00:00.00]歌词第一行\\n[00:05.00]歌词第二行'
-});
-
-// 三合一：同时写入文件、标签和配置文件夹
-const all = await fb2k.invoke('lyrics.save', {
-    path: 'C:\\\\Music\\\\song.flac',
-    lyrics: '[00:01.00]Hello world',
-    target: 'all'
-});
-
-// 数组组合
-await fb2k.invoke('lyrics.save', {
-    path: 'C:\\\\Music\\\\song.flac',
-    lyrics: '[00:01.00]Hello world',
-    target: ['file', 'config']
-});
-```
-
-### lyrics.exists 
-
-检查歌词是否存在。同时检查嵌入式标签、.lrc 文件和 .txt 文件。显式传入路径时会自动规范化（canonical path）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-
-**返回值**:
-
-```json
-{
-    "exists": true,
-    "sources": ["embedded", "file:song.lrc", "file:song.txt"]
-}
-```
-
-```javascript
-const { exists, sources } = await fb2k.invoke('lyrics.exists', { path: trackPath });
-if (exists) console.log('歌词来源:', sources);
-```
-
-::: tip Selection API
-选择管理 API（`selection.*`）已移至 [Queue & Selection API](./queue) 页面。
-:::

@@ -1,324 +1,226 @@
-# UI & Keyboard & DnD API 
+# Ui Interaction API
 
-界面交互、快捷键注册、拖放操作。共13 个 API。
+English API reference for the `dnd`, `keyboard`, `ui` family.
 
-## UI API - 界面交互 (5 个 API) 
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-### ui.showCustomMenu 
+## dnd
 
-显示自定义右键菜单。支持子菜单、分隔线、快捷键提示、勾选状态。
+### dnd.getDropZones
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| items | array | ✓ | 菜单项数组 |
-| x | number | ✗ | X 坐标（默认 0） |
-| y | number | ✗ | Y 坐标（默认 0） |
-| w | number | ✗ | 排除区域宽度（菜单不会覆盖此区域） |
-| h | number | ✗ | 排除区域高度 |
-| suppressDefault | boolean | ✗ | 强制禁用 WebView 默认右键菜单 |
+Public API method. Runtime authority: `src/api/DndApi.cpp:290`.
 
-**菜单项结构**:
+_No parameters._
 
-| 字段 | 类型 | 描述 |
-| --- | --- | --- |
-| id | string | 菜单项标识 |
-| label | string | 显示文本 |
-| type | string | "separator" 表示分隔线 |
-| enabled | boolean | 是否可用（默认 true） |
-| checked | boolean | 勾选状态（默认 false） |
-| shortcut | string | 快捷键提示文本 |
-| submenu | array | 子菜单项数组 |
+**Returns**: `{"count":"...","success":true,"zones":"..."}`
 
-**返回值**: `{ "success": true, "selectedId": "play" }`
-
-用户取消菜单时 `selectedId` 为 `null`。
-
-**事件**: 点击菜单项时触发 `ui:menuItemClicked` 事件，携带 `{ id, label }`。
-
-```javascript
-const result = await fb2k.invoke('ui.showCustomMenu', {
-    items: [
-        { id: 'play', label: '播放', shortcut: 'Enter' },
-        { type: 'separator' },
-        { id: 'edit', label: '编辑', submenu: [
-            { id: 'rename', label: '重命名' },
-            { id: 'delete', label: '删除', enabled: false }
-        ]},
-        { id: 'favorite', label: '收藏', checked: true }
-    ],
-    x: event.clientX,
-    y: event.clientY,
-    suppressDefault: true
-});
-if (result.selectedId) {
-    console.log('选中:', result.selectedId);
-}
-
-// 监听菜单项点击事件
-fb2k.on('ui:menuItemClicked', (data) => {
-    console.log(`菜单项 ${data.id} (${data.label}) 被点击`);
-    // 处理菜单项点击逻辑
-    switch (data.id) {
-        case 'play':
-            fb2k.invoke('playback.play');
-            break;
-        case 'rename':
-            showRenameDialog();
-            break;
-    }
-});
+```js
+const result = await fb2k.invoke('dnd.getDropZones');
 ```
 
-### ui.showToast 
+### dnd.registerDropZone
 
-显示 Toast 提示。通过触发 `ui:toast` 事件由前端渲染。
+Public API method. Runtime authority: `src/api/DndApi.cpp:281`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| message | string | ✓ | 提示消息 |
-| duration | number | ✗ | 显示时长 ms（默认 3000） |
-| type | string | ✗ | 类型: info, success, warning, error（默认 info） |
-| position | string | ✗ | 位置（默认 bottom-right） |
+| `accept` | `array` | No | Optional; default omitted. |
+| `event` | `string` | No | Optional; default dnd:drop. |
+| `selector` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"accept":"...","error":"...","event":"...","script":"...","selector":"...","success":true,"zoneId":"..."}`
 
-**事件**: 触发 `ui:toast` 事件，携带 `{ message, duration, type, position }`。
-
-```javascript
-// 调用 API 显示 Toast
-await fb2k.invoke('ui.showToast', {
-    message: '已添加到播放列表',
-    type: 'success',
-    duration: 2000
-});
-
-// 监听 Toast 事件（由前端渲染）
-fb2k.on('ui:toast', (data) => {
-    // 使用自定义 Toast 组件渲染
-    showToast({
-        message: data.message,
-        type: data.type,
-        duration: data.duration,
-        position: data.position
-    });
-});
+```js
+const result = await fb2k.invoke('dnd.registerDropZone', { accept: /* value */, event: /* value */, selector: /* value */ });
 ```
 
-::: tip 提示
-`ui.showToast` 不直接渲染 Toast，而是触发 `ui:toast` 事件。前端需要监听该事件并使用自己的 Toast 组件渲染。这样可以保持 UI 风格的一致性。
-:::
+### dnd.startDrag
 
-### ui.showNotification 
+Public API method. Runtime authority: `src/api/DndApi.cpp:287`.
 
-显示系统托盘通知（Windows Balloon Notification）。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| title | string | ✗ | 通知标题 |
-| body | string | ✗ | 通知内容（title 和 body 至少需要一个） |
-| silent | boolean | ✗ | 是否静音（默认 false） |
-| timeout | number | ✗ | 超时时间 ms（默认 5000） |
+| `data` | `string` | No | Optional; default . |
+| `paths` | `array` | Yes | Required. |
+| `type` | `string` | No | Optional; default text. |
 
-**返回值**: `{ "success": true, "id": 1 }`
+**Returns**: `{"error":"...","note":"...","success":true,"trackCount":"...","type":"..."}`
 
-```javascript
-const { id } = await fb2k.invoke('ui.showNotification', {
-    title: '正在播放',
-    body: 'Artist - Song Title',
-    timeout: 5000
-});
+```js
+const result = await fb2k.invoke('dnd.startDrag', { data: /* value */, paths: /* value */, type: /* value */ });
 ```
 
-### ui.hideNotification 
+### dnd.unregisterDropZone
 
-隐藏当前显示的系统托盘通知。
+Public API method. Runtime authority: `src/api/DndApi.cpp:284`.
 
-- **参数**: 无
-
-**返回值**: `{ "success": true }`
-
-### ui.showContextMenu 
-
-显示 foobar2000 原生上下文菜单。通常用于响应右键事件，在指定坐标位置弹出原生菜单。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| x | number | ✗ | 屏幕 X 坐标（默认使用当前鼠标位置） |
-| y | number | ✗ | 屏幕 Y 坐标（默认使用当前鼠标位置） |
+| `zoneId` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"error":"...","script":"...","success":true,"zoneId":"..."}`
 
-::: tip 提示
-坐标与实际鼠标位置差距超过 50 像素时，会自动使用当前鼠标位置以确保 DPI 缩放场景下的准确性。
-:::
-
-```javascript
-// 右键事件中弹出原生菜单
-document.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
-    fb2k.invoke('ui.showContextMenu', { x: e.screenX, y: e.screenY });
-});
+```js
+const result = await fb2k.invoke('dnd.unregisterDropZone', { zoneId: /* value */ });
 ```
 
-## Keyboard API - 快捷键 (4 个 API) 
+## keyboard
 
-### keyboard.registerHotkey 
+### keyboard.getRegisteredHotkeys
 
-注册全局热键。热键触发时通过 `keyboard:hotkey` 事件通知。
+Public API method. Runtime authority: `src/api/KeyboardApi.cpp:383`.
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| key | string | ✓ | 组合键字符串，如 "Ctrl+Alt+Space" |
-| action | string | ✓ | 热键触发时的动作标识 |
-| global | boolean | ✗ | 是否为全局热键（默认 true） |
+_No parameters._
 
-**返回值**: `{ "success": true, "id": 1 }`
+**Returns**: `{"hotkeys":"...","success":true}`
 
-**支持的修饰键**: `Ctrl`/`Control`, `Alt`, `Shift`, `Win`
-
-**支持的按键**: A-Z, 0-9, F1-F12, Space, Enter, Tab, Escape, Backspace, Delete, Insert, Home, End, PageUp, PageDown, 方向键, 媒体键 (PlayPause/MediaStop/NextTrack/PrevTrack/VolumeUp/VolumeDown/VolumeMute), 标点符号
-
-**事件**: `keyboard:hotkey` — 携带 `{ id, key, action }`
-
-```javascript
-const result = await fb2k.invoke('keyboard.registerHotkey', {
-    key: 'Ctrl+Alt+Space',
-    action: 'play_pause',
-    global: true
-});
-// result.id 可用于后续 unregisterHotkey
-
-fb2k.on('keyboard:hotkey', (data) => {
-    if (data.action === 'play_pause') fb2k.invoke('playback.playOrPause');
-});
+```js
+const result = await fb2k.invoke('keyboard.getRegisteredHotkeys');
 ```
 
-### keyboard.registerShortcut 
+### keyboard.registerHotkey
 
-注册 WebView 应用内快捷键（非全局）。
+Public API method. Runtime authority: `src/api/KeyboardApi.cpp:374`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ✓ | 组合键字符串 |
-| action | string | ✓ | 动作标识 |
+| `action` | `string` | No | Optional; default . |
+| `global` | `boolean` | No | Optional; default true. |
+| `key` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"error":"...","id":"...","success":true}`
 
-### keyboard.unregisterHotkey 
-
-注销热键。支持按 ID 或按 key 字符串注销。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| id | number | ✗ | 注册时返回的热键 ID |
-| key | string | ✗ | 组合键字符串（id 和 key 二选一） |
-
-**返回值**: `{ "success": true }`
-
-```javascript
-await fb2k.invoke('keyboard.unregisterHotkey', { id: result.id });
-// 或
-await fb2k.invoke('keyboard.unregisterHotkey', { key: 'Ctrl+Alt+Space' });
+```js
+const result = await fb2k.invoke('keyboard.registerHotkey', { action: /* value */, global: /* value */, key: /* value */ });
 ```
 
-### keyboard.getRegisteredHotkeys 
+### keyboard.registerShortcut
 
-获取所有已注册的热键列表。
+Public API method. Runtime authority: `src/api/KeyboardApi.cpp:377`.
 
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "hotkeys": [
-        { "id": 1, "key": "Ctrl+Alt+Space", "action": "play_pause", "global": true }
-    ]
-}
-```
-
-## DnD API - 拖放 (4 个 API) 
-
-### dnd.registerDropZone 
-
-注册拖放区域。返回用于设置拖放区域的 JavaScript 代码。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| selector | string | ✓ | CSS 选择器 |
-| accept | string[] | ✗ | 接受的拖放类型: "files", "text", "tracks"（默认 ["files"]） |
-| event | string | ✗ | 回调事件名（默认 "dnd:drop"） |
+| `action` | `string` | No | Optional; default . |
+| `key` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","success":true}`
 
-```json
-{
-    "success": true,
-    "zoneId": "dropzone_1",
-    "selector": "#playlist-area",
-    "accept": ["files", "tracks"],
-    "event": "dnd:drop",
-    "script": "..."
-}
+```js
+const result = await fb2k.invoke('keyboard.registerShortcut', { action: /* value */, key: /* value */ });
 ```
 
-> `script` 字段包含自动注入的 JavaScript，用于设置 DOM 元素的 dragover/dragleave/drop 事件。
+### keyboard.unregisterHotkey
 
-```javascript
-await fb2k.invoke('dnd.registerDropZone', {
-    selector: '#playlist-area',
-    accept: ['files', 'tracks'],
-    event: 'dnd:drop'
-});
+Public API method. Runtime authority: `src/api/KeyboardApi.cpp:380`.
 
-fb2k.on('dnd:drop', (data) => {
-    console.log('Zone:', data.zoneId);
-    console.log('Files:', data.files);
-    console.log('Text:', data.text);
-});
-```
-
-> 事件总线统一使用 colon 命名约定，与全局 `fb2k.on()` 监听一致。
-
-### dnd.unregisterDropZone 
-
-注销拖放区域。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| zoneId | string | ✓ | 注册时返回的 zoneId |
+| `id` | `string` | No | Optional; default omitted. |
+| `key` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "zoneId": "dropzone_1", "script": "..." }`
+**Returns**: `{"error":"...","success":true}`
 
-### dnd.startDrag 
-
-启动拖拽操作（用于从 WebView 拖出内容）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| type | string | ✓ | 数据类型: "text", "tracks", "files" |
-| data | string | ✗ | 文本数据（type=text 时） |
-| paths | string[] | ✗ | 路径数组（type=tracks/files 时） |
-
-**返回值**: `{ "success": true, "type": "text" }`
-
-::: tip注意 原生拖拽操作需要 OLE drag-drop 实现。对于 tracks/files 类型，建议使用 `playlist.add` 或文件选择对话框代替。 :::
-
-### dnd.getDropZones 
-
-获取所有已注册的拖放区域。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "zones": [
-        { "id": "dropzone_1", "selector": "#playlist-area", "accept": ["files"], "event": "dnd:drop" }
-    ],
-    "count": 1
-}
+```js
+const result = await fb2k.invoke('keyboard.unregisterHotkey', { id: /* value */, key: /* value */ });
 ```
+
+## ui
+
+### ui.hideNotification
+
+Public API method. Runtime authority: `src/api/UiApi.cpp:343`.
+
+_No parameters._
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('ui.hideNotification');
+```
+
+### ui.showContextMenu
+
+Public API method. Runtime authority: `src/api/WindowApi.cpp:2424`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `x` | `integer` | No | Optional; default -1. |
+| `y` | `integer` | No | Optional; default -1. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('ui.showContextMenu', { x: /* value */, y: /* value */ });
+```
+
+### ui.showCustomMenu
+
+Public API method. Runtime authority: `src/api/UiApi.cpp:334`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `h` | `integer` | No | Optional; default 0. |
+| `items` | `array` | Yes | Required. |
+| `suppressDefault` | `boolean` | No | Optional; default false. |
+| `w` | `integer` | No | Optional; default 0. |
+| `x` | `integer` | No | Optional; default 0. |
+| `y` | `integer` | No | Optional; default 0. |
+
+**Returns**: `{"error":"...","selectedId":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('ui.showCustomMenu', { h: /* value */, items: /* value */, suppressDefault: /* value */, w: /* value */, x: /* value */, y: /* value */ });
+```
+
+### ui.showNotification
+
+Public API method. Runtime authority: `src/api/UiApi.cpp:340`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `body` | `string` | No | Optional; default . |
+| `silent` | `boolean` | No | Optional; default false. |
+| `timeout` | `integer` | No | Optional; default 5000. |
+| `title` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","id":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('ui.showNotification', { body: /* value */, silent: /* value */, timeout: /* value */, title: /* value */ });
+```
+
+### ui.showToast
+
+Public API method. Runtime authority: `src/api/UiApi.cpp:337`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `duration` | `integer` | No | Optional; default 3000. |
+| `message` | `string` | No | Optional; default . |
+| `position` | `string` | No | Optional; default bottom-right. |
+| `type` | `string` | No | Optional; default info. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('ui.showToast', { duration: /* value */, message: /* value */, position: /* value */, type: /* value */ });
+```
+
+## Interaction delivery and limitations
+
+`ui.showCustomMenu` uses the current cursor position for native placement and
+routes `ui:menuItemClicked` only to the caller. A dismissed menu returns a
+successful result with `selectedId: null`. `ui.showToast` does not paint UI in
+native code; it emits `ui:toast` to the caller, so the theme owns rendering.
+
+`keyboard.registerHotkey` registers a Windows hotkey and later routes
+`keyboard:hotkey` to the window that registered it. `registerShortcut` only
+stores an application-local shortcut. Both registration methods require a
+non-empty `key` and `action`; `unregisterHotkey` accepts either the numeric
+`id` or the original key string.
+
+`dnd.registerDropZone` returns a script that the page must apply to its own
+DOM. Its default callback is `dnd:drop`; the callback payload contains the
+zone ID plus file metadata, plain text, and HTML data. `dnd.startDrag` reports
+the current native limitation for track and file drags rather than implementing
+an OLE drag source.

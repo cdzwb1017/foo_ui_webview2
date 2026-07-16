@@ -1,177 +1,177 @@
-# D. 播放列表 
+# D. Playlists
 
 ## `<fb-playlist-tabs>` {#fb-playlist-tabs}
 
-播放列表标签栏，支持键盘 ArrowLeft/ArrowRight 切换。
+Playlist tab strip with ArrowLeft/ArrowRight keyboard navigation, drag reordering, edge resizing, and overflow scrolling.
 
 ```html
 <fb-playlist-tabs></fb-playlist-tabs>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| active-index | string | — | 只读反映：当前激活索引 |
-| count | string | — | 只读反映：播放列表数量 |
-| native-context | boolean | — | 设置时启用原生右键菜单 |
+| `active-index` | string | — | Read-only active playlist index |
+| `count` | string | — | Read-only playlist count |
+| `native-context` | boolean | false | Also opens the native playlist context menu when present |
 
-**宿主属性（只读状态）：** `dragging`（拖拽进行中）、`overflow`（标签栏溢出时）
+**Read-only Host States:** `dragging` while a tab is being dragged; `overflow` while the tab strip overflows
 
 **CSS Parts:** `tabs-container`, `tab`, `tab-name`, `tab-count`, `drop-indicator`, `add-button`
 
-tab 上 `locked` 属性标识锁定的播放列表。
+Each `tab` part receives a `locked` attribute when the playlist is locked.
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-playlist-select', e => {
-  console.log('选中播放列表:', e.detail.index);
+  console.log('Selected playlist:', e.detail.index);
 });
 el.addEventListener('fb-playlist-context', e => {
-  console.log('右键菜单:', e.detail.index, e.detail.x, e.detail.y);
+  console.log('Context request:', e.detail.index, e.detail.x, e.detail.y);
 });
 el.addEventListener('fb-playlist-add', e => {
-  console.log('点击新建');
+  console.log('New playlist created');
 });
 el.addEventListener('fb-playlist-reorder', e => {
-  console.log('拖拽重排:', e.detail);
+  console.log('Reordered:', e.detail.fromIndex, e.detail.toIndex, e.detail.newOrder);
 });
 ```
 
 ## `<fb-resizable-header>` {#fb-resizable-header}
 
-可调列宽表头，支持拖拽调整列宽、拖拽列重排序、点击列排序。通常与 `<fb-playlist-view>` 配合使用。
+Resizable column header with drag reordering and click-to-sort behavior. It is typically paired with `<fb-playlist-view>`.
 
 ```html
 <fb-resizable-header columns='[{"id":"title","label":"Title","width":"2fr"}]'></fb-resizable-header>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| columns | string (JSON) | [] | 列定义数组，每项含 id、label、width（如 '1fr'）、sortable（默认 true）、fixed（不可拖拽重排） |
-| sort-column | string | — | 当前排序列 ID（observed） |
-| sort-direction | string | 'asc' | 排序方向 'asc'/'desc'（observed） |
+| `columns` | string (JSON) | `[]` | Column descriptors with `id`, optional `label`/`name`, `width` (for example `1fr`), `sortable`, and `fixed` fields |
+| `sort-column` | string | — | Current sort column ID (observed and reflected) |
+| `sort-direction` | `'asc' \| 'desc'` | `'asc'` | Current sort direction (observed and reflected) |
 
-**宿主属性（只读状态）：** `resizing`（正在调整列宽时）、`reordering`（正在拖拽重排时）
+`fixed` columns cannot be resized or reordered. **Read-only Host States:** `resizing` and `reordering`
 
 **CSS Parts:** `header`, `cell`, `cell-{id}`, `resize-handle`, `sort-icon`, `sort-active`, `drop-indicator`, `drag-ghost`, `label`
 
-**只读属性（JS）：**
+**Read-only JavaScript Properties:**
 
-- `gridTemplate` — 当前 CSS `grid-template-columns` 值（同步到 playlist-view）
-- `columnIds` — 当前列 ID 顺序数组
+- `gridTemplate` — current CSS `grid-template-columns` value for synchronizing a playlist view
+- `columnIds` — current visual order of column IDs
 
-**事件：**
+**Events:**
 
 ```js
-// 列宽调整
+// Column resize
 el.addEventListener('fb-column-resize', e => {
-  console.log('列宽:', e.detail.column, e.detail.width);
-  // 同步到 playlist-view
+  console.log('Width:', e.detail.column, e.detail.width);
+  // Keep the playlist view aligned with the header.
   playlistView.setAttribute('grid-template', e.detail.gridTemplate);
 });
 
-// 列重排序
+// Column reorder
 el.addEventListener('fb-column-reorder', e => {
-  console.log('重排:', e.detail.fromIndex, '→', e.detail.toIndex);
-  console.log('新顺序:', e.detail.columns);
+  console.log('Reordered:', e.detail.fromIndex, '→', e.detail.toIndex);
+  console.log('New order:', e.detail.columns);
 });
 
-// 点击列排序
+// Column sort
 el.addEventListener('fb-column-sort', e => {
-  console.log('排序:', e.detail.column, e.detail.direction);
+  console.log('Sort:', e.detail.column, e.detail.direction);
 });
 
-// 右键列头
+// Header context request
 el.addEventListener('fb-header-context', e => {
-  console.log('列头右键:', e.detail.x, e.detail.y);
+  console.log('Header context:', e.detail.x, e.detail.y);
 });
 ```
 
 ## `<fb-playlist-view>` {#fb-playlist-view}
 
-虚拟滚动播放列表视图，支持 rAF + DOM 池、Ctrl/Shift 多选、Enter 播放、Delete 删除、Ctrl+A 全选。
+Virtualized playlist view with an rAF-driven DOM pool. It supports Ctrl/Shift selection, Enter to play, Delete to remove, and Ctrl+A to select all.
 
 ```html
 <fb-playlist-view row-height="24"></fb-playlist-view>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| playlist | string | — | 播放列表索引，默认活动列表（observed） |
-| columns | string | 'index,title,artist,album,duration' | 逗号分隔的列名（observed） |
-| row-height | string | '32' | 行高像素（observed） |
-| grid-template | string | — | CSS grid-template-columns 值，用于同步 fb-resizable-header 的列宽（observed） |
-| formats | string (JSON) | — | 自定义列的 Titleformat 表达式映射（observed） |
-| track-count | string | — | 只读反映：曲目总数 |
-| selected-count | string | — | 只读反映：选中曲目数 |
+| `playlist` | string | — | Playlist index; defaults to the active playlist (observed) |
+| `columns` | string | `'index,title,artist,album,duration'` | Comma-separated column IDs (observed) |
+| `row-height` | string | `'32'` | Row height in pixels (observed) |
+| `grid-template` | string | — | CSS `grid-template-columns` value, typically copied from `<fb-resizable-header>` (observed) |
+| `formats` | string (JSON) | `{}` | Map of custom column IDs to Title Formatting expressions (observed) |
+| `track-count` | string | — | Read-only total track count |
+| `selected-count` | string | — | Read-only selected track count |
 
 **CSS Parts:** `viewport`, `scroll-content`, `row`, `row-{column}`
 
-`row` 上的状态属性（可用于 CSS 选择器）：`selected`、`focused`、`playing`
+Each `row` part may reflect the `selected`, `focused`, and `playing` states as attributes.
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-track-select', e => {
-  console.log('选中:', e.detail.index, e.detail.indices);
+  console.log('Selected:', e.detail.index, e.detail.indices);
 });
 el.addEventListener('fb-track-play', e => {
-  console.log('双击播放:', e.detail.index);
+  console.log('Play:', e.detail.index);
 });
 el.addEventListener('fb-track-context', e => {
-  console.log('右键菜单:', e.detail.indices, e.detail.x, e.detail.y);
+  console.log('Context request:', e.detail.indices, e.detail.x, e.detail.y);
 });
 ```
 
 ## `<fb-queue-view>` {#fb-queue-view}
 
-播放队列视图，双击条目移除。
+Playback queue view. Double-clicking a row removes that queue entry.
 
 ```html
 <fb-queue-view columns="index,title,artist,duration">
-  <span slot="empty">队列为空</span>
+  <span slot="empty">The queue is empty</span>
 </fb-queue-view>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| columns | string | 'index,title,artist,duration' | 逗号分隔的列名 |
-| empty | boolean | — | 只读反映：队列是否为空 |
-| count | string | — | 只读反映：队列条目数 |
+| `columns` | string | `'index,title,artist,duration'` | Comma-separated column IDs |
+| `empty` | boolean | — | Read-only reflection of whether the queue is empty |
+| `count` | string | — | Read-only queue-entry count |
 
 **CSS Parts:** `container`, `row`, `row-{column}`, `empty`
 **Slots:** `empty`
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-queue-context', e => {
-  console.log('右键菜单:', e.detail.index, e.detail.x, e.detail.y);
+  console.log('Context request:', e.detail.index, e.detail.x, e.detail.y);
 });
 el.addEventListener('fb-queue-remove', e => {
-  console.log('移除:', e.detail.index);
+  console.log('Removed:', e.detail.index);
 });
 ```
 
 ## `<fb-playlist-selector>` {#fb-playlist-selector}
 
-播放列表下拉选择器。
+Playlist dropdown selector.
 
 ```html
 <fb-playlist-selector></fb-playlist-selector>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| selected-index | string | — | 只读反映：当前选中索引 |
-| selected-name | string | — | 只读反映：当前选中名称 |
+| `selected-index` | string | — | Read-only selected playlist index |
+| `selected-name` | string | — | Read-only selected playlist name |
 
 **CSS Parts:** `select`
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-playlist-pick', e => {
-  console.log('选择:', e.detail.index, e.detail.name);
+  console.log('Selected:', e.detail.index, e.detail.name);
 });
 ```

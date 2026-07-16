@@ -1,36 +1,37 @@
-# fb.tray 系统托盘
+# `fb.tray` system tray
 
-本页是 `fb.tray` 的 SDK 视角文档入口。
+`fb.tray` controls the application-scoped tray icon, notifications, tray visibility behavior, and native or WebView-rendered context menus.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK method stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block completes SDK method coverage and may later be expanded with richer examples and guidance.
 
 ### appendMenuItems()
 
-签名：`fb.tray.appendMenuItems(...args): Promise<unknown>`
+Signature: `fb.tray.appendMenuItems(items: TrayMenuItem[], position: TrayMenuPosition = 'top'): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `items` | `TrayMenuItem[]` | Yes | Items to append |
+| `position` | `TrayMenuPosition` | No | Target zone; defaults to `'top'` |
 
-返回值：底层 `tray.appendMenuItems` 调用结果。
+Returns the `tray.appendMenuItems` result.
 
 ```javascript
-const result = await fb.tray.appendMenuItems();
+const result = await fb.tray.appendMenuItems([{ id: 'settings', label: 'Settings' }]);
 ```
 
 ### clearMenuItems()
 
-签名：`fb.tray.clearMenuItems(...args): Promise<unknown>`
+Signature: `fb.tray.clearMenuItems(position?: TrayMenuPosition): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `position` | `TrayMenuPosition` | No | Zone to clear; omitted to clear all zones |
 
-返回值：底层 `tray.clearMenuItems` 调用结果。
+Returns the `tray.clearMenuItems` result.
 
 ```javascript
 const result = await fb.tray.clearMenuItems();
@@ -38,13 +39,13 @@ const result = await fb.tray.clearMenuItems();
 
 ### create()
 
-签名：`fb.tray.create(...args): Promise<unknown>`
+Signature: `fb.tray.create(opts?: { icon?: string | null; tooltip?: string }): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `opts` | `{ icon?: string \| null; tooltip?: string }` | No | Initial icon and tooltip |
 
-返回值：底层 `tray.create` 调用结果。
+Creates the tray icon. Call this before other `tray.*` methods.
 
 ```javascript
 const result = await fb.tray.create();
@@ -52,13 +53,13 @@ const result = await fb.tray.create();
 
 ### destroy()
 
-签名：`fb.tray.destroy(...args): Promise<unknown>`
+Signature: `fb.tray.destroy(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `tray.destroy` 调用结果。
+Removes the tray icon.
 
 ```javascript
 const result = await fb.tray.destroy();
@@ -66,13 +67,13 @@ const result = await fb.tray.destroy();
 
 ### getMenuItems()
 
-签名：`fb.tray.getMenuItems(...args): Promise<unknown>`
+Signature: `fb.tray.getMenuItems(): Promise<{ success: boolean; items: TrayMenuItem[] }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `tray.getMenuItems` 调用结果。
+Returns user-defined items flattened in `top -> playback -> bottom` order. Runtime-injected playback/system items are excluded.
 
 ```javascript
 const result = await fb.tray.getMenuItems();
@@ -80,13 +81,13 @@ const result = await fb.tray.getMenuItems();
 
 ### isVisible()
 
-签名：`fb.tray.isVisible(...args): Promise<unknown>`
+Signature: `fb.tray.isVisible(): Promise<{ success: boolean; visible: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `tray.isVisible` 调用结果。
+Returns whether the tray icon currently exists.
 
 ```javascript
 const result = await fb.tray.isVisible();
@@ -94,55 +95,56 @@ const result = await fb.tray.isVisible();
 
 ### removeMenuItems()
 
-签名：`fb.tray.removeMenuItems(...args): Promise<unknown>`
+Signature: `fb.tray.removeMenuItems(ids: string[]): Promise<BaseResponse & { removed: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `ids` | `string[]` | Yes | Item IDs to remove from all zones |
 
-返回值：底层 `tray.removeMenuItems` 调用结果。
+Returns the operation result and number of removed items.
 
 ```javascript
-const result = await fb.tray.removeMenuItems();
+const result = await fb.tray.removeMenuItems(['settings']);
 ```
 
 ### setCloseToTray()
 
-签名：`fb.tray.setCloseToTray(...args): Promise<unknown>`
+Signature: `fb.tray.setCloseToTray(enabled: boolean): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `enabled` | `boolean` | Yes | Hide to tray instead of quitting on close |
 
-返回值：底层 `tray.setCloseToTray` 调用结果。
+Returns the `tray.setCloseToTray` result.
 
 ```javascript
-const result = await fb.tray.setCloseToTray();
+const result = await fb.tray.setCloseToTray(true);
 ```
 
 ### setContextMenu()
 
-签名：`fb.tray.setContextMenu(...args): Promise<unknown>`
+Signature: `fb.tray.setContextMenu(items: TrayMenuItem[], config?: TrayMenuConfig): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `items` | `TrayMenuItem[]` | Yes | User-defined menu items |
+| `config` | `TrayMenuConfig` | No | Zone, renderer, layout, styling, and behavior options |
 
-返回值：底层 `tray.setContextMenu` 调用结果。
+Replaces items in the configured zone; the other zones remain intact.
 
 ```javascript
-const result = await fb.tray.setContextMenu();
+const result = await fb.tray.setContextMenu([{ id: 'settings', label: 'Settings' }]);
 ```
 
 ### setIcon()
 
-签名：`fb.tray.setIcon(...args): Promise<unknown>`
+Signature: `fb.tray.setIcon(icon?: string | null): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `icon` | `string \| null` | No | Base64 icon payload; omitted/null uses the main icon |
 
-返回值：底层 `tray.setIcon` 调用结果。
+Returns the `tray.setIcon` result.
 
 ```javascript
 const result = await fb.tray.setIcon();
@@ -150,44 +152,143 @@ const result = await fb.tray.setIcon();
 
 ### setMenuItemState()
 
-签名：`fb.tray.setMenuItemState(...args): Promise<unknown>`
+Signature: `fb.tray.setMenuItemState(id: string, state: { checked?: boolean; enabled?: boolean }): Promise<BaseResponse & { found: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `id` | `string` | Yes | Item ID searched recursively across all zones |
+| `state` | `{ checked?: boolean; enabled?: boolean }` | Yes | At least one field must be supplied |
 
-返回值：底层 `tray.setMenuItemState` 调用结果。
+Returns whether a matching item was found. The native menu reflects changes on the next open.
 
 ```javascript
-const result = await fb.tray.setMenuItemState();
+const result = await fb.tray.setMenuItemState('settings', { enabled: false });
 ```
 
 ### setMinimizeToTray()
 
-签名：`fb.tray.setMinimizeToTray(...args): Promise<unknown>`
+Signature: `fb.tray.setMinimizeToTray(enabled: boolean): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `enabled` | `boolean` | Yes | Hide to tray instead of the taskbar on minimize |
 
-返回值：底层 `tray.setMinimizeToTray` 调用结果。
+Returns the `tray.setMinimizeToTray` result.
 
 ```javascript
-const result = await fb.tray.setMinimizeToTray();
+const result = await fb.tray.setMinimizeToTray(true);
 ```
 
 ### setTooltip()
 
-签名：`fb.tray.setTooltip(...args): Promise<unknown>`
+Signature: `fb.tray.setTooltip(tooltip: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `tooltip` | `string` | Yes | Tooltip text, up to 128 characters |
 
-返回值：底层 `tray.setTooltip` 调用结果。
+Returns the `tray.setTooltip` result.
 
 ```javascript
-const result = await fb.tray.setTooltip();
+const result = await fb.tray.setTooltip('foobar2000');
+```
+
+### showBalloon()
+
+Signature: `fb.tray.showBalloon(opts: { title: string; message: string; icon?: string }): Promise<BaseResponse>`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `opts.title` | `string` | Yes | Notification title |
+| `opts.message` | `string` | Yes | Notification body |
+| `opts.icon` | `string` | No | `'info'` (default), `'warning'`, or `'error'` |
+
+```javascript
+await fb.tray.showBalloon({
+  title: 'Playback',
+  message: 'The playlist has finished.',
+  icon: 'info',
+});
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Phase 2 layout guide (`layoutMode`)
+
+`TrayMenuConfig.layoutMode` is **`'flat'` by default**. Zero-config WebView tray menus keep the legacy direct-child DOM (`#menu > .fb-item` / `.fb-sep`), so existing structure selectors do not need to migrate.
+
+### Flat (default) — no DOM migration
+
+```javascript
+await fb.tray.setContextMenu(items, {
+  render: 'webview',
+  // layoutMode omitted → 'flat'
+  css: `
+    #menu { display: flex; flex-direction: column; gap: 2px; }
+    .fb-item[data-zone="playback"] { opacity: 0.95; }
+  `,
+});
+```
+
+### Zones (opt-in) — top / playback / bottom containers
+
+```javascript
+const ver = await fb.config.getVersionInfo();
+const plugin = ver?.plugin?.version; // probe before opting into zones
+// Minimum plugin version that ships zones is not finalized yet — do not hard-code a fake floor.
+await fb.tray.setContextMenu(items, {
+  render: 'webview',
+  layoutMode: 'zones',
+  css: `
+    .fb-zone[data-zone="top"] { display: flex; flex-direction: column; }
+    .fb-zone[data-zone="playback"] { display: grid; gap: 4px; }
+    .fb-zone[data-zone="bottom"] { display: flex; flex-direction: column; }
+    .fb-item[data-item-id="volume"] { padding-inline: 12px; }
+  `,
+});
+```
+
+### Compatibility notes
+
+- **Native** (`render: 'native'`) ignores `layoutMode`.
+- **Older runtimes** ignore the unknown key (no crash) but do **not** create `.fb-zone` wrappers.
+- **`menu.show` / `fb.menu.popup`** always use legacy direct-child DOM — they never inherit tray zones.
+- Stable hooks: `.fb-menu[data-depth]`, `.fb-zone[data-zone]`, `.fb-item[data-item-id|data-kind|data-depth|data-zone]`. Prefer these over `:nth-child()`.
+- `data-item-token` is an internal single-show identity — **not** a public CSS contract.
+- This is an opt-in capability, not a claim of “full compatibility” with every historical theme selector.
+
+## Phase 3 slider orientation & accessibility
+
+`TrayMenuItem.orientation` is **slider-only** (`'horizontal' | 'vertical'`). Default when omitted: horizontal. The SDK passes the field through as supplied and does **not** inject a default.
+
+### Horizontal / vertical examples
+
+```javascript
+// Horizontal (default) — old runtime / native ignore unknown orientation safely.
+await fb.tray.setContextMenu([
+  { id: 'vol', type: 'slider', label: 'Volume', min: 0, max: 100, value: 40 },
+], { render: 'webview' });
+
+// Vertical — probe plugin version first; do not hard-code a fake minimum version.
+const { plugin } = await fb.config.getVersionInfo();
+await fb.tray.setContextMenu([
+  {
+    id: 'vol',
+    type: 'slider',
+    label: 'Volume',
+    min: 0,
+    max: 100,
+    value: 40,
+    orientation: 'vertical',
+  },
+], { render: 'webview' });
+```
+
+### Keyboard / ARIA / reduced motion
+
+- Navigation mode: roving `tabindex` + real row focus; Up/Down/Home/End; Enter/Space activate; submenu Right/Enter open + focus, Left close + restore focus, Escape layer-by-layer.
+- Editor mode (rating / slider / segmented): Enter or Right enters; internal control focuses; Escape/Enter returns to the row.
+- Vertical slider: min bottom / max top; Up/Right increase; Down/Left decrease; Home=min; End=max.
+- `checked: false` still marks a checkable item (`menuitemcheckbox`); omit `checked` for a normal item.
+- Default enter/exit animations honor `prefers-reduced-motion: reduce` (disable transform/transition). Custom CSS should do the same; this is **not** in protected CSS and does not change the hide protocol / `closeAnimationMs`.
+- Native backend ignores `orientation` (stepped submenu degrade). Older runtimes ignore the key and keep horizontal interaction.

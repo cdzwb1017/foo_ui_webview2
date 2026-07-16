@@ -1,18 +1,18 @@
-# Artwork 工具 
+# Artwork Tools
 
-封面图片获取。共 2 个工具。返回 base64 编码的图片数据。
+Two tools retrieve artwork through the Bridge. Available images are returned as base64 data URLs in the Bridge result.
 
-## fb2k_artwork_get_current 
+## fb2k_artwork_get_current
 
-获取当前播放曲目的封面。
+Gets artwork for the currently playing track.
 
-- **Bridge 方法**: `artwork.getCurrent`
+- **Bridge method**: `artwork.getCurrent`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| type | string | ✗ | 封面类型（见下方表格，默认 front） |
+| `type` | string | No | One of `front`, `back`, `disc`, `icon`, or `artist`; the Bridge defaults to `front` when omitted |
 
-**返回值**（有封面时）:
+**Example result when artwork is available:**
 
 ```json
 {
@@ -25,40 +25,40 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| available | boolean | 是否有可用封面 |
-| type | string | 封面类型 |
-| source | string | 封面来源（now_playing_manager / album_art_manager_v2 / direct_extractor） |
-| mimeType | string | MIME 类型（image/jpeg / image/png / image/webp） |
-| size | integer | 图片大小（字节） |
-| dataUrl | string | base64 编码的 Data URL |
+| `available` | boolean | Whether artwork was found |
+| `type` | string | Requested artwork type |
+| `source` | string | Retrieval source when reported, such as `now_playing_manager`, `album_art_manager_v2`, or `extractor` |
+| `mimeType` | string | Detected MIME type |
+| `size` | integer | Image size in bytes |
+| `dataUrl` | string | Base64-encoded Data URL |
 
-**返回值**（无封面时）:
+**Example result when no artwork is available:**
 
 ```json
 { "available": false, "type": "front", "reason": "no_track" }
 ```
 
-## fb2k_artwork_get_for_track 
+## fb2k_artwork_get_for_track
 
-获取指定曲目的封面。
+Gets artwork for a specified track file.
 
-- **Bridge 方法**: `artwork.getForTrack`
+- **Bridge method**: `artwork.getForTrack`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径 |
-| type | string | ✗ | 封面类型（默认 front） |
+| `path` | string | Yes | Track file path |
+| `type` | string | No | One of `front`, `back`, `disc`, `icon`, or `artist`; the Bridge defaults to `front` when omitted |
 
-**返回值**: 结构同 `fb2k_artwork_get_current`。
+**Result:** The availability, MIME type, byte size, dimensions when detected, and `dataUrl` are returned by the Bridge.
 
-## 封面类型 
+## Artwork types
 
-| 值 | 说明 |
+| Value | Meaning |
 | --- | --- |
-| front | 正面封面（默认） |
-| back | 背面封面 |
-| disc | 光盘图 |
-| icon | 图标 |
-| artist | 艺术家图片 |
+| `front` | Front cover and Bridge default |
+| `back` | Back cover |
+| `disc` | Disc artwork |
+| `icon` | Icon artwork |
+| `artist` | Artist artwork |

@@ -1,94 +1,94 @@
-# MCP Server 概述 
+# MCP Server Overview
 
-通过 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) 让 AI 智能体直接操控 foobar2000。共 **102 个工具**（98 个 Bridge 工具 + 4 个 UI 测试工具）。
+Control foobar2000 from an AI agent through the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/). The server registers **101 tools by default**: 98 Bridge tools and 3 always-on UI-testing tools. Setting `FB2K_ENABLE_EVAL` to `1` or `true` adds `fb2k_evaluate`, bringing the total to **102 tools**.
 
-## 什么是 MCP 
+## What is MCP?
 
-MCP（Model Context Protocol）是一种开放协议，允许 AI 助手（如 Claude、GitHub Copilot）通过标准化接口调用外部工具。foo-ui-webview2-mcp 将 foobar2000 的 Bridge API 暴露为 MCP 工具，使 AI 能直接控制播放、管理播放列表、检索媒体库等。
+MCP is an open protocol that lets AI clients such as VS Code, Claude Desktop, and Cursor call external tools through a standard interface. `foo-ui-webview2-mcp` exposes a controlled mapping of the foobar2000 Bridge API as MCP tools for playback control, playlist management, library queries, metadata operations, and UI inspection.
 
-## 架构 
+## Architecture
 
 ```text
-AI 智能体 (VS Code / Claude Desktop / Cursor)
+AI agent (VS Code / Claude Desktop / Cursor)
     │  MCP (stdio, JSON-RPC)
     ▼
 foo-ui-webview2-mcp (Node.js)
     │  CDP (localhost:9222)
     ▼
-WebView2 (foobar2000 内运行)
+WebView2 (running inside foobar2000)
     │  window.fb2k.invoke('namespace.method', params)
     ▼
-C++ BridgeCore → foobar2000 SDK
+C++ BridgeCore -> foobar2000 SDK
 ```
 
-### 数据流 
+### Data flow
 
-1. AI 智能体发出工具调用请求（如 `fb2k_playback_play`）
-2. MCP Server 将工具名解析为 Bridge 方法（`playback.play`）
-3. 通过 CDP 在 WebView2 中执行 `window.fb2k.invoke('playback.play', {})`
-4. C++ 后端处理请求并返回 JSON 结果
-5. MCP Server 将结果返回给 AI 智能体
+1. The AI agent requests a tool call such as `fb2k_playback_play`.
+2. The server resolves the tool through its explicit method map to `playback.play`.
+3. The CDP client evaluates `window.fb2k.invoke('playback.play', {})` in WebView2.
+4. The C++ Bridge handles the request and returns a JSON-compatible value.
+5. The MCP server serializes the result for the client.
 
-### 关键设计 
+### Implementation characteristics
 
-| 特性 | 说明 |
+| Characteristic | Behavior |
 | --- | --- |
-| 预连接 | 服务启动时立即连接 CDP，减少首次调用延迟 |
-| 截图预热 | 连接时执行 1×1 像素截图预热渲染管线（~50ms），避免首次真实截图 ~8s 延迟 |
-| 自动重连 | 连接断开后指数退避重连（1s → 2s → 4s，最多 3 次） |
-| 安全校验 | 方法名正则验证，防止 JS 注入 |
-| 结构化日志 | JSON Lines 格式输出到 stderr，不干扰 MCP 协议通信 |
+| Pre-connect | After the stdio server starts, it attempts a CDP connection; a failed attempt is retried on the first tool call. |
+| Screenshot warm-up | Each successful CDP connection performs a best-effort 1×1 PNG capture before real screenshots. No fixed timing guarantee is implied. |
+| Automatic reconnect | A disconnected client retries with 1 s, 2 s, and 4 s delays after the initial attempt. |
+| Method validation | Bridge method IDs must match the `namespace.method` pattern before they are interpolated into the evaluated expression. |
+| Structured logging | JSON Lines are written to stderr so stdout remains available for MCP stdio traffic. |
 
-## 工具命名空间 
+## Tool groups
 
-| 命名空间 | 工具数 | 说明 |
+| Group | Tools | Scope |
 | --- | --- | --- |
-| Playback | 12 | 播放控制、状态、音量 |
-| Playback Extended | 13 | 静音、播放顺序、路径播放 |
-| Playlist | 7 | 播放列表基础操作 |
-| Playlist Extended | 40 | 选区、排序、自动播放列表 |
-| Library | 4 | 媒体库搜索与统计 |
-| Artwork | 2 | 封面获取 |
-| Queue | 8 | 播放队列管理 |
-| Metadata | 12 | 元数据读写与评分 |
-| UI Testing | 4 | 截图、DOM 快照、控制台 |
+| Playback | 12 | Playback control, state, position, and volume |
+| Playback Extended | 13 | Mute, playback order, stop-after-current, and path playback |
+| Playlist | 7 | Core playlist operations |
+| Playlist Extended | 40 | Ordering, selection, focus, locking, and autoplaylists |
+| Library | 4 | Media-library search and statistics |
+| Artwork | 2 | Artwork retrieval |
+| Queue | 8 | Playback-queue management |
+| Metadata | 12 | Metadata, artwork writing, and ratings |
+| UI Testing | 3 default + 1 conditional | Screenshot, DOM snapshot, console messages, and optional evaluation |
 
-## 与 SDK / 底层 API 的关系 
+## Relationship to the SDK and Bridge API
 
-| 维度 | MCP 工具 | SDK (fb.*) | 底层 API (fb2k.invoke) |
+| Dimension | MCP tools | SDK (`fb.*`) | Low-level API (`fb2k.invoke`) |
 | --- | --- | --- | --- |
-| 调用者 | AI 智能体 | Web 前端 JS | Web 前端 JS |
-| 传输 | stdio + CDP | WebView2 内 postMessage | WebView2 内 postMessage |
-| 适用场景 | AI 自动化、测试 | UI 开发 | 精确控制 |
-| 参数格式 | MCP JSON Schema | JS 函数参数 | JSON 对象 |
+| Caller | AI agent | Web frontend | Web frontend |
+| Transport | stdio + CDP | WebView2 `postMessage` | WebView2 `postMessage` |
+| Typical use | AI automation and testing | Theme and application development | Direct Bridge access |
+| Parameters | Registered MCP input schema | SDK function arguments | JSON object |
 
-::: tip TIP
-MCP 工具底层调用的是同一套 C++ Bridge API。工具参数与 `fb2k.invoke()` 的参数完全一致。
+::: tip Controlled parameter mapping
+Each Bridge tool has an explicit tool-name-to-method mapping. The generic registration path enforces required fields, string enums, declared defaults, primitive `string` / `number` / `integer` / `boolean` types, and the outer array shape before passing fields to the mapped `fb2k.invoke()` method. Object-valued fields use the generic fallback. Numeric `minimum` / `maximum` values and array item types shown on these pages come from `ToolDefinition` metadata and describe the intended contract, but the current generic Zod conversion does not apply those two classes of constraint; the mapped Bridge handler may perform additional validation. This is a controlled subset and mapping of the Bridge contract, not a guarantee that every low-level parameter or coercion is exposed unchanged.
 :::
 
-## 使用示例 
+## Usage examples
 
-### 查询当前播放 
+### Query current playback
 
 ```text
-用户: 现在在放什么歌？
+User: What's playing right now?
 AI → fb2k_playback_get_current_track
-AI: 正在播放「天ノ弱」by 164 feat. GUMI，时长 4:23
+AI: "Redo" by Mili is playing.
 ```
 
-### 搜索并播放 
+### Search and play
 
 ```text
-用户: 帮我找 Mili 的歌然后播放第一首
+User: Find songs by Mili and play the first result.
 AI → fb2k_library_search { query: "artist IS Mili" }
 AI → fb2k_playlist_play_track { index: 0 }
-AI: 已开始播放 Mili 的「Redo」
+AI: Started playing "Redo" by Mili.
 ```
 
-### 截图验证 
+### Verify the UI with a screenshot
 
 ```text
-用户: 截个图看看当前界面
+User: Take a screenshot of the current UI.
 AI → fb2k_screenshot { fullPage: true }
-AI: [显示截图] 当前主题加载正常，播放栏在底部...
+AI: [shows screenshot] The theme loaded and the playback bar is visible.
 ```

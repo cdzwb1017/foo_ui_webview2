@@ -1,53 +1,41 @@
-# fb.console 控制台
+# fb.console Host Console
 
-本页是 `fb.console` 的 SDK 视角文档入口。
+`fb.console` writes string messages to the foobar2000 console window. It is separate from the browser's global `console` object.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### error()
+### error(message)
 
-签名：`fb.console.error(...args): Promise<unknown>`
+Signature: `fb.console.error(message: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `console.error` 调用结果。
+Writes an error-level message.
 
 ```javascript
-const result = await fb.console.error();
+await fb.console.error('Artwork loading failed');
 ```
 
-### log()
+### log(message)
 
-签名：`fb.console.log(...args): Promise<unknown>`
+Signature: `fb.console.log(message: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `console.log` 调用结果。
+Writes an informational message.
 
 ```javascript
-const result = await fb.console.log();
+await fb.console.log('Theme initialized');
 ```
 
-### warn()
+### warn(message)
 
-签名：`fb.console.warn(...args): Promise<unknown>`
+Signature: `fb.console.warn(message: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `console.warn` 调用结果。
+Writes a warning-level message.
 
 ```javascript
-const result = await fb.console.warn();
+await fb.console.warn('Using fallback artwork');
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

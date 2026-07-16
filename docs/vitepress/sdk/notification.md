@@ -1,25 +1,68 @@
-# fb.notification 通知
+# fb.notification Notifications
 
-本页是 `fb.notification` 的 SDK 视角文档入口。
+`fb.notification` wraps the `ui.*` notification, toast, and custom-menu handlers behind one SDK namespace.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### hide()
 
-签名：`fb.notification.hide(...args): Promise<unknown>`
+Signature: `fb.notification.hide(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `ui.hideNotification` 调用结果。
+Returns the `ui.hideNotification` response envelope.
 
 ```javascript
 const result = await fb.notification.hide();
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Show a Notification
+
+`fb.notification.show(options: UiShowNotificationParams)` invokes `ui.showNotification`. The options are `title`, `body`, `silent`, and `timeout` in milliseconds. The response may include an `id`.
+
+```javascript
+await fb.notification.show({
+	title: 'Library scan',
+	body: 'The scan has completed.',
+	timeout: 5000,
+});
+```
+
+## Show a Toast
+
+`fb.notification.showToast(options: UiShowToastParams)` invokes `ui.showToast`. The options include `message`, `duration`, `type`, and `position`.
+
+```javascript
+await fb.notification.showToast({
+	message: 'Added to the playlist',
+	type: 'success',
+	duration: 3000,
+	position: 'bottom-right',
+});
+```
+
+Successful toast requests can produce the typed `ui:toast` event with `UiToastPayload`.
+
+## Show a Custom Menu
+
+`fb.notification.showCustomMenu(options: UiShowCustomMenuParams): Promise<UiShowCustomMenuResponse>` invokes `ui.showCustomMenu`. The response's optional `selectedId` is the clicked item ID or `null` when the menu is dismissed.
+
+```javascript
+const { selectedId } = await fb.notification.showCustomMenu({
+	items: [
+		{ id: 'play', label: 'Play' },
+		{ id: 'queue', label: 'Add to queue' },
+	],
+	x: 120,
+	y: 80,
+	suppressDefault: true,
+});
+```

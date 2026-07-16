@@ -1,31 +1,31 @@
-# fb.state 响应式状态 
+# fb.state Playback State Mirror
 
-`fb.state` 是一个自动同步的状态对象，通过订阅播放事件实时更新。适合 UI 绑定和状态轮询场景，无需手动调用 API 获取当前状态。
+`fb.state` is a plain mutable state object that the SDK keeps synchronized through playback events. It is convenient for imperative UI reads and polling without issuing an API call for every update.
 
-## 属性 
+## Properties
 
-| 属性 | 类型 | 说明 |
+| Property | Type | Description |
 | --- | --- | --- |
-| volume | number | 当前音量（0-100） |
-| isPlaying | boolean | 是否正在播放（含暂停状态） |
-| currentTrack | object \| null | 当前曲目信息（曲目切换时更新，停止时为 null） |
-| position | number | 当前播放位置（秒），约每 500ms 更新 |
+| volume | number | Current output volume on a linear 0-100 scale |
+| isPlaying | boolean | `true` only when playback state is `'playing'`; paused and stopped states are `false` |
+| currentTrack | `TrackInfo \| null` | Most recently announced now-playing track. Initially `null`; stopping playback does not clear it |
+| position | number | Current playback position in seconds |
 
-## 自动更新机制 
+## Automatic Updates
 
-`fb.state` 通过监听以下事件自动更新：
+`fb.state` listens to these events:
 
-| 事件 | 更新字段 |
+| Event | Updated fields |
 | --- | --- |
-| playback:stateChanged | isPlaying、position |
-| playback:trackChanged | currentTrack、isPlaying = true |
-| playback:stopped | isPlaying = false、position = 0 |
-| playback:volumeChanged | volume |
-| playback:time | position |
+| `playback:stateChanged` | Updates `isPlaying` from `state` and updates `position` when present |
+| `playback:trackChanged` | Replaces `currentTrack` and sets `isPlaying = true` |
+| `playback:stopped` | Sets `isPlaying = false` and `position = 0` |
+| `playback:volumeChanged` | Updates `volume` when present |
+| `playback:time` | Updates `position` when present |
 
-## 使用示例 
+## Examples
 
-### 基本读取 
+### Basic Reads
 
 ```javascript
 console.log(fb.state.isPlaying);     // true
@@ -34,7 +34,7 @@ console.log(fb.state.position);      // 42.5
 console.log(fb.state.currentTrack);  // {title, artist, album, ...}
 ```
 
-### 定时器轮询 UI 更新 
+### Polling UI Updates
 
 ```javascript
 setInterval(() => {
@@ -43,20 +43,20 @@ setInterval(() => {
 }, 500);
 ```
 
-### 结合事件使用 
+### Reading State from an Event Handler
 
 ```javascript
-// state 自动更新，事件回调可以直接读取 state
+// The SDK updates state before consumer handlers run for this event.
 fb.on('playback:trackChanged', () => {
     const track = fb.state.currentTrack;
-    document.title = `${track.title} - ${track.artist}`;
+    if (track) document.title = `${track.title} - ${track.artist}`;
 });
 ```
 
-::: tip TIP
-`fb.state` 是简单的状态快照，不是 Proxy 响应式对象。如需精确状态变化通知，请使用 `fb.on()` 订阅事件。如需精确的实时值，请使用 `fb.player.getState()` / `fb.player.getPosition()` 等 API。
+::: tip State semantics
+`fb.state` is a mutable snapshot, not a Proxy or framework-reactive object. Subscribe through `fb.on()` for change notifications. Use APIs such as `fb.player.getState()` or `fb.player.getPosition()` when an authoritative value is required on demand.
 :::
 
-::: warning 与 SMP 兼容层的区别
-`fb.state` 仅跟踪 4 个基本字段。如需完整的缓存状态（播放列表、配置等），请使用 SMP 兼容层的 `window.smp.cache`，详见 [SMP 兼容层](/reference/smp-compat)。
+::: warning SMP compatibility layer
+`fb.state` tracks only these four playback fields. For the broader cached state used by the SMP compatibility layer, including playlists and configuration, use `window.smp.cache`; see [SMP Compatibility](/reference/smp-compat).
 :::

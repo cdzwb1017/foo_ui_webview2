@@ -1,20 +1,22 @@
-# Library 工具 
+# Library Tools
 
-媒体库搜索与统计。共 4 个工具。
+Four tools search and summarize the media library.
 
-## fb2k_library_search 
+## fb2k_library_search
 
-搜索媒体库。支持 foobar2000 查询语法（如 `artist IS Mili`、`%rating% GREATER 3`）。
+Searches the media library with foobar2000 query syntax, for example `artist IS Mili` or `%rating% GREATER 3`.
 
-- **Bridge 方法**: `library.search`
+- **Bridge method**: `library.search`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| query | string | ? | 搜索查询表达式 |
-| offset | integer | ? | 结果偏移（默认 0） |
-| limit | integer | ? | 返回数量限制（默认 50，最大 500） |
+| `query` | string | Yes | foobar2000 query expression |
+| `offset` | integer | No | Declared minimum `0`; the Bridge default is `0` |
+| `limit` | integer | No | Declared range `1` to `500`; the Bridge default is `100` |
 
-**返回值**:
+The `ToolDefinition` description currently says default `50`, but it declares no MCP default. Omission therefore reaches `library.search`, whose handler uses `100`; that runtime behavior is documented here.
+
+**Example result:**
 
 ```json
 {
@@ -25,37 +27,36 @@
 }
 ```
 
-::: tip 查询语法
-支持标准 foobar2000 查询语法：
-- `artist IS Mili` — 精确匹配
-- `title HAS love` — 包含匹配
-- `%rating% GREATER 3` — 数值比较
-- `artist IS Mili AND album IS "Miracle Milk"` — 组合查询
+::: tip Query examples
+- `artist IS Mili` — exact match
+- `title HAS love` — substring match
+- `%rating% GREATER 3` — numeric comparison
+- `artist IS Mili AND album IS "Miracle Milk"` — combined expression
 
 :::
 
-## fb2k_library_get_albums 
+## fb2k_library_get_albums
 
-获取所有专辑列表。
+Gets all album names in the media library.
 
-- **参数**: 无
-- **Bridge 方法**: `library.getAlbums`
+- **Parameters**: none
+- **Bridge method**: `library.getAlbums`
 
-## fb2k_library_get_artists 
+## fb2k_library_get_artists
 
-获取所有艺术家列表。
+Gets all artist names in the media library.
 
-- **参数**: 无
-- **Bridge 方法**: `library.getArtists`
+- **Parameters**: none
+- **Bridge method**: `library.getArtists`
 
-## fb2k_library_get_stats 
+## fb2k_library_get_stats
 
-获取媒体库统计信息。
+Gets media-library statistics.
 
-- **参数**: 无
-- **Bridge 方法**: `library.getStats`
+- **Parameters**: none
+- **Bridge method**: `library.getStats`
 
-**返回值**:
+**Example result:**
 
 ```json
 {

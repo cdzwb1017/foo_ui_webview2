@@ -1,16 +1,18 @@
-# fb.artwork 封面 
+# `fb.artwork` album art
 
-封面获取建议按优先级使用：
+Choose an API according to the representation you need:
 
-1. **展示用途（推荐）**: `fb.artwork.getFb2kUrl()` / `getFb2kUrlByPath()` — 返回 `fb2k://` URL，高性能二进制响应
-2. **需要图片内容**: `fb.artwork.getForTrack()` — 返回 `dataUrl`，适合保存/上传/写入标签
+1. **Direct display:** `getFb2kUrl()` or `getFb2kUrlByPath()` returns a response whose `dataUrl` field contains an `fb2k://` URL suitable for `<img src>`.
+2. **Embedded image content:** `getCurrent()`, `getByPath()`, or `getForTrack()` returns an `ArtworkResponse` with renderable URL/data fields when `available` is true.
 
-> 本项目已采用"方案B（一刀切）"，统一使用 `available` / `dataUrl` / `url` 字段。
+Read `available` before consuming `dataUrl` or `url`.
 
-获取当前播放曲目的 `fb2k://` 封面 URL（高性能展示）。
+## getFb2kUrl(type?, options?)
 
-- `type?`: `'front'` | `'back'` | `'disc'` | `'icon'` | `'artist'`，默认 `'front'`
-- `options?`: `{ maxSize?: number }` — 缩略图最大边长（像素）
+Resolves an `fb2k://` artwork URL for the current track.
+
+- `type?`: `'front' | 'back' | 'disc' | 'icon' | 'artist'`
+- `options?`: `{ maxSize?: number }`, where `maxSize` is the maximum pixel dimension
 
 ```javascript
 const res = await fb.artwork.getFb2kUrl('front', { maxSize: 300 });
@@ -19,135 +21,150 @@ if (res.available && res.dataUrl) {
 }
 ```
 
-根据文件路径获取 `fb2k://` 封面 URL。
+## getFb2kUrlByPath(path, type?, options?)
+
+Resolves an `fb2k://` artwork URL for a file path.
 
 ```javascript
-const res = await fb.artwork.getFb2kUrlByPath('E:\\\\Music\\\\song.flac', 'front', { maxSize: 200 });
+const res = await fb.artwork.getFb2kUrlByPath(
+    'E:\\Music\\song.flac',
+    'front',
+    { maxSize: 200 },
+);
 ```
 
-## fb2k://artwork 协议说明 
+## `fb2k://artwork` URL notes
 
-- URL 结构: `fb2k://artwork/<编码后的path>/<type>?maxSize=200`
-- path 必须做 URL 编码（SDK 已处理）
-- `maxSize` 可选，插件端会在协议层缩放后再返回二进制
+- The URL structure is `fb2k://artwork/<encoded-path>/<type>?maxSize=200`.
+- The SDK asks the host to construct the URL; consume the returned `dataUrl` rather than assembling protocol URLs manually.
+- `maxSize` is optional and requests host-side downsampling.
 
-## getForTrack(path, type?, options?) 
+## getForTrack(path, type?, options?)
 
-获取指定曲目封面内容（返回 `dataUrl`）。适合保存/上传/写入标签。
+Returns embedded artwork information for a track path. `options.maxSize` requests downsampling.
 
 ```javascript
-const res = await fb.artwork.getForTrack('E:\\\\Music\\\\song.flac', 'front', { maxSize: 300 });
+const res = await fb.artwork.getForTrack(
+    'E:\\Music\\song.flac',
+    'front',
+    { maxSize: 300 },
+);
 ```
 
-## getCurrent(type?) 
+## getCurrent(type?)
 
-获取当前播放曲目封面内容。返回 `{available, dataUrl?, type, mimeType?, size?}`。纯展示建议用 `getFb2kUrl()`。
+Returns an `ArtworkResponse` for the current track.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| type | string | 'front' / 'back' / 'disc' / 'icon' / 'artist'（默认 'front'） |
+| `type` | `AlbumArtType?` | Artwork type |
 
 ```javascript
 const res = await fb.artwork.getCurrent('front');
 if (res.available) img.src = res.dataUrl;
 ```
 
-## getByPath(path, type?) 
+## getByPath(path, type?)
 
-根据文件路径获取封面内容。返回 `{available, dataUrl?, type, mimeType?, size?}`。纯展示建议用 `getFb2kUrlByPath()`。
+Returns an `ArtworkResponse` for a file path.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 音频文件路径 |
-| type | string | 封面类型（默认 'front'） |
+| `path` | `string` | Audio path |
+| `type` | `AlbumArtType?` | Artwork type |
 
-## withMaxSize(url, maxSize) 
+```javascript
+const cover = await fb.artwork.getByPath('E:\\Music\\song.flac', 'front');
+```
 
-工具函数：给 `fb2k://` URL 追加 `maxSize` 参数。
+## withMaxSize(url, maxSize?)
+
+Pure helper that appends a `maxSize` query parameter to an artwork URL. It returns the input unchanged when the URL is empty or `maxSize` is missing/non-positive.
 
 ```javascript
 const url = fb.artwork.withMaxSize('fb2k://artwork/...', 300);
 // 'fb2k://artwork/...?maxSize=300'
 ```
 
-批量获取封面。`paths` 为 `[{path, type?}, ...]`。
+## getBatch(paths)
+
+Fetches artwork for multiple paths. The wrapper accepts `string[]`.
 
 ```javascript
 const results = await fb.artwork.getBatch([
-    { path: 'E:\\\\Music\\\\a.flac' },
-    { path: 'E:\\\\Music\\\\b.mp3', type: 'back' }
+    'E:\\Music\\a.flac',
+    'E:\\Music\\b.mp3',
 ]);
 ```
 
-## 补全方法参考
+## getByPlaylistItem(playlist, index, type?)
+
+Fetches artwork for a playlist item.
+
+```javascript
+const artwork = await fb.artwork.getByPlaylistItem(0, 12, 'front');
+```
+
+## getFb2kUrlByPathBatch(items, opts?)
+
+Batch variant of `getFb2kUrlByPath()`. `items` may be `string[]` or `ArtworkBatchItem[]`; `opts` may provide batch-wide `type` and `maxSize` values. It returns the full `ArtworkBatchResponse` envelope.
+
+```javascript
+const batch = await fb.artwork.getFb2kUrlByPathBatch(
+    ['E:\\Music\\a.flac', 'E:\\Music\\b.flac'],
+    { type: 'front', maxSize: 256 },
+);
+```
+
+## Supplemental method reference
 
 ### getAvailableArtwork(path?)
 
-签名：`fb.artwork.getAvailableArtwork(path?: string): Promise<ArtworkAvailableResponse>`
+Signature: `fb.artwork.getAvailableArtwork(path?: string): Promise<ArtworkAvailableArtworkResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | 否 | 音频文件路径；省略时检查当前播放曲目 |
+| `path` | `string` | No | Audio path; omitted for the host's current-track behavior |
 
-返回值：可用封面类型与状态。
+Returns available-artwork status.
 
 ```javascript
 const available = await fb.artwork.getAvailableArtwork('E:\\Music\\song.flac');
 ```
 
-### getAvailableTypes(path?)
+### getAvailableTypes()
 
-签名：`fb.artwork.getAvailableTypes(path?: string): Promise<ArtworkAvailableTypesResponse>`
+Signature: `fb.artwork.getAvailableTypes(): Promise<AlbumArtType[]>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| path | string | 否 | 音频文件路径；省略时检查当前播放曲目 |
-
-返回值：可用封面类型列表。
+Returns the artwork types available for the current host context.
 
 ```javascript
 const types = await fb.artwork.getAvailableTypes();
 ```
 
-### getByPath(path, type?, options?)
+### getFolderImages(directory)
 
-签名：`fb.artwork.getByPath(path: string, type?: string, options?: object): Promise<ArtworkResponse>`
+Signature: `fb.artwork.getFolderImages(directory: string): Promise<{ images: string[] }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | 是 | 音频文件路径 |
-| type | string | 否 | 封面类型，默认 `front` |
-| options | object | 否 | 缩略图或返回格式选项 |
+| `directory` | `string` | Yes | Directory path |
 
-返回值：指定文件的封面内容或可用状态。
+Returns recognized image paths in the directory.
 
 ```javascript
-const cover = await fb.artwork.getByPath('E:\\Music\\song.flac', 'front');
+const images = await fb.artwork.getFolderImages('E:\\Music\\Album');
 ```
 
-### getFolderImages(path)
+### getLyrics(path)
 
-签名：`fb.artwork.getFolderImages(path: string): Promise<ArtworkFolderImagesResponse>`
+Signature: `fb.artwork.getLyrics(path: string): Promise<ArtworkLyricsResult>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | 是 | 音频文件或目录路径 |
+| `path` | `string` | Yes | Audio path |
 
-返回值：同目录下可识别的图片文件列表。
-
-```javascript
-const images = await fb.artwork.getFolderImages('E:\\Music\\Album\\song.flac');
-```
-
-### getLyrics(path?)
-
-签名：`fb.artwork.getLyrics(path?: string): Promise<ArtworkLyricsResponse>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| path | string | 否 | 音频文件路径；省略时读取当前播放曲目 |
-
-返回值：歌词文本或可用状态。
+Returns lyrics data for the path.
 
 ```javascript
 const lyrics = await fb.artwork.getLyrics('E:\\Music\\song.flac');
@@ -155,13 +172,13 @@ const lyrics = await fb.artwork.getLyrics('E:\\Music\\song.flac');
 
 ### getMetadata(path)
 
-签名：`fb.artwork.getMetadata(path: string): Promise<ArtworkMetadataResponse>`
+Signature: `fb.artwork.getMetadata(path: string): Promise<ArtworkMetadataResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | 是 | 音频文件路径 |
+| `path` | `string` | Yes | Audio path |
 
-返回值：与封面/图片相关的元数据。
+Returns artwork-related metadata.
 
 ```javascript
 const metadata = await fb.artwork.getMetadata('E:\\Music\\song.flac');

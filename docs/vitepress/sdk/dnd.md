@@ -1,25 +1,53 @@
-# fb.dnd 拖放
+# fb.dnd Drag and Drop
 
-本页是 `fb.dnd` 的 SDK 视角文档入口。
+`fb.dnd` registers frontend drop zones and starts host-backed drag operations.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### startDrag()
+### registerDropZone(options)
 
-签名：`fb.dnd.startDrag(...args): Promise<unknown>`
+Signature: `fb.dnd.registerDropZone(options: DndRegisterDropZoneParams): Promise<{ zoneId: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dnd.startDrag` 调用结果。
+Registers a drop zone. The options contain a CSS `selector`, an optional `accept` string array, and an event name that defaults to `dnd:drop`.
 
 ```javascript
-const result = await fb.dnd.startDrag();
+const { zoneId } = await fb.dnd.registerDropZone({
+	selector: '#playlist-drop-zone',
+	accept: ['.flac', '.mp3'],
+	event: 'dnd:drop'
+});
+```
+
+### unregisterDropZone(zoneId)
+
+Signature: `fb.dnd.unregisterDropZone(zoneId: string): Promise<BaseResponse & { script?: string }>`
+
+Removes a previously registered drop zone.
+
+### getDropZones()
+
+Signature: `fb.dnd.getDropZones(): Promise<DndGetDropZonesResponse>`
+
+Returns `{ zones, count }`. Each zone exposes `id`, `selector`, `accept`, and `event`.
+
+### startDrag(type, options?)
+
+Signature: `fb.dnd.startDrag(type: string, options?: Omit<DndStartDragParams, 'type'>): Promise<BaseResponse & { trackCount?: number; note?: string }>`
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `string` | Yes | Drag payload type |
+| `options.data` | `string` | No | Text payload |
+| `options.paths` | `unknown` | No | Host-recognized path payload |
+
+```javascript
+await fb.dnd.startDrag('files', {
+	paths: ['C:\\Music\\track.flac']
+});
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

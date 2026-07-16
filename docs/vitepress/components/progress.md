@@ -1,35 +1,35 @@
-# B. 进度与音量 
+# B. Progress and Volume
 
 ## `<fb-seek-bar>` {#fb-seek-bar}
 
-播放进度条，支持拖拽和键盘控制。
+Playback seek bar with mouse, drag, and keyboard controls.
 
 ```html
 <fb-seek-bar></fb-seek-bar>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| position | string | — | 只读反映：当前秒数 |
-| duration | string | — | 只读反映：总时长秒数 |
-| progress | string | — | 只读反映：进度 0-1 |
+| `position` | string | — | Read-only current position in whole seconds |
+| `duration` | string | — | Read-only total duration in whole seconds |
+| `progress` | string | — | Read-only progress ratio from 0 to 1 |
 
 **CSS Parts:** `track`, `fill`, `thumb`
-**CSS 自定义属性:** `--fb-seek-progress`（0-1）、`--fb-seek-hover-progress`（0-1，hover 时）
-**键盘:** Arrow ±5s，Home/End 跳转首尾
+**CSS Custom Properties:** `--fb-seek-progress` (0–1), `--fb-seek-hover-progress` (0–1 while hovering)
+**Keyboard:** Arrow keys seek by ±5 seconds; Home/End seek to the start/end
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-seek', e => {
-  console.log(e.detail.position); // 最终 seek 位置（秒）
+  console.log(e.detail.position); // committed position in seconds
 });
 el.addEventListener('fb-seeking', e => {
-  console.log(e.detail.position); // 拖拽过程中的位置
+  console.log(e.detail.position); // tentative position during a drag
 });
 ```
 
-**样式示例：**
+**Styling Example:**
 
 ```css
 fb-seek-bar::part(track) { background: #333; height: 4px; }
@@ -39,50 +39,52 @@ fb-seek-bar::part(thumb) { width: 12px; height: 12px; background: white; border-
 
 ## `<fb-volume-control>` {#fb-volume-control}
 
-音量控制，含静音按钮和滑块。
+Volume slider with a mute button.
 
 ```html
 <fb-volume-control></fb-volume-control>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| vertical | boolean | false | 垂直布局（observed） |
-| no-icon | boolean | false | 隐藏静音按钮（observed） |
-| volume | string | — | 只读反映：当前音量 0-100 |
-| muted | boolean | — | 只读反映：是否静音 |
+| `vertical` | boolean | false | Uses a vertical, bottom-to-top slider layout (observed) |
+| `no-icon` | boolean | false | Hides the mute button (observed) |
+| `volume` | string | — | Read-only current volume on the 0–100 linear scale |
+| `muted` | boolean | — | Read-only reflection of the mute state |
 
 **CSS Parts:** `mute-button`, `track`, `fill`, `thumb`
-**Slots:** `icon`（默认 🔊）
-**CSS 自定义属性:** `--fb-volume`（0-1）
-**键盘:** Arrow ±5，Home=0，End=100
-**滚轮:** ±5
+**Slots:** `icon` (default: 🔊)
+**CSS Custom Properties:** `--fb-volume` (0–1)
+**Keyboard:** Arrow keys change volume by ±5; Home sets 0 and End sets 100
+**Mouse Wheel:** changes volume by ±5
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-volume-change', e => {
-  console.log(e.detail.volume); // 0-100
+  console.log(e.detail.volume); // 0–100
 });
-el.addEventListener('fb-mute-toggle', e => { /* 静音切换 */ });
+el.addEventListener('fb-mute-toggle', e => { /* mute toggled */ });
 ```
 
 ## `<fb-playback-order>` {#fb-playback-order}
 
-播放顺序选择器，支持下拉菜单和按钮循环两种模式。
+Seven-state playback-order picker with dropdown and cycling-button modes.
 
 ```html
 <fb-playback-order mode="button"></fb-playback-order>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| mode | `'select' \| 'button'` | 'button' | 显示模式（observed） |
-| order | string | — | 只读反映：当前顺序名 |
+| `mode` | `'select' \| 'button'` | `'button'` | Display mode (observed); only the exact value `select` selects the dropdown |
+| `order` | string | — | Read-only reflection of the current order name |
 
-**CSS Parts:** `button`（button 模式）或 `select`（select 模式） **Slots:** 默认 slot（button 模式文本） **7 种顺序:** default / repeat-playlist / repeat-track / random / shuffle-tracks / shuffle-albums / shuffle-folders
+**CSS Parts:** `button` (button mode) or `select` (select mode)
+**Slots:** default slot (button mode label)
+**Orders:** `default`, `repeat-playlist`, `repeat-track`, `random`, `shuffle-tracks`, `shuffle-albums`, `shuffle-folders`
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-order-change', e => {

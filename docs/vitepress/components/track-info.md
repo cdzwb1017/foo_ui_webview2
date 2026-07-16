@@ -1,24 +1,24 @@
-# C. 曲目信息 
+# C. Track Information
 
 ## `<fb-track-text>` {#fb-track-text}
 
-通用曲目文本显示，替代旧版 `fb-title`/`fb-artist`/`fb-album`。
+General-purpose track text display. It replaces the legacy `fb-title`, `fb-artist`, and `fb-album` elements; use a built-in field or a Title Formatting expression.
 
 ```html
 <fb-track-text field="title"></fb-track-text>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| field | string | 'title' | 显示的字段名（observed） |
-| tf | string | — | Title Formatting 表达式，优先于 field（observed） |
-| placeholder | string | — | 无数据时的占位文本（observed） |
+| `field` | string | `'title'` | Field to display (observed) |
+| `tf` | string | — | Title Formatting expression; takes precedence over `field` (observed) |
+| `placeholder` | string | — | Text shown when no value is available (observed) |
 
 **CSS Parts:** `text`
 
 ## `<fb-cover-art>` {#fb-cover-art}
 
-封面图显示，推荐使用 `use-fb2k` 属性启用高性能加载路径。
+Cover-art display. Add `use-fb2k` to try the SDK's `getFb2kUrl()` helper first; the component falls back to `artwork.getCurrent()` when that path does not return usable artwork.
 
 ```html
 <fb-cover-art use-fb2k>
@@ -26,75 +26,75 @@
 </fb-cover-art>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| type | string | 'front' | 封面类型 front/back/disc/icon/artist（observed） |
-| use-fb2k | boolean | false | 使用 fb2k:// 高性能协议（observed，推荐） |
-| loaded | boolean | — | 只读反映：是否已加载 |
-| src | string | — | 只读反映：当前图片 src |
+| `type` | string | `'front'` | Artwork type: `front`, `back`, `disc`, `icon`, or `artist` (observed) |
+| `use-fb2k` | boolean | false | Tries the SDK URL-helper lookup before the standard artwork request (observed) |
+| `loaded` | boolean | — | Read-only reflection of successful image loading |
+| `src` | string | — | Read-only reflection of the current non-data image source |
 
 **CSS Parts:** `container`, `image`
 **Slots:** `placeholder`
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-cover-load', e => { /* 封面加载成功 */ });
-el.addEventListener('fb-cover-error', e => { /* 封面加载失败 */ });
+el.addEventListener('fb-cover-load', e => { /* artwork loaded */ });
+el.addEventListener('fb-cover-error', e => { /* artwork failed to load */ });
 ```
 
 ## `<fb-time-current>` {#fb-time-current}
 
-当前播放时间，格式 `m:ss` 或 `h:mm:ss`。
+Current playback time, formatted as `m:ss` or `h:mm:ss`.
 
 ```html
 <fb-time-current></fb-time-current>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| seconds | string | — | 只读反映：当前秒数 |
+| `seconds` | string | — | Read-only current position in whole seconds |
 
 **CSS Parts:** `text`
 
 ## `<fb-time-total>` {#fb-time-total}
 
-总时长。
+Total track duration.
 
 ```html
 <fb-time-total></fb-time-total>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| seconds | string | — | 只读反映：总秒数 |
+| `seconds` | string | — | Read-only total duration in whole seconds |
 
 **CSS Parts:** `text`
 
 ## `<fb-time-remaining>` {#fb-time-remaining}
 
-剩余时间，显示前缀 `-`。
+Remaining playback time, shown with a `-` prefix.
 
 ```html
 <fb-time-remaining></fb-time-remaining>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| seconds | string | — | 只读反映：剩余秒数 |
+| `seconds` | string | — | Read-only remaining time in whole seconds |
 
 **CSS Parts:** `text`
 
 ## `<fb-tech-info>` {#fb-tech-info}
 
-技术信息显示。`field="all"` 时输出格式：`FLAC | 1411 kbps | 44.1 kHz | Stereo`。
+Technical track information. With `field="all"`, the output is formatted like `FLAC | 1411 kbps | 44.1 kHz | Stereo`.
 
 ```html
 <fb-tech-info field="all"></fb-tech-info>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| field | string | 'all' | 显示字段：all/codec/bitrate/samplerate/channels（observed） |
+| `field` | string | `'all'` | Display field: `all`, `codec`, `bitrate`, `samplerate`, or `channels` (observed) |
 
 **CSS Parts:** `text`

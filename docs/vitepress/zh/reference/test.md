@@ -1,0 +1,27 @@
+# Test API
+
+用于测试 Bridge 通信是否正常的工具 API。
+
+运行时权威：`src/api/PlaybackApi.cpp`。
+
+## test.echo
+
+回显传入的参数，用于验证 Bridge 通信。
+
+```javascript
+const result = await fb2k.invoke('test.echo', { message: 'hello' });
+// { "success": true, "echo": "hello", "input": { "message": "hello" } }
+```
+
+若省略 `message`，则 `echo` 与 `input` 都包含完整 params 对象。
+
+## test.ping
+
+测试连接是否存活。
+
+```javascript
+const result = await fb2k.invoke('test.ping');
+// { "pong": true, "timestamp": 1234567890 }
+```
+
+`timestamp` 为主机侧 Unix 纪元秒。

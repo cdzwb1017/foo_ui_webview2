@@ -1,39 +1,63 @@
-# fb.panel panel
+# fb.panel Panel Configuration
 
-本页是 `fb.panel` 的 SDK 视角文档入口。
+`fb.panel` reads and updates configuration for the current WebView panel.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### getConfig()
 
-签名：`fb.panel.getConfig(...args): Promise<unknown>`
+Signature: `fb.panel.getConfig(): Promise<PanelGetConfigResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `panel.getConfig` 调用结果。
+Returns a response envelope whose optional `config` field is a `PanelConfigShape`. It can include `panelName`, `templateName`, `edgeStyle`, `urlOverride`, `transparentBackground`, `grabFocus`, `enableDragDrop`, and `enableDevTools`.
 
 ```javascript
-const result = await fb.panel.getConfig();
+const { config } = await fb.panel.getConfig();
 ```
 
 ### setConfig()
 
-签名：`fb.panel.setConfig(...args): Promise<unknown>`
+Signature: `fb.panel.setConfig(options: PanelSetConfigParams): Promise<BaseResponse & { changed?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `options.panelName` | `string` | No | Panel name. |
+| `options.transparentBackground` | `boolean` | No | Whether the panel background is transparent. |
+| `options.grabFocus` | `boolean` | No | Whether the panel takes focus. |
+| `options.enableDragDrop` | `boolean` | No | Whether drag-and-drop is enabled. |
 
-返回值：底层 `panel.setConfig` 调用结果。
+Returns the `panel.setConfig` response envelope. `changed` is present when reported by the host.
 
 ```javascript
-const result = await fb.panel.setConfig();
+const result = await fb.panel.setConfig({
+	panelName: 'Library',
+	transparentBackground: true,
+	enableDragDrop: true,
+});
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Events
+
+Panel lifecycle and configuration changes use the `panel:*` event family. Subscribe through `fb.on()`:
+
+- `panel:configChanged` — `PanelConfigChangedPayload`
+- `panel:focus` and `panel:blur` — payload `{ windowId }`
+- `panel:initialized` — payload `{ mode, panelMode, windowId }`
+- `panel:visibilityChanged` — payload `{ visible }`
+
+```javascript
+const off = fb.on('panel:configChanged', (config) => {
+	console.log(config.panelName, config.transparentBackground);
+});
+
+off();
+```

@@ -1,137 +1,99 @@
-# fb.file file
+# fb.file File System
 
-本页是 `fb.file` 的 SDK 视角文档入口。
+`fb.file` exposes host-side file and directory operations to the WebView.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### copy()
+### read(path, options?)
 
-签名：`fb.file.copy(...args): Promise<unknown>`
+Signature: `fb.file.read(path: string, options?: Omit<FileReadParams, 'path'>): Promise<{ content: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.copy` 调用结果。
+Reads a text file. `options.encoding` defaults to `utf-8`.
 
 ```javascript
-const result = await fb.file.copy();
+const { content } = await fb.file.read('C:\\Config\\settings.json');
 ```
 
-### delete()
+### write(path, content, options?)
 
-签名：`fb.file.delete(...args): Promise<unknown>`
+Signature: `fb.file.write(path: string, content: string, options?: Omit<FileWriteParams, 'path' | 'content'>): Promise<BaseResponse & { bytesWritten?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.delete` 调用结果。
+Writes text to a file. `options.encoding` defaults to `utf-8`; set `options.append` to append instead of replacing the file.
 
 ```javascript
-const result = await fb.file.delete();
+await fb.file.write('C:\\Logs\\theme.log', 'Theme initialized\n', { append: true });
 ```
 
-### exists()
+### exists(path)
 
-签名：`fb.file.exists(...args): Promise<unknown>`
+Signature: `fb.file.exists(path: string): Promise<{ exists: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Tests whether a file-system entry exists.
 
-返回值：底层 `file.exists` 调用结果。
+### list(path, options?)
+
+Signature: `fb.file.list(path: string, options?: Omit<FileListParams, 'path'>): Promise<FileListResponse>`
+
+Lists matching files and directories. `options.pattern` defaults to `*`; `options.recursive` defaults to `false`. The response exposes `files`, `directories`, and the compatibility alias `items`.
 
 ```javascript
-const result = await fb.file.exists();
+const result = await fb.file.list('C:\\Music', {
+	pattern: '*.flac',
+	recursive: true
+});
 ```
 
-### getInfo()
+### delete(path)
 
-签名：`fb.file.getInfo(...args): Promise<unknown>`
+Signature: `fb.file.delete(path: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Deletes the file-system entry. The SDK facade passes only `path`, so the host's default `moveToTrash: true` behavior applies.
 
-返回值：底层 `file.getInfo` 调用结果。
+### mkdir(path)
+
+Signature: `fb.file.mkdir(path: string): Promise<BaseResponse & { created?: boolean }>`
+
+Creates a directory, including missing parent directories.
+
+### copy(source, destination)
+
+Signature: `fb.file.copy(source: string, destination: string): Promise<BaseResponse>`
+
+Copies a file. The SDK facade does not expose the host's optional `overwrite` field, so existing destinations are not overwritten by default.
 
 ```javascript
-const result = await fb.file.getInfo();
+await fb.file.copy('C:\\Music\\track.flac', 'C:\\Backup\\track.flac');
 ```
 
-### list()
+### move(source, destination)
 
-签名：`fb.file.list(...args): Promise<unknown>`
+Signature: `fb.file.move(source: string, destination: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Moves a file-system entry to a new path.
 
-返回值：底层 `file.list` 调用结果。
+### rename(path, newName)
+
+Signature: `fb.file.rename(path: string, newName: string): Promise<BaseResponse & { oldPath?: string; newPath?: string }>`
+
+Renames an entry within its current parent directory. `newName` is a name, not a destination path.
 
 ```javascript
-const result = await fb.file.list();
+await fb.file.rename('C:\\Music\\old.flac', 'new.flac');
 ```
 
-### mkdir()
+### getInfo(path)
 
-签名：`fb.file.mkdir(...args): Promise<unknown>`
+Signature: `fb.file.getInfo(path: string): Promise<FileGetInfoResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.mkdir` 调用结果。
+Returns `exists` and, when available, `isDirectory`, `isFile`, `size`, `modified`, `name`, `extension`, and `parent`. `modified` is a JavaScript timestamp in milliseconds.
 
 ```javascript
-const result = await fb.file.mkdir();
-```
-
-### move()
-
-签名：`fb.file.move(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.move` 调用结果。
-
-```javascript
-const result = await fb.file.move();
-```
-
-### read()
-
-签名：`fb.file.read(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.read`, `file.write` 调用结果。
-
-```javascript
-const result = await fb.file.read();
-```
-
-### rename()
-
-签名：`fb.file.rename(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `file.rename` 调用结果。
-
-```javascript
-const result = await fb.file.rename();
+const info = await fb.file.getInfo('C:\\Music\\track.flac');
+console.log(info.size, info.modified);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

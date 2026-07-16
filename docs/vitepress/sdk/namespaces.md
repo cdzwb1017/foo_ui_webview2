@@ -1,80 +1,73 @@
-# SDK 命名空间 
+# SDK namespaces
 
-SDK 通过全局 `fb` 对象提供以下命名空间（共 40 个 namespace）。
+The aggregate `fb` object exposes 40 runtime namespaces, plus the reactive `fb.state` mirror and the top-level `fb.on`, `fb.off`, `fb.once`, `fb.invoke`, `fb.isAvailable()`, and `fb.ready()` helpers.
 
-R12 VitePress SDK 覆盖门禁当前按 SDK wrapper 视角统计为 `386` 个 method / `0` 个文档示例调用缺口；下表“数量”列沿用 API reference / host capability 口径，可能包含状态、事件或非 wrapper 入口，因此不等同于 R12 统计口径。
+The Phase 4 AST gate currently reports `443` methods in the complete public facade and `0` undocumented example-call gaps. It derives that facade directly from the exported namespace objects; the narrower direct-`invoke` extractor remains a diagnostic subset rather than the SDK total.
 
-## 核心命名空间 
+## Core media and UI
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.player | 播放控制 | 27 | fb.player.play() |
-| fb.playlist | 播放列表管理 | 47 | fb.playlist.getAll() |
-| fb.library | 媒体库操作 | 25 | fb.library.search('query') |
-| fb.ui | 窗口控制 | 82 | fb.ui.minimize() |
-| fb.config | 配置管理 | 29 | fb.config.get('key') |
-| fb.artwork | 封面获取 | 14 | fb.artwork.getCurrent() |
-| fb.audio | 音频分析 | 14 | fb.audio.subscribeSpectrum() |
-| fb.utils | 工具函数 | 3 | fb.utils.formatTitle() |
-| fb.system | 系统信息 | 9 | fb.system.listApis() |
-| fb.shell | 系统集成 | 5 | fb.shell.openExternal(url) |
-| fb.state | 响应式状态 | - | fb.state.isPlaying |
+| Namespace | Purpose | Example |
+| --- | --- | --- |
+| `fb.player` | Playback and volume control | `fb.player.play()` |
+| `fb.playlist` | Playlist management | `fb.playlist.getAll()` |
+| `fb.library` | Media-library queries and traversal | `fb.library.search('query')` |
+| `fb.ui` | Window and popup management | `fb.ui.minimize()` |
+| `fb.config` | Portable configuration and host settings | `fb.config.get('key')` |
+| `fb.artwork` | Album-art retrieval | `fb.artwork.getCurrent()` |
+| `fb.audio` | Audio analysis and waveform operations | `fb.audio.subscribeSpectrum()` |
+| `fb.output` | Output-device queries | `fb.output.getDevices()` |
+| `fb.dsp` | DSP chain and preset operations | `fb.dsp.getChain()` |
+| `fb.replaygain` | ReplayGain configuration | `fb.replaygain.getMode()` |
+| `fb.queue` | Playback queue | `fb.queue.get()` |
+| `fb.jitQueue` | Just-in-time queue | `fb.jitQueue.enqueueNext()` |
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.file | 文件读写 | 10 | fb.file.read(path) |
-| fb.http | HTTP 请求 | 9 | fb.http.get(url) |
-| fb.dialog | 对话框 | 4 | fb.dialog.openFile() |
-| fb.clipboard | 剪贴板 | 4 | fb.clipboard.read() |
+## Metadata and data access
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.dsp | DSP 预设 | 8 | fb.dsp.getChain() |
-| fb.output | 输出设备 | 3 | fb.output.getDevices() |
-| fb.replaygain | ReplayGain | 8 | fb.replaygain.getMode() |
+| Namespace | Purpose | Example |
+| --- | --- | --- |
+| `fb.metadata` | Metadata reads and writes | `fb.metadata.read(path)` |
+| `fb.titleformat` | Title Formatting evaluation | `fb.titleformat.eval()` |
+| `fb.playcount` | Playback statistics | `fb.playcount.get(path)` |
+| `fb.rating` | Track ratings | `fb.rating.set(path, 5)` |
+| `fb.selection` | Global selection synchronization | `fb.selection.get()` |
+| `fb.file` | File I/O | `fb.file.read(path)` |
+| `fb.http` | HTTP requests | `fb.http.get(url)` |
+| `fb.clipboard` | Clipboard access | `fb.clipboard.read()` |
+| `fb.dialog` | Native dialogs | `fb.dialog.openFile()` |
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.queue | 播放队列 | 8 | fb.queue.get() |
-| fb.jitQueue | JIT 即时队列 | 8 | fb.jitQueue.enqueueNext() |
-| fb.discovery | 服务发现 | 15 | fb.discovery.getAllServices() |
-| fb.keyboard | 全局快捷键 | 4 | fb.keyboard.registerHotkey() |
+## Cross-window and desktop integration
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.metadata | 元数据读写 | 10 | fb.metadata.read(path) |
-| fb.titleformat | Titleformat | 5 | fb.titleformat.eval() |
-| fb.playcount | 播放统计 | 4 | fb.playcount.get(path) |
-| fb.selection | 选择同步 | 6 | fb.selection.get() |
-| fb.rating | 评分 | 2 | fb.rating.set(path, 5) |
+| Namespace | Purpose | Example |
+| --- | --- | --- |
+| `fb.port` | Named cross-window ports | `fb.port.connect('main')` |
+| `fb.event` | Cross-window custom events | `fb.event.emit('refresh')` |
+| `fb.sharedState` | Shared cross-window state | `fb.sharedState.get('theme')` |
+| `fb.cursor` | Per-window cursor visibility | `fb.cursor.setHidden(true)` |
+| `fb.taskbar` | Taskbar buttons and progress | `fb.taskbar.setProgress(50)` |
+| `fb.tray` | System tray icon and menus | `fb.tray.showBalloon(opts)` |
+| `fb.keyboard` | Global hotkeys | `fb.keyboard.registerHotkey()` |
+| `fb.discovery` | Service and API discovery | `fb.discovery.getAllServices()` |
+| `fb.shell` | Operating-system integration | `fb.shell.openExternal(url)` |
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.port | PortHub 跨窗口端口 | 5 | fb.port.connect('main') |
-| fb.event | 跨窗口事件 | - | fb.event.emit('refresh') |
-| fb.sharedState | 跨窗口共享状态 | - | fb.sharedState.get('theme') |
+## Utilities and host services
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.cursor | 光标控制 | 2 | fb.cursor.set('hand') |
-| fb.taskbar | 任务栏按钮 | 5 | fb.taskbar.setProgress(50) |
-| fb.tray | 系统托盘 | 13 | fb.tray.showBalloon(opts) |
+| Namespace | Purpose | Example |
+| --- | --- | --- |
+| `fb.system` | API, plugin, locale, DPI, and theme discovery | `fb.system.listApis()` |
+| `fb.utils` | General utility methods | `fb.utils.formatTitle()` |
+| `fb.menu` | Main-menu and context-menu commands | `fb.menu.runMainMenuCommand()` |
+| `fb.console` | Host console output | `fb.console.log(msg)` |
+| `fb.log` | Log-file operations | `fb.log.write(msg)` |
+| `fb.lyrics` | Lyrics access | `fb.lyrics.get()` |
+| `fb.notification` | Toasts and notifications | `fb.notification.showToast()` |
+| `fb.panel` | Panel configuration | `fb.panel.getConfig()` |
+| `fb.misc` | Miscellaneous host operations | `fb.misc.restart()` |
+| `fb.dnd` | Drag-and-drop integration | `fb.dnd.registerDropZone()` |
 
-| 命名空间 | 描述 | 数量 | 示例 |
-| --- | --- | --- | --- |
-| fb.menu | 菜单命令 | 6 | fb.menu.runMainMenuCommand() |
-| fb.console | 控制台 | 3 | fb.console.log(msg) |
-| fb.log | 日志文件 | 3 | fb.log.write(msg) |
-| fb.lyrics | 歌词 | 3 | fb.lyrics.get() |
-| fb.notification | 通知/菜单 | 4 | fb.notification.showToast() |
-| fb.panel | 面板配置 | 2 | fb.panel.getConfig() |
-| fb.misc | 杂项工具 | 9 | fb.misc.restart() |
-| fb.dnd | 拖放 | 4 | fb.dnd.registerDropZone() |
+## Related documentation
 
-各命名空间详细文档：
+**Core:** [player](./player) | [playlist](./playlist) | [library](./library) | [ui](./ui) | [config](./config) | [artwork](./artwork) | [audio](./audio) | [utils](./utils) | [system](./system) | [shell](./shell) | [state](./state) | [events](./events)
 
-**核心**: [player](./player) | [playlist](./playlist) | [library](./library) | [ui](./ui) | [config](./config) | [artwork](./artwork) | [audio](./audio) | [utils](./utils) | [system](./system) | [shell](./shell) | [state](./state) | [events](./events)
+**Extended:** [file I/O](./file-io) | [extended audio](./audio-ext) | [navigation](./navigation) | [data](./data) | [miscellaneous](./misc)
 
-**扩展**: [file-io](./file-io) | [audio-ext](./audio-ext) | [navigation](./navigation) | [data](./data) | [misc](./misc)
-
-**桌面集成**: [cursor API](../api/cursor) | [taskbar/tray API](../api/taskbar-tray)
+**Desktop integration:** [cursor API](../api/cursor) | [taskbar and tray API](../api/taskbar-tray)

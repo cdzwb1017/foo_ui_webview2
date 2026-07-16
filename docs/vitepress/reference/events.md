@@ -1,162 +1,216 @@
-# 事件系统 
+# Event reference
 
-所有事件同时派发为 `fb2k:*` DOM 事件（CustomEvent）。
+Runtime event payload reference for foo_ui_webview2. Event names use **colon** format (`namespace:eventName`); method invocations use **dot** format (`namespace.method`).
 
-## 播放事件 
+Every payload key set is backed by a precise C++ emit-source rule. Internal `:__` events and historical entries without runtime emit evidence are excluded.
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| playback:trackChanged | 曲目切换 | {title, artist, album, duration, path, id, absolutePath} |
-| playback:stateChanged | 播放状态变化 | {state, position, duration} (state: "playing"/"paused"/"stopped") |
-| playback:paused | 播放/暂停切换 | {paused} |
-| playback:stopped | 播放停止 | {reason} (字符串: "user"/"eof"/"starting_another"/"shutting_down") |
-| playback:seeked | 播放位置跳转 | {position} |
-| playback:volumeChanged | 音量变化 | {volume, volumeDb, muted, isMuted} |
-| playback:time | 播放时间更新（~1秒/次，整数秒） | {position} |
-| playback:timeHighRes | 高精度时间更新（~100ms，小数秒，C++ 定时器轮询真实位置） | {position} |
-| playback:starting | 播放即将开始 | {command, paused} (command: "play"/"next"/"previous"/"random") |
-| playback:dynamicInfo | 动态信息变化 | {bitrate, streamTitle?} |
-| playback:dynamicInfoTrack | 动态曲目信息变化 | {artist?, title?} |
-| playback:edited | 当前曲目元数据被编辑 | {title, artist, album, duration, path, ...} |
-| playback:orderChanged | 播放顺序变化 | {orderIndex, order} |
-| playback:queueChanged | 播放队列变化 | {origin} ("user_added" / "user_removed" / "playback_advance") |
-| playback:itemPlayed | 曲目播放完成 | {title, artist, album, duration, path, absolutePath, ...} (完整 track info) |
-| playback:stopAfterCurrentChanged | "当前曲目后停止"状态变化 | {enabled} |
-| playback:followCursorChanged | “播放跟随光标”变化 | {enabled} |
-| playback:cursorFollowChanged | “光标跟随播放”变化 | {enabled} |
+## app events
 
-## 播放列表事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| playlist:activated | 活动播放列表切换 | {oldIndex, newIndex} |
-| playlist:created | 播放列表创建 | {index, name} |
-| playlist:removed | 播放列表删除 | {oldCount, newCount} |
-| playlist:renamed | 播放列表重命名 | {index, name} |
-| playlist:reordered | 播放列表顺序变化 | {count} |
-| playlist:lockChanged | 播放列表锁定状态变化 | {playlist, locked} |
-| playlist:defaultFormatChanged | 默认格式变化 | - |
-| playlist:itemsAdded | 曲目添加 | {playlist, start, count} |
-| playlist:itemsRemoved | 曲目移除 | {playlist, oldCount, newCount} |
-| playlist:itemsReordered | 曲目重新排序 | {playlist, count} |
-| playlist:itemsReplaced | 曲目替换 | {playlist, count} |
-| playlist:selectionChanged | 播放列表选中项变化 | {playlist} |
-| playlist:focusChanged | 焦点曲目变化 | {playlist, from, to} |
-| playlist:addComplete | 异步添加完成（广播到所有窗口） | {operationId, success, addedCount, totalCount} |
-
-## 媒体库事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| library:itemsAdded | 媒体库新增项目 | {count, timestamp} |
-| library:itemsRemoved | 媒体库移除项目 | {count, timestamp} |
-| library:itemsModified | 媒体库项目修改 | {count, timestamp} |
-| library:initialized | 媒体库初始化完成 | {timestamp} |
-
-## 元数据事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| metadb:changed | 评分/标签/统计变化 | {tracks, count, fromHook, timestamp} |
-
-## 选择事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| selection:changed | 全局选择变化 (50ms 节流) | {count, type, handles, truncated, track?, nowPlaying?} |
-
-## 音频事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| audio:spectrum | 频谱数据更新（需订阅） | {spectrum} |
-| audio:dspPresetChanged | DSP 预设变化 | - |
-| audio:outputDeviceChanged | 输出设备变化 | - |
-| audio:replaygainModeChanged | ReplayGain 模式变化 | {mode} |
-| audio:fullWaveformReady | 完整波形生成完成 | {taskId, path, waveform, duration, sampleRate, channels, resolution, method} |
-| audio:fullWaveformFailed | 完整波形生成失败 | {taskId, path, error, code} |
-
-## 窗口事件 
-
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| window:alwaysOnTopChanged | 置顶状态变化 | {enabled} |
-| window:stateChanged | 窗口状态变化 | 规范字段 {isMaximized, isMinimized}（运行时暂兼容 maximized / minimized） |
-| window:popupOpened | 弹出窗口打开 | {windowId, title, url} |
-| window:popupClosed | 弹出窗口关闭 | {windowId} |
-| window:beforeClose | 窗口关闭前确认 | {windowId} |
-| window:message | 跨窗口消息接收 | {sourceWindowId, message} |
-| window:behaviorChanged | 弹窗行为策略变更 | {windowId, profile, behavior, resolvedBehavior} |
-| window:minimizeSuppressed | 抑制最小化（Win+D 策略） | {windowId, reason} |
-| window:backdropStateChanged | 主窗口 / popup 的 DWM 激活/失焦策略生效 | {windowId, active, mode, effect} |
-
-## 面板事件 
-
-| 事件 | 触发时机 |
+| Event | Payload keys |
 | --- | --- |
-| panel:initialized | 面板初始化完成 |
-| panel:focus | 面板获得焦点 |
-| panel:blur | 面板失去焦点 |
-| panel:visibilityChanged | DUI 面板可见性变化 |
-| panel:configChanged | 面板配置变化 |
+| app:beforeQuit | `{}` |
 
-## UI 事件 
+## audio events
 
-| 事件 | 触发时机 |
+| Event | Payload keys |
 | --- | --- |
-| ui:coloursChanged | 颜色主题变化 |
-| ui:fontChanged | 字体变化 |
-| ui:menuItemClicked | 菜单项点击 |
-| ui:toast | 通知消息 |
-| system:themeChanged | 系统主题变化 |
+| audio:dspPresetChanged | `{}` |
+| audio:fullWaveformFailed | `{ code, error, path, taskId }` |
+| audio:fullWaveformReady | `{ cached, channels, duration, method, path, resolution, sampleRate, scale, signed, taskId, waveform }` |
+| audio:outputDeviceChanged | `{}` |
+| audio:replaygainModeChanged | `{ mode }` |
+| audio:spectrum | `{ spectrum }` |
+| audio:stream | `{}` |
 
-## 应用生命周期事件 
+`audio:stream` is currently only a reserved token returned by the unimplemented stream-capture subscription stub; the runtime does not emit it.
 
-| 事件 | 触发时机 |
+## cursor events
+
+| Event | Payload keys |
 | --- | --- |
-| app:beforeQuit | foobar2000 即将退出（fire-and-forget，前端可做快速清理） |
+| cursor:hiddenChanged | `{ hidden }` |
 
-## HTTP 事件 
+## http events
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| http:response | 异步 HTTP 请求完成 | {requestId, success, status, body, headers} |
+| Event | Payload keys |
+| --- | --- |
+| http:downloadComplete | `{ bytesWritten, cancelled, code, error, path, requestId, status, success }` |
+| http:response | `{ body, cancelled, code, contentLength, error, headers, requestId, responseType, status, success }` |
 
-## JIT Queue 事件 
+## jitQueue events
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| jitQueue:needNext | 后端请求下一首 | {currentTrackId} |
-| jitQueue:trackChanged | 播放曲目变化 | {trackId, title} |
-| jitQueue:listExhausted | 缓冲区耗尽 | {lastTrackId} |
-| jitQueue:error | 错误 | {trackId, error, url} |
+| Event | Payload keys |
+| --- | --- |
+| jitQueue:error | `{ error, path, trackId, url }` |
+| jitQueue:listExhausted | `{ lastTrackId }` |
+| jitQueue:needNext | `{ currentTrackId, reason }` |
+| jitQueue:preloadComplete | `{ count, replace, startIndex }` |
+| jitQueue:trackChanged | `{ title, trackId }` |
 
-## 键盘事件 
+For `jitQueue:error`, local-file failures include `path`, while remote-source failures include `url`; exactly one of those two keys is present in each payload.
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| keyboard:hotkey | 快捷键触发 | {action, key} |
+## keyboard events
 
-## 跨窗口通信事件 
+| Event | Payload keys |
+| --- | --- |
+| keyboard:hotkey | `{ action, id, key }` |
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| port:connected | 命名通道连接 | {portId, name, windowId} |
-| port:disconnected | 命名通道断开 | {portId, name, windowId} |
-| port:message | 收到跨窗口消息 | {portId, sourcePortId, sourceWindowId, message} |
+## library events
 
-## 共享状态事件 
+| Event | Payload keys |
+| --- | --- |
+| library:getAllResult | `{ error, fromCache, items, limit, offset, requestId, total, tracks }` |
+| library:initialized | `{ timestamp }` |
+| library:itemsAdded | `{ count, timestamp }` |
+| library:itemsModified | `{ count, timestamp }` |
+| library:itemsRemoved | `{ count, timestamp }` |
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| state:changed | 共享状态变更 | {key, value, sourceWindowId} |
-| state:deleted | 共享状态删除 | {key, sourceWindowId} |
+## menu events
 
-## 插件事件 
+| Event | Payload keys |
+| --- | --- |
+| menu:dismiss | `{ menuId, reason }` |
+| menu:select | `{ itemId, menuId }` |
+| menu:show | `{ menuId }` |
 
-| 事件 | 触发时机 | 数据 |
-| --- | --- | --- |
-| plugin:registered | 外部插件注册 | {namespace, name, version} |
-| plugin:unregistered | 外部插件注销 | {namespace} |
-| api:registered | 外部 API 注册 | {namespace, method} |
-| api:unregistered | 外部 API 注销 | {namespace, method} |
+## metadata events
+
+| Event | Payload keys |
+| --- | --- |
+| metadata:writeComplete | `{ code, operation, path, status, subsong, success }` |
+
+## metadb events
+
+| Event | Payload keys |
+| --- | --- |
+| metadb:changed | `{ count, fromHook, timestamp, tracks }` |
+
+## panel events
+
+| Event | Payload keys |
+| --- | --- |
+| panel:blur | `{}` |
+| panel:configChanged | `{ edgeStyle, enableDevTools, enableDragDrop, grabFocus, panelName, templateName, transparentBackground, urlOverride }` |
+| panel:focus | `{}` |
+| panel:initialized | `{ mode, panelMode, windowId }` |
+| panel:visibilityChanged | `{ visible }` |
+
+## playback events
+
+| Event | Payload keys |
+| --- | --- |
+| playback:cursorFollowChanged | `{ enabled }` |
+| playback:dynamicInfo | `{ bitrate, streamTitle }` |
+| playback:dynamicInfoTrack | `{ artist, title }` |
+| playback:edited | `{ absolutePath, album, albumArtist, artist, bitrate, channels, codec, date, discNumber, duration, fileSize, fullPath, genre, id, path, sampleRate, subsong, title, trackNumber }` |
+| playback:followCursorChanged | `{ enabled }` |
+| playback:itemPlayed | `{ absolutePath, album, albumArtist, artist, bitrate, channels, codec, date, discNumber, duration, fileSize, fullPath, genre, id, path, sampleRate, subsong, title, trackNumber }` |
+| playback:orderChanged | `{ order, orderIndex }` |
+| playback:paused | `{ paused }` |
+| playback:queueChanged | `{ origin }` |
+| playback:seeked | `{ position }` |
+| playback:starting | `{ command, paused }` |
+| playback:stateChanged | `{ duration, position, state }` |
+| playback:stopAfterCurrentChanged | `{ enabled }` |
+| playback:stopped | `{ reason }` |
+| playback:time | `{ position }` |
+| playback:timeHighRes | `{ position }` |
+| playback:trackChanged | `{ absolutePath, album, albumArtist, artist, bitrate, channels, codec, date, discNumber, duration, fileSize, fullPath, genre, id, path, sampleRate, subsong, title, trackNumber }` |
+| playback:volumeChanged | `{ isMuted, muted, volume, volumeDb }` |
+
+## playlist events
+
+| Event | Payload keys |
+| --- | --- |
+| playlist:activated | `{ oldIndex, newIndex }` |
+| playlist:addComplete | `{ addedCount, operationId, success, totalCount }` |
+| playlist:created | `{ index, name }` |
+| playlist:defaultFormatChanged | `{}` |
+| playlist:focusChanged | `{ playlist, from, to }` |
+| playlist:itemsAdded | `{ playlist, start, count }` |
+| playlist:itemsRemoved | `{ playlist, oldCount, newCount }` |
+| playlist:itemsReordered | `{ playlist, count }` |
+| playlist:itemsReplaced | `{ playlist, count }` |
+| playlist:lockChanged | `{ playlist, locked }` |
+| playlist:removed | `{ oldCount, newCount }` |
+| playlist:renamed | `{ index, name }` |
+| playlist:reordered | `{ count }` |
+| playlist:selectionChanged | `{ playlist }` |
+
+## port events
+
+| Event | Payload keys |
+| --- | --- |
+| port:connected | `{ name, portId, windowId }` |
+| port:disconnected | `{ name, portId, windowId }` |
+| port:message | `{ message, portId, sourcePortId, sourceWindowId }` |
+
+## selection events
+
+| Event | Payload keys |
+| --- | --- |
+| selection:changed | `{ absolutePath, album, albumArtist, artist, bitrate, channels, codec, count, date, discNumber, duration, fileSize, fullPath, genre, handles, id, nowPlaying, path, sampleRate, subsong, title, track, trackNumber, truncated, type }` |
+
+## state events
+
+| Event | Payload keys |
+| --- | --- |
+| state:changed | `{ expiresAt, key, previousValue, sourceWindowId, value }` |
+| state:deleted | `{ key, reason, sourceWindowId }` |
+
+## system events
+
+| Event | Payload keys |
+| --- | --- |
+| system:themeChanged | `{ darkMode }` |
+
+## taskbar events
+
+| Event | Payload keys |
+| --- | --- |
+| taskbar:buttonClicked | `{ id }` |
+
+## tray events
+
+| Event | Payload keys |
+| --- | --- |
+| tray:beforeContextMenu | `{ x, y }` |
+| tray:click | `{ button, x, y }` |
+| tray:doubleClick | `{ x, y }` |
+| tray:menuItemClicked | `{ id, value }` |
+
+## ui events
+
+| Event | Payload keys |
+| --- | --- |
+| ui:coloursChanged | `{}` |
+| ui:fontChanged | `{}` |
+| ui:menuItemClicked | `{ id, label }` |
+| ui:toast | `{ duration, message, position, type }` |
+
+## webview events
+
+| Event | Payload keys |
+| --- | --- |
+| webview:processFailed | `{ kind, kindRaw, recovered, recoveryAction }` |
+
+## window events
+
+| Event | Payload keys |
+| --- | --- |
+| window:alwaysOnTopChanged | `{ enabled }` |
+| window:backdropStateChanged | `{ active, effect, mode, windowId }` |
+| window:beforeClose | `{ windowId }` |
+| window:behaviorChanged | `{ behavior, profile, resolvedBehavior, windowId }` |
+| window:hoverStateChanged | `{ hovering, windowId }` |
+| window:message | `{ message, sourceWindowId }` |
+| window:minimizeSuppressed | `{ reason, windowId }` |
+| window:popupClosed | `{ windowId }` |
+| window:popupOpened | `{ title, url, windowId }` |
+| window:stateChanged | `{ active, fullscreen, isActive, isFullscreen, isMaximized, isMinimized, maximized, minimized }` |
+
+## Notes
+
+- `playback:stopAfterCurrentChanged` uses `{ enabled }`, the same field as its API.
+- Playlist lifecycle payloads are authoritative in `src/callbacks/PlaylistCallback.cpp`.
+- The exact emit source and field set for every row follow the C++ `EmitEvent` / `BroadcastEvent` call sites in the component source.

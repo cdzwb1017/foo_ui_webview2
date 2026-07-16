@@ -1,67 +1,35 @@
-# fb.cursor 光标控制
+# fb.cursor Cursor Visibility
 
-本页是 `fb.cursor` 的 SDK 视角文档入口。
+`fb.cursor` explicitly controls the calling window's client-area cursor. State and the `cursor:hiddenChanged` event are scoped to the originating window, so popups can manage visibility independently.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
-
-### isHidden()
-
-签名：`fb.cursor.isHidden(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `cursor.isHidden` 调用结果。
-
-```javascript
-const result = await fb.cursor.isHidden();
-```
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
 ### isHidden()
 
-签名：`fb.cursor.isHidden(...args): Promise<unknown>`
+Signature: `fb.cursor.isHidden(): Promise<CursorIsHiddenResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `cursor.isHidden` 调用结果。
+Returns `{ hidden }` for the calling window. If the host cannot resolve that window, the response falls back to `{ hidden: false }`.
 
 ```javascript
-const result = await fb.cursor.isHidden();
+const { hidden } = await fb.cursor.isHidden();
 ```
 
-### setHidden()
+### setHidden(hidden)
 
-签名：`fb.cursor.setHidden(...args): Promise<unknown>`
+Signature: `fb.cursor.setHidden(hidden: boolean): Promise<CursorSetHiddenResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `cursor.setHidden` 调用结果。
+Hides the cursor when `hidden` is `true` and restores it when `false`. Repeating the current state resolves with `success: true` and `changed: false`; only actual state changes emit `cursor:hiddenChanged`.
 
 ```javascript
-const result = await fb.cursor.setHidden();
+await fb.cursor.setHidden(true);
 ```
 
-### setHidden()
+## Event
 
-签名：`fb.cursor.setHidden(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `cursor.setHidden` 调用结果。
-
-```javascript
-const result = await fb.cursor.setHidden();
-```
+`cursor:hiddenChanged` carries `{ hidden: boolean }` and is delivered only to the window that changed its cursor state.
 
 <!-- END AUTO-GENERATED SDK STUBS -->

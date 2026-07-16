@@ -1,53 +1,64 @@
-# fb.port 跨窗口端口
+# fb.port Cross-Window Ports
 
-本页是 `fb.port` 的 SDK 视角文档入口。
+`fb.port` provides named cross-window messaging channels. Call `connect(name)` to obtain a `portId`, then use that ID for messaging and disconnection.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### disconnect()
 
-签名：`fb.port.disconnect(...args): Promise<unknown>`
+Signature: `fb.port.disconnect(portId: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| portId | string | Yes | Port identifier returned by `connect(name)` |
 
-返回值：底层 `port.disconnect` 调用结果。
+Disconnects the port. Receivers can subscribe to `port:disconnected` through `onDisconnect(handler)`.
 
 ```javascript
-const result = await fb.port.disconnect();
+const result = await fb.port.disconnect(portId);
 ```
 
 ### getPorts()
 
-签名：`fb.port.getPorts(...args): Promise<unknown>`
+Signature: `fb.port.getPorts(name: string): Promise<{ ports: unknown[] }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| name | string | Yes | Named channel to inspect |
 
-返回值：底层 `port.getPorts` 调用结果。
+Returns the connected ports for the requested channel as `{ ports }`.
 
 ```javascript
-const result = await fb.port.getPorts();
+const result = await fb.port.getPorts('transport');
 ```
 
 ### postMessage()
 
-签名：`fb.port.postMessage(...args): Promise<unknown>`
+Signature: `fb.port.postMessage(portId: string, message: unknown): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| portId | string | Yes | Sending port identifier |
+| message | unknown | Yes | Structured-clone-compatible message payload |
 
-返回值：底层 `port.postMessage`, `port.postMessageTo` 调用结果。
+Broadcasts through the named channel. `postMessageTo(portId, targetPortId, message)` targets one connected port. `onMessage(handler)` receives `port:message`; `onConnect(handler)` and `onDisconnect(handler)` subscribe to lifecycle events. Each subscription method returns an unsubscribe function.
 
 ```javascript
-const result = await fb.port.postMessage();
+const { portId } = await fb.port.connect('transport');
+const result = await fb.port.postMessage(portId, { action: 'play' });
+await fb.port.postMessageTo(portId, targetPortId, { action: 'pause' });
+
+const offMessage = fb.port.onMessage((data) => console.log(data));
+const offConnect = fb.port.onConnect((data) => console.log(data));
+const offDisconnect = fb.port.onDisconnect((data) => console.log(data));
+
+offMessage();
+offConnect();
+offDisconnect();
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

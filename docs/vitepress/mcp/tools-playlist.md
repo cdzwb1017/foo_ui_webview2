@@ -1,17 +1,17 @@
-# Playlist 工具 
+# Playlist Tools
 
-播放列表基础操作。共 7 个工具。
+Seven tools provide the core playlist query and management operations.
 
-## 查询 
+## Queries
 
 ### fb2k_playlist_get_all 
 
-获取所有播放列表。
+Gets all playlists.
 
-- **参数**: 无
-- **Bridge 方法**: `playlist.getAll`
+- **Parameters**: none
+- **Bridge method**: `playlist.getAll`
 
-**返回值**:
+**Example result:**
 
 ```json
 [
@@ -36,24 +36,24 @@
 ]
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| index | integer | 播放列表索引 |
-| name | string | 播放列表名称 |
-| trackCount | integer | 曲目数 |
-| isActive | boolean | 是否为当前活动列表 |
-| isPlaying | boolean | 是否正在播放 |
-| isLocked | boolean | 是否已锁定 |
-| isAutoplaylist | boolean | 是否为自动播放列表 |
+| `index` | integer | Playlist index |
+| `name` | string | Playlist name |
+| `trackCount` | integer | Track count |
+| `isActive` | boolean | Whether this is the active playlist |
+| `isPlaying` | boolean | Whether this is the playing playlist |
+| `isLocked` | boolean | Whether the playlist is locked |
+| `isAutoplaylist` | boolean | Whether the playlist is an autoplaylist |
 
 ### fb2k_playlist_get_active 
 
-获取当前活动播放列表。
+Gets the active playlist.
 
-- **参数**: 无
-- **Bridge 方法**: `playlist.getActive`
+- **Parameters**: none
+- **Bridge method**: `playlist.getActive`
 
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -67,63 +67,65 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| index | integer | 播放列表索引 |
-| name | string | 播放列表名称 |
-| trackCount | integer | 曲目数 |
-| isActive | boolean | 是否为活动列表 |
-| isPlaying | boolean | 是否正在播放 |
-| isLocked | boolean | 是否已锁定 |
-| duration | number | 总时长（秒） |
+| `index` | integer | Playlist index |
+| `name` | string | Playlist name |
+| `trackCount` | integer | Track count |
+| `isActive` | boolean | Whether this is the active playlist |
+| `isPlaying` | boolean | Whether this is the playing playlist |
+| `isLocked` | boolean | Whether the playlist is locked |
+| `duration` | number | Total duration in seconds |
 
-## 管理 
+## Management
 
 ### fb2k_playlist_set_active 
 
-切换活动播放列表。
+Sets the active playlist.
 
-- **Bridge 方法**: `playlist.setActive`
+- **Bridge method**: `playlist.setActive`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
+| `playlist` | integer | Yes | Zero-based playlist index; minimum `0` |
 
 ### fb2k_playlist_create 
 
-创建新播放列表。
+Creates an empty playlist.
 
-- **Bridge 方法**: `playlist.create`
+- **Bridge method**: `playlist.create`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| name | string | ? | 播放列表名称 |
+| `name` | string | Yes | Playlist name |
 
 ### fb2k_playlist_remove 
 
-删除播放列表。
+Removes a playlist.
 
-- **Bridge 方法**: `playlist.remove`
+- **Bridge method**: `playlist.remove`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
+| `playlist` | integer | Yes | Zero-based playlist index; minimum `0` |
 
-## 曲目操作 
+## Track operations
 
 ### fb2k_playlist_get_tracks 
 
-获取播放列表中的曲目（支持分页）。
+Gets a page of tracks from a playlist.
 
-- **Bridge 方法**: `playlist.getTracks`
+- **Bridge method**: `playlist.getTracks`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引（默认活动列表） |
-| start | integer | ? | 起始索引（默认 0） |
-| count | integer | ? | 返回数量（默认全部） |
+| `playlist` | integer | No | Declared minimum `0`; defaults to the active playlist |
+| `start` | integer | No | Declared minimum `0`; Bridge default `0` |
+| `count` | integer | No | Declared range `1` to `500`; Bridge default `100` |
 
-**返回值**:
+The `ToolDefinition` description currently says default `50`, but it declares no MCP default. Omission therefore reaches `playlist.getTracks`, whose handler uses `100`; that runtime behavior is documented here.
+
+**Example result:**
 
 ```json
 {
@@ -134,17 +136,17 @@
   "tracks": [
     {
       "index": 0,
-      "title": "天ノ弱",
+      "title": "Redo",
       "artist": "164 feat. GUMI",
-      "album": "天ノ弱",
+      "album": "Millennium Mother",
       "albumArtist": "164",
       "genre": "Vocaloid",
       "date": "2011",
       "trackNumber": 1,
       "discNumber": 1,
       "duration": 263.5,
-      "path": "D:\\\\Music\\\\164\\\\天ノ弱.flac",
-      "absolutePath": "D:\\\\Music\\\\164\\\\天ノ弱.flac",
+      "path": "D:\\\\Music\\\\Mili\\\\Redo.flac",
+      "absolutePath": "D:\\\\Music\\\\Mili\\\\Redo.flac",
       "fileSize": 28456789,
       "subsong": 0,
       "rating": 5,
@@ -163,18 +165,18 @@
 }
 ```
 
-::: tip 分页
-对于大型播放列表，建议使用 `start` 和 `count` 进行分页获取。返回值中的 `total` 字段表示曲目总数。
+::: tip Pagination
+Use `start` and `count` to page through large playlists. The `total` field reports the playlist's total track count.
 :::
 
 ### fb2k_playlist_play_track 
 
-播放指定曲目。
+Plays a specific track in a playlist.
 
-- **Bridge 方法**: `playlist.playTrack`
+- **Bridge method**: `playlist.playTrack`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| index | integer | ? | 曲目索引 |
-| playlist | integer | ? | 播放列表索引 |
-| deferred | boolean | ? | 是否延迟播放 |
+| `index` | integer | Yes | Zero-based track index; minimum `0` |
+| `playlist` | integer | No | Minimum `0`; defaults to the active playlist |
+| `deferred` | boolean | No | Whether playback should be deferred |

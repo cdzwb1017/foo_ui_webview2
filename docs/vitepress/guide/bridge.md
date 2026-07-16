@@ -1,27 +1,27 @@
-# Bridge 协议 
+# Bridge Protocol
 
-插件通过 WebView2 的 `window.chrome.webview.postMessage` 与 C++ 层通信，上层封装为 `window.fb2k` 对象。
+The component talks to the C++ host through WebView2 `window.chrome.webview.postMessage`, wrapped as the `window.fb2k` object.
 
-## Bridge 对象 
+## Bridge object
 
-插件会自动注入 `window.fb2k` 对象：
+The component injects `window.fb2k`:
 
 ```javascript
 window.fb2k = {
-    // 调用 API
+    // Call an API
     invoke(method, params) → Promise<result>,
     
-    // 监听事件
+    // Subscribe to events
     on(event, callback) → unsubscribe function,
     
-    // 内部属性（勿直接使用）
+    // Internal fields (do not use directly)
     _callbacks: Map,
     _callId: number,
     _evts: Object
 };
 ```
 
-## 请求格式 
+## Request format
 
 ```json
 {
@@ -31,15 +31,15 @@ window.fb2k = {
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| id | number | 自增请求 ID，用于匹配响应 |
-| method | string | API 方法名，格式为 namespace.action |
-| params | object | 请求参数 |
+| id | number | Auto-increment request id used to match responses |
+| method | string | API method name as `namespace.action` |
+| params | object | Request parameters |
 
-## 响应格式 
+## Response format
 
-### 成功响应 
+### Success
 
 ```json
 {
@@ -49,7 +49,7 @@ window.fb2k = {
 }
 ```
 
-### 错误响应 
+### Error
 
 ```json
 {
@@ -59,7 +59,7 @@ window.fb2k = {
 }
 ```
 
-## 事件格式 
+## Event format
 
 ```json
 {
@@ -74,70 +74,70 @@ window.fb2k = {
 }
 ```
 
-## 重要注意事项 
+## Important notes
 
-### 异步操作 
+### Async calls
 
-所有 `fb2k.invoke()` 调用都返回 Promise，**必须使用 `await` 或 `.then()`**：
+Every `fb2k.invoke()` returns a Promise — **always `await` or use `.then()`**:
 
 ```javascript
-// ✅ 正确
+// ✅ Correct
 await fb2k.invoke('playback.play');
 const track = await fb2k.invoke('playback.getCurrentTrack');
 
-// ❌ 错误：忘记 await 会导致操作未完成
+// ❌ Wrong: missing await leaves the call unfinished
 fb2k.invoke('playback.play');
-const track = fb2k.invoke('playback.getCurrentTrack'); // 返回 Promise 而非结果
+const track = fb2k.invoke('playback.getCurrentTrack'); // Promise, not result
 ```
 
-### 事件名称格式 
+### Event name format
 
-所有事件使用 **冒号分隔** 的命名格式：
+Events use **colon-separated** names:
 
 ```javascript
-// ✅ 正确格式
+// ✅ Correct
 fb2k.on('playback:trackChanged', callback);
 fb2k.on('playback:stateChanged', callback);
 fb2k.on('playlist:itemsAdded', callback);
 
-// ❌ 错误格式（不支持）
+// ❌ Unsupported
 fb2k.on('playback.trackChanged', callback);
 fb2k.on('playbackTrackChanged', callback);
 ```
 
-### 音量格式 
+### Volume format
 
-| 场景 | 范围 | 说明 |
+| Context | Range | Notes |
 | --- | --- | --- |
-| API 输入/输出 | 0-100 | 整数百分比，0=静音，100=最大 |
-| 滑块控件 | 0-100 | 直接绑定 |
-| dB 换算 | - | 0% ≈ -100dB，100% = 0dB |
+| API input/output | 0-100 | Integer percent; 0=mute, 100=max |
+| Slider controls | 0-100 | Bind directly |
+| dB conversion | - | 0% ≈ -100dB, 100% = 0dB |
 
-### 路径格式 
+### Path format
 
-API 返回的曲目对象包含两个路径字段：
+Track objects returned by the API include two path fields:
 
-| 字段 | 说明 |
+| Field | Description |
 | --- | --- |
-| path | foobar2000 内部路径（可能是 file-relative:// 等特殊格式） |
-| absolutePath | 本地文件系统绝对路径（推荐使用） |
+| path | foobar2000 internal path (may be `file-relative://`, etc.) |
+| absolutePath | Local filesystem absolute path (preferred) |
 
-::: warning 始终使用 absolutePath
-在调用需要文件路径的 API（如 `artwork.getForTrack`）时，始终使用 `absolutePath` 而非 `path`。
+::: warning Always prefer absolutePath
+When calling path-based APIs such as `artwork.getForTrack`, pass `absolutePath`, not `path`.
 :::
 
-#### 路径类型 
+#### Path kinds
 
-| 路径前缀 | 类型 | 示例 |
+| Prefix | Kind | Example |
 | --- | --- | --- |
-| C:\\ D:\\ | 本地文件 | D:\\Music\\song.flac |
-| file:// | URI 格式 | file://D:/Music/song.flac |
-| file-relative:// | 相对路径 | file-relative://../../song.flac |
-| archive:// | 压缩包 | archive://D:\\Album.zip\|track01.flac |
-| cdda:// | CD 音轨 | cdda://E,1 |
-| http:// https:// | 网络流 | https://stream.example.com/live |
+| C:\\ D:\\ | Local file | D:\\Music\\song.flac |
+| file:// | URI form | file://D:/Music/song.flac |
+| file-relative:// | Relative path | file-relative://../../song.flac |
+| archive:// | Archive entry | archive://D:\\Album.zip\|track01.flac |
+| cdda:// | CD track | cdda://E,1 |
+| http:// https:// | Network stream | https://stream.example.com/live |
 
-#### 文件类型识别 
+#### File type detection
 
 ```javascript
 function getFileType(absolutePath) {

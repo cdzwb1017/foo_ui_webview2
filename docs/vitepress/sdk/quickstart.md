@@ -1,21 +1,21 @@
-# SDK 快速入门 
+# SDK quick start
 
-## 最小示例 
+## Minimal script-tag example
 
 ```html
 <!DOCTYPE html>
 <html>
 <head>
-    <script src="bridge.js"></script>
-    <script src="components.js"></script>
+    <script src="bridge.global.js"></script>
+    <script src="components.global.js"></script>
 </head>
 <body>
-    <!-- 使用 Web Components -->
+    <!-- components.global.js registers these elements automatically. -->
     <fb-play-button></fb-play-button>
     <fb-prev-button></fb-prev-button>
     <fb-next-button></fb-next-button>
     <fb-seek-bar></fb-seek-bar>
-    <fb-volume-bar></fb-volume-bar>
+    <fb-volume-control></fb-volume-control>
 
     <script>
         fb.on('playback:trackChanged', (track) => {
@@ -26,32 +26,53 @@
 </html>
 ```
 
-## 完整播放器示例 
+## ES module setup
+
+```javascript
+import fb from 'foo-webview-sdk';
+import { registerComponents } from 'foo-webview-sdk/components';
+
+registerComponents();
+await fb.ready();
+```
+
+## Player example
 
 ```javascript
 async function init() {
-    // 获取当前曲目
+    // Read the current track. The SDK returns null when nothing is loaded.
     const track = await fb.player.getCurrentTrack();
     if (track) updateUI(track);
 
-    // 获取所有播放列表
+    // Read all playlists.
     const playlists = await fb.playlist.getAll();
     renderPlaylists(playlists);
 
-    // 订阅事件
+    // Subscribe to typed host events.
     fb.on('playback:trackChanged', updateUI);
     fb.on('playback:stateChanged', updatePlaybackState);
 }
 
-// 播放控制
+// Playback controls.
 document.getElementById('playBtn').onclick = () => fb.player.toggle();
 document.getElementById('prevBtn').onclick = () => fb.player.prev();
 document.getElementById('nextBtn').onclick = () => fb.player.next();
 
-// 音量控制 (0-100)
+// Linear volume control (0-100).
 document.getElementById('volumeSlider').oninput = (e) => {
     fb.player.setVolume(Number(e.target.value));
 };
 
 init();
+```
+
+`fb.on()` returns an unsubscribe function. Keep it when the subscription has a shorter lifetime than the page:
+
+```javascript
+const off = fb.on('playback:time', ({ position }) => {
+    renderPosition(position);
+});
+
+// Later:
+off();
 ```

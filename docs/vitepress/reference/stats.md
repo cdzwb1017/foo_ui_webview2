@@ -1,54 +1,69 @@
-# Playcount & Rating 
+# Stats reference
 
-> 底层 API 完整参考：[Playcount API](/api/playcount) · [Titleformat API](/api/titleformat)（可用 `%play_count%`、`%rating%` 等字段）
+Cross-page reference for playcount and rating surfaces. Primary owners remain:
 
-## rating.set 
+- [Playcount API](/api/playcount)
+- [Metadata / Rating API](/api/metadata)
 
-设置曲目评分。优先使用 foo_playcount 上下文菜单，不可用时回退到写入文件 RATING 标签。
+## rating.set
 
-| 参数 | 类型 | 必填 | 描述 |
+Sets a track rating. Prefers the foo_playcount context-menu path when available; otherwise falls back to writing the file `RATING` tag.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✗ | 音频文件路径（支持 \|subsong:N 格式）。省略时对当前播放曲目操作 |
-| rating | number | ✓ | 0-5，0=取消评分 |
-| cueIndex | number | ✗ | CUE 子曲目索引（优先级高于路径中的 \|subsong:N） |
+| `path` | string | No | Audio path. Supports `path\|subsong:N`. Omit to target the now-playing item when the handler allows it. |
+| `rating` | number | Yes | `0`–`5`; `0` clears the rating. |
+| `cueIndex` | number | No | CUE subsong index. Takes priority over `\|subsong:N` embedded in `path`. |
 
-::: warning 依赖说明
-需要安装 [foo_playcount](https://www.foobar2000.org/components/view/foo_playcount) 插件才能正常工作。
+::: warning Dependency
+Install [foo_playcount](https://www.foobar2000.org/components/view/foo_playcount) for stats-backed ratings.
 :::
 
-## rating.get 
+Runtime authority: `src/api/MetadataApi.cpp` (`rating.set`).
 
-获取曲目评分。优先从 foo_playcount 读取（`%rating%` titleformat），不可用时回退读取文件 RATING 标签。
+## rating.get
 
-| 参数 | 类型 | 必填 | 描述 |
+Reads a track rating. Prefers foo_playcount (`%rating%` titleformat) and falls back to the file `RATING` tag.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径（支持 \|subsong:N 格式） |
-| cueIndex | number | ✗ | CUE 子曲目索引 |
+| `path` | string | Yes | Audio path. Supports `path\|subsong:N`. |
+| `cueIndex` | number | No | CUE subsong index. |
 
-**返回值**:
+Example return:
 
 ```json
 {
-    "success": true,
-    "path": "C:\\\\Music\\\\song.flac",
-    "rating": 4,
-    "storage": "stats"
+  "success": true,
+  "path": "C:\\Music\\song.flac",
+  "rating": 4,
+  "storage": "stats"
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| rating | number | 0-5，0=未评分 |
-| storage | string | "stats"（来自 foo_playcount）或 "file"（来自文件标签） |
+| `rating` | number | `0`–`5`; `0` means unrated |
+| `storage` | string | `"stats"` (foo_playcount) or `"file"` (file tag) |
 
-## playcount.get 
+Runtime authority: `src/api/MetadataApi.cpp` (`rating.get`).
 
-获取播放统计信息（来自 foo_playcount）。详细参数和返回值见 [Playcount API](/api/playcount)。
+## playcount.get
 
-## playcount.getBatch 
+Returns playcount statistics from foo_playcount. Full parameter/return contract: [Playcount API](/api/playcount#playcount-get).
 
-`playcount.get` 的别名，参数和返回值完全相同。
+## playcount.getBatch
 
-## playcount.getStats 
+Alias of `playcount.get` with the same parameters and return shape. See [Playcount API](/api/playcount#playcount-getbatch).
 
-获取媒体库整体播放统计。详见 [Playcount API](/api/playcount#playcount-getstats)。
+## playcount.getStats
+
+Returns whole-library playcount aggregates. See [Playcount API](/api/playcount#playcount-getstats).
+
+## playcount.set
+
+Registered placeholder only. It requires `path` but always returns `success: false` and directs callers to `rating.set` for ratings. It does not mutate play counts.
+
+## Related titleformat fields
+
+When foo_playcount is installed, titleformat fields such as `%play_count%`, `%rating%`, and `%last_played%` may be available through the Titleformat API.

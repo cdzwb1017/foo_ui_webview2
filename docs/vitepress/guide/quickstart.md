@@ -1,8 +1,8 @@
-# 快速开始 
+# Quick Start
 
-## 最小示例 
+## Minimal example
 
-将以下内容保存为 `index.html`，放到 `profile/foo_ui_webview2/` 目录下即可运行：
+Save the following as `index.html` under the current active template directory, usually `profile/webview-ui/<active-template>/` (for the common starter this is `profile/webview-ui/default/`), then load that template:
 
 ```html
 <!DOCTYPE html>
@@ -12,10 +12,10 @@
     <title>My foobar2000 UI</title>
 </head>
 <body>
-    <h1 id="track">等待播放...</h1>
-    <button id="play">▶ 播放</button>
-    <button id="prev">⏮ 上一首</button>
-    <button id="next">⏭ 下一首</button>
+    <h1 id="track">Waiting for playback...</h1>
+    <button id="play">▶ Play</button>
+    <button id="prev">⏮ Previous</button>
+    <button id="next">⏭ Next</button>
 
     <script>
     document.getElementById('play').onclick = () => fb2k.invoke('playback.playOrPause');
@@ -30,43 +30,43 @@
 </html>
 ```
 
-> `window.fb2k` 由插件自动注入，无需引入任何文件。如需 SDK 封装（`fb.player.play()` 等简化调用），请另外引入 `sdk/bridge.js`。
+> Native `window.fb2k` is injected by the component — no SDK file is required for `fb2k.invoke()` / `fb2k.on()`. For the higher-level `fb.*` wrappers (`fb.player.play()`, etc.), install `foo-webview-sdk` and load a published asset such as `bridge.global.js` (or import the ESM package from a bundler). The component does not auto-deploy an SDK directory under the active template.
 
-## Bridge 对象 
+## Bridge object
 
-插件会自动注入 `window.fb2k` 对象：
+The component injects `window.fb2k`:
 
 ```javascript
 window.fb2k = {
-    invoke(method, params) → Promise<result>,  // 调用 API
-    on(event, callback) → unsubscribe,         // 监听事件
+    invoke(method, params) → Promise<result>,  // call an API
+    on(event, callback) → unsubscribe,         // subscribe to events
 };
 ```
 
-## 基础调用 
+## Basic calls
 
 ```javascript
-// 1. 调用 API（所有调用都是异步的）
+// 1. Call an API (all calls are async)
 const result = await fb2k.invoke('playback.play');
 console.log(result); // { success: true }
 
-// 2. 获取当前曲目信息
+// 2. Get the current track
 const track = await fb2k.invoke('playback.getCurrentTrack');
 console.log(track.title, track.artist);
 
-// 3. 监听事件
+// 3. Listen for events
 const unsubscribe = fb2k.on('playback:trackChanged', (data) => {
-    console.log('正在播放:', data.title);
+    console.log('Now playing:', data.title);
 });
-// 取消订阅：unsubscribe();
+// unsubscribe later: unsubscribe();
 
-// 4. 带参数调用（音量范围 0-100）
+// 4. Call with params (volume range 0-100)
 await fb2k.invoke('playback.setVolume', { volume: 80 });
 ```
 
-## 完整播放器示例 
+## Full player example
 
-初始化播放控制事件监听
+Initialize playback control listeners:
 
 ```javascript
 async function initPlayer() {
@@ -114,7 +114,7 @@ fb2k.on('playback:time', (data) => {
 });
 ```
 
-## 辅助函数 
+## Helpers
 
 ```javascript
 function formatTime(seconds) {

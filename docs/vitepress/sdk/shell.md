@@ -1,8 +1,8 @@
-# fb.shell 系统集成 
+# fb.shell System Integration
 
 ## showInExplorer(path) 
 
-在资源管理器中显示文件。
+Reveals a file in Windows File Explorer.
 
 ```javascript
 await fb.shell.showInExplorer('E:\\\\Music\\\\song.flac');
@@ -10,10 +10,10 @@ await fb.shell.showInExplorer('E:\\\\Music\\\\song.flac');
 
 ## openWith(path) 
 
-用系统默认程序打开文件。
+Opens a file with its system-associated application.
 
-::: danger 安全限制
-禁止打开可执行文件（.exe/.bat/.cmd 等）。
+::: danger Security restriction
+Executable file types such as `.exe`, `.bat`, and `.cmd` are rejected.
 :::
 
 ```javascript
@@ -22,7 +22,7 @@ await fb.shell.openWith('E:\\\\Music\\\\cover.jpg');
 
 ## openExternal(url) 
 
-用默认浏览器打开 URL。
+Opens a URL in the default browser.
 
 ```javascript
 await fb.shell.openExternal('https://www.foobar2000.org');
@@ -30,16 +30,18 @@ await fb.shell.openExternal('https://www.foobar2000.org');
 
 ## exec(command, options?) 
 
-执行系统命令。
+Executes a system command and returns a `ShellExecResponse` containing `success` and, on success, `processId`.
 
-::: warning 安全限制
-不限制可执行命令（主题来自用户自己或可信来源，信任边界等同于安装一个 foobar2000 组件）。若提供 `cwd`，会经路径安全校验拒绝系统目录等越界路径。破坏性文件操作请用 `fb.file.*`，其受 PathSecurity 路径黑名单保护。
+::: warning Security boundary
+Commands are not allowlisted because installed themes are treated as trusted code, with a trust boundary comparable to installing a foobar2000 component. When provided, `cwd` is validated and paths outside the permitted boundary, including protected system directories, are rejected. Prefer `fb.file.*` for destructive file operations so PathSecurity restrictions apply.
 :::
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| command | string | 要执行的命令 |
-| options | object | 可选：{args, cwd, hidden} |
+| command | string | Command to execute |
+| options.args | string[] | Command-line arguments |
+| options.cwd | string | Working directory |
+| options.hidden | boolean | Hide the child window. Defaults to `true` |
 
 ```javascript
 await fb.shell.exec('notepad', { args: ['E:\\\\notes.txt'] });
@@ -47,16 +49,21 @@ await fb.shell.exec('notepad', { args: ['E:\\\\notes.txt'] });
 
 ## spawn(executable, options?) 
 
-结构化启动进程（推荐用于启动 Node 服务）。
+Starts a process through the structured spawn API, recommended for services such as Node applications.
 
-::: warning 安全限制
-不限制可执行文件（信任主题作者）。绝对路径可执行文件与 `cwd` 会经路径安全校验，拒绝指向系统目录等越界路径。
+::: warning Security boundary
+Executables are not allowlisted; trust the theme author. Absolute executable paths and `cwd` values are validated, and paths outside the permitted boundary, including protected system directories, are rejected. An empty-string `cwd` is rejected by the SDK before invoking the host.
 :::
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| executable | string | 可执行文件名或绝对路径 |
-| options | object | 可选：{args, cwd, hidden, waitForExitMs} |
+| executable | string | Executable name or absolute path |
+| options.args | string[] | Process arguments |
+| options.cwd | string | Working directory |
+| options.hidden | boolean | Hide the child window. Defaults to `true` |
+| options.waitForExitMs | number | Wait up to this many milliseconds for exit. Defaults to `0` (do not wait) |
+
+The response contains `processId` on success. If `waitForExitMs` is positive, it may also contain `exited` and, when the process exited in time, `exitCode`.
 
 ```javascript
 const result = await fb.shell.spawn('E:\\\\FB2K\\\\Runtime\\\\node.exe', {

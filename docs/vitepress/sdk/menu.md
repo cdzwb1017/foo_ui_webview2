@@ -1,112 +1,125 @@
-# fb.menu menu
+# fb.menu Menu APIs
 
-本页是 `fb.menu` 的 SDK 视角文档入口。
+`fb.menu` queries and executes main or context menu commands and provides WebView-rendered popup menus.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### getContextMenu()
 
-签名：`fb.menu.getContextMenu(...args): Promise<unknown>`
+Signature: `fb.menu.getContextMenu(options?: MenuGetContextMenuParams): Promise<MenuGetContextMenuResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `options.mode` | `string` | No | Context mode: `'auto'`, `'playlist'`, `'nowPlaying'`, or `'handles'`. |
+| `options.handles` | `unknown[]` | No | Handles used by handle-based context. |
+| `options.path` | `string` | No | Optional track path. |
+| `options.subsong` | `number` | No | Optional subsong index. |
+| `options.locale` | `string` | No | Locale selector; defaults to `'auto'`. |
+| `options.i18n` | `boolean` | No | Enables localized labels. |
+| `options.withAvailability` | `boolean` | No | Includes availability metadata. |
 
-返回值：底层 `menu.getContextMenu` 调用结果。
+Returns a `MenuGetContextMenuResponse` containing the recursive `items` menu tree and context metadata.
 
 ```javascript
-const result = await fb.menu.getContextMenu();
+const result = await fb.menu.getContextMenu({ mode: 'nowPlaying' });
 ```
 
 ### getMainMenu()
 
-签名：`fb.menu.getMainMenu(...args): Promise<unknown>`
+Signature: `fb.menu.getMainMenu(root?: string): Promise<MenuGetMainMenuResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `root` | `string` | No | Limits the returned tree, for example `'Main'` or `'View'`. |
 
-返回值：底层 `menu.getMainMenu` 调用结果。
+Returns a `MenuGetMainMenuResponse`. The optional `items` field is a recursive `MenuItem[]` tree.
 
 ```javascript
-const result = await fb.menu.getMainMenu();
+const result = await fb.menu.getMainMenu('View');
 ```
 
 ### runContextCommand()
 
-签名：`fb.menu.runContextCommand(...args): Promise<unknown>`
+Signature: `fb.menu.runContextCommand(command: string): Promise<BaseResponse & { guid?: string; itemCount?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `command` | `string` | Yes | Context-menu command path or name. |
 
-返回值：底层 `menu.runContextCommand`, `menu.runContextCommandById` 调用结果。
+Invokes only `menu.runContextCommand`. The response may include the command `guid` and affected `itemCount`.
 
 ```javascript
-const result = await fb.menu.runContextCommand();
+const result = await fb.menu.runContextCommand('Properties');
 ```
 
 ### runMainMenuCommand()
 
-签名：`fb.menu.runMainMenuCommand(...args): Promise<unknown>`
+Signature: `fb.menu.runMainMenuCommand(command: string): Promise<BaseResponse & { guid?: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `command` | `string` | Yes | Main-menu command path. |
 
-返回值：底层 `menu.runMainMenuCommand` 调用结果。
+Returns the `menu.runMainMenuCommand` response envelope and may include the resolved `guid`.
 
 ```javascript
-const result = await fb.menu.runMainMenuCommand();
+const result = await fb.menu.runMainMenuCommand('View/Console');
 ```
 
 ### showNativePopup()
 
-签名：`fb.menu.showNativePopup(...args): Promise<unknown>`
+Signature: `fb.menu.showNativePopup(options: MenuShowNativePopupParams): Promise<MenuShowNativePopupResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `options.mode` | `string` | No | Context mode; defaults to `'playlist'`. |
+| `options.handles` | `unknown[]` | No | Optional handle list. |
+| `options.path` | `string` | No | Optional track path. |
+| `options.subsong` | `number` | No | Optional subsong index. |
 
-返回值：底层 `menu.showNativePopup` 调用结果。
+Returns the `menu.showNativePopup` response envelope. Native rendering is scheduled by the host.
 
 ```javascript
-const result = await fb.menu.showNativePopup();
+const result = await fb.menu.showNativePopup({ mode: 'playlist' });
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
 
-## 自绘弹出菜单（Self-drawn popup menu）
+## Self-drawn Popup Menus
 
-`menu.show` / `menu.close` / `menu.popup` 用 WebView 渲染上下文菜单，替代原生 Win32 `TrackPopupMenu`，支持子菜单、键盘导航与 `::part()` 主题化。
+`menu.show`, `menu.close`, and `menu.popup` render a context menu in WebView rather than through the native Win32 popup. The renderer supports submenus, keyboard navigation, and `::part()` theme hooks.
+
+> **Boundary with tray zones:** public `menu.show` always uses direct item children under `#menu > .fb-item`; it does not produce `.fb-zone` containers. Zoned layout through `layoutMode: 'zones'` is an opt-in capability of `tray.setContextMenu` with `render: 'webview'`.
 
 ### fb.menu.popup(items, position?)
 
-推荐入口：弹出自绘菜单并等待用户选择。选中返回所选项的 `id`，被取消（外点击 / Esc / 其他原因）时返回 `null`。事件按菜单 id 匹配，多个调用不会互相串扰。
+Preferred convenience API. It displays a self-drawn menu and waits for a selection. It resolves to the selected item's `id`, or `null` when the menu is dismissed by an outside click, Escape, or another close reason. Events are correlated by menu ID, so overlapping calls do not resolve one another.
 
 ```javascript
 const id = await fb.menu.popup(
   [
-    { id: 'play', label: '播放' },
-    { id: 'queue', label: '加入队列', checked: true },
+    { id: 'play', label: 'Play' },
+    { id: 'queue', label: 'Add to queue', checked: true },
     { type: 'separator' },
-    { id: 'more', label: '更多', submenu: [
-      { id: 'props', label: '属性' },
-      { id: 'del', label: '删除', enabled: false },
+    { id: 'more', label: 'More', submenu: [
+      { id: 'props', label: 'Properties' },
+      { id: 'remove', label: 'Remove', enabled: false },
     ] },
   ],
-  { x: 200, y: 150 }, // 省略 position 用光标位置
+  { x: 200, y: 150 },
 );
 if (id) console.log('selected', id);
 ```
 
+Omit `position` or either coordinate to use the current cursor coordinate for that axis.
+
 ### fb.menu.show(items, position?)
 
-底层方法：仅弹出菜单并返回 `{ success, menuId }`；用户选择通过 `menu:select` / `menu:dismiss` 事件回传。
+Low-level API. It shows the menu and resolves with `MenuShowResponse`, including `{ success, menuId }` on success. User interaction arrives asynchronously through `menu:select` and `menu:dismiss`.
 
 ```javascript
 const { menuId } = await fb.menu.show([{ id: 'a', label: 'A' }]);
@@ -114,34 +127,46 @@ fb.on('menu:select', (e) => { if (e.menuId === menuId) console.log(e.itemId); })
 fb.on('menu:dismiss', (e) => { if (e.menuId === menuId) console.log('dismissed', e.reason); });
 ```
 
+#### Caller, Security, and Resource Boundaries
+
+- **Public entry points:** theme pages may call `menu.show`, `menu.close`, and `menu.popup`. Internal endpoints such as `menu.__select`, `menu.__valueChanged`, `menu.__dismiss`, `menu.__ready`, and `menu.__getMenuState` belong to the overlay window and are not part of the public SDK contract.
+- **Authorization:** an unauthorized internal IPC call, including an incorrect caller or mismatched `menuId`, returns `INVALID_PARAMS` without changing menu state.
+- **Validation limits:** validation is transactional before the overlay opens. Exceeding a limit returns `success: false`; `details` identifies `field`, `limit`, and `actual`.
+  - At most 512 total items.
+  - At most 8 recursive levels, with the root at level 1.
+  - The shared renderer allows at most 64 options in one internally supplied `segmented` item. `segmented` is not part of the public `MenuPopupItem` type.
+  - The shared renderer allows at most 256 KiB of SVG `content` per menu after oversized individual icons are discarded. The public `MenuPopupItem` type does not expose an SVG field.
+- **Individual SVG limit:** within the shared renderer, an icon larger than 32 KiB is discarded without failing the entire menu.
+- This API is a generic self-drawn menu, not the tray-zone configuration surface. Use `tray.setContextMenu` or `tray.appendMenuItems` for top, playback, and bottom tray zones.
+
 ### fb.menu.close(reason?)
 
-主动关闭当前自绘菜单。
+Closes the active self-drawn menu. The facade omits the `reason` field when no reason is supplied.
 
 ```javascript
 await fb.menu.close('api');
 ```
 
-### 菜单项 MenuPopupItem
+### MenuPopupItem
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 | --- | --- | --- |
-| `id` | `string` | 选中时通过 `menu:select` 回传 |
-| `label` | `string` | 行文本（分隔线可省略） |
-| `type` | `'normal' \| 'separator'` | `separator` 渲染分隔线 |
-| `enabled` | `boolean` | 默认 `true`；`false` 灰显不可选 |
-| `checked` | `boolean` | 渲染勾选标记 |
-| `submenu` | `MenuPopupItem[]` | 子菜单，渲染右展开箭头 |
+| `id` | `string` | Stable ID echoed through `menu:select`. |
+| `label` | `string` | Visible row text; omitted for separators. |
+| `type` | `'normal' \| 'separator'` | `'separator'` renders a divider. |
+| `enabled` | `boolean` | Disabled rows cannot be selected; defaults to enabled. |
+| `checked` | `boolean` | Displays a check mark. |
+| `submenu` | `MenuPopupItem[]` | Nested child items rendered as a flyout. |
 
-### 事件
+### Events
 
-| 事件 | payload | 时机 |
+| Event | Payload | Timing |
 | --- | --- | --- |
-| `menu:show` | `{ menuId }` | 菜单显示 |
-| `menu:select` | `{ menuId, itemId }` | 选中某项后触发，随后自动关闭 |
-| `menu:dismiss` | `{ menuId, reason }` | 关闭（reason：outside / escape / select / api / timeout / blur） |
+| `menu:show` | `MenuShowPayload` with `{ menuId }` | The menu becomes visible. |
+| `menu:select` | `MenuSelectPayload` with `{ menuId, itemId }` | An item is selected; the menu then closes. |
+| `menu:dismiss` | `MenuDismissPayload` with `{ menuId, reason }` | The menu closes. Host reasons include `outside`, `escape`, `select`, `api`, `timeout`, and `blur`. |
 
-### 既有菜单方法（主菜单 / 上下文菜单查询与执行）
+## Main and Context Menu Query/Execution
 
 ```javascript
 await fb.menu.getMainMenu('View');
@@ -151,3 +176,5 @@ await fb.menu.runContextCommand('Properties');
 await fb.menu.runContextCommandById(3, { mode: 'playlist' });
 await fb.menu.showNativePopup({ mode: 'playlist' });
 ```
+
+`runContextCommandById(id, options?)` is a separate facade method even though it is not listed in the generated stub block. `options` is `Omit<MenuRunContextCommandByIdParams, 'id'>`.

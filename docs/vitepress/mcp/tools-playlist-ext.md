@@ -1,483 +1,87 @@
-# Playlist Extended 工具 
+# Playlist Extended Tools
 
-播放列表扩展操作：选区、排序、自动播放列表等。共 40 个工具。
+Forty tools cover playlist inspection, ordering, track insertion and removal, selection, focus, undo/redo, locking, and autoplaylists.
 
-## 查询 
+## Parameter notation
 
-### fb2k_playlist_get_count 
+- A parameter without `?` is required by the MCP input schema.
+- `playlist?: integer >= 0` defaults to the active playlist in the mapped Bridge handler.
+- Array element types are shown in brackets, such as `paths: string[]`.
+- The `newOrder`, `items`, and `indices` integer-array item schemas declare a minimum of `0` wherever those fields appear below.
+- Defaults shown below are applied by MCP registration before the Bridge call.
 
-获取播放列表总数。
+## Queries and playlist management
 
-- **参数**: 无
-- **Bridge 方法**: `playlist.getCount`
-
-**返回值**:
-
-```json
-{ "count": 5 }
-```
-
-### fb2k_playlist_get_playing 
-
-获取正在播放的播放列表信息。结构与 `playlist.getActive` 相同。
-
-- **参数**: 无
-- **Bridge 方法**: `playlist.getPlaying`
-
-**返回值**:
-
-```json
-{
-  "index": 0,
-  "name": "Default",
-  "trackCount": 128,
-  "isActive": true,
-  "isPlaying": true,
-  "isLocked": false,
-  "duration": 34567.8
-}
-```
-
-### fb2k_playlist_get_track_count 
-
-获取播放列表曲目数。
-
-- **Bridge 方法**: `playlist.getTrackCount`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引（默认活动列表） |
+| `fb2k_playlist_get_count` | `playlist.getCount` | none | Get the number of playlists |
+| `fb2k_playlist_get_playing` | `playlist.getPlaying` | none | Get the playing playlist |
+| `fb2k_playlist_get_track_count` | `playlist.getTrackCount` | `playlist?: integer >= 0` | Get a playlist's track count |
+| `fb2k_playlist_get_available_columns` | `playlist.getAvailableColumns` | none | Get available playlist-column definitions |
+| `fb2k_playlist_rename` | `playlist.rename` | `playlist: integer >= 0`, `name: string` | Rename a playlist |
+| `fb2k_playlist_clear` | `playlist.clear` | `playlist?: integer >= 0` | Clear a playlist |
+| `fb2k_playlist_duplicate` | `playlist.duplicate` | `playlist?: integer >= 0`, `name?: string` | Duplicate a playlist; the Bridge derives a name when omitted |
+| `fb2k_playlist_reorder_playlists` | `playlist.reorderPlaylists` | `newOrder: integer[]` with items >= `0` | Reorder all playlists |
 
-**返回值**:
+## Track ordering and removal
 
-```json
-{ "count": 128 }
-```
-
-### fb2k_playlist_get_available_columns 
-
-获取可用列定义。
-
-- **参数**: 无
-- **Bridge 方法**: `playlist.getAvailableColumns`
-
-## 管理 
-
-### fb2k_playlist_rename 
-
-重命名播放列表。
-
-- **Bridge 方法**: `playlist.rename`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-| name | string | ? | 新名称 |
+| `fb2k_playlist_insert_tracks` | `playlist.insertTracks` | `handles: string[]`, `playlist?: integer >= 0`, `position?: integer >= 0` | Insert track handles |
+| `fb2k_playlist_remove_tracks` | `playlist.removeTracks` | `items: integer[]`, `playlist?: integer >= 0` | Remove tracks by index |
+| `fb2k_playlist_remove_selected_tracks` | `playlist.removeSelectedTracks` | `playlist?: integer >= 0` | Remove selected tracks |
+| `fb2k_playlist_move_tracks` | `playlist.moveTracks` | `delta: integer`, `playlist?: integer >= 0`, `items?: integer[]` | Move tracks by a signed offset |
+| `fb2k_playlist_reorder` | `playlist.reorder` | `newOrder: integer[]`, `playlist?: integer >= 0` | Apply a custom track order |
+| `fb2k_playlist_reverse` | `playlist.reverse` | `playlist?: integer >= 0` | Reverse track order |
+| `fb2k_playlist_sort` | `playlist.sort` | `playlist?: integer >= 0`, `pattern?: string = "%title%"`, `descending?: boolean = false`, `selectedOnly?: boolean = false` | Sort with a foobar2000 title-format pattern |
+| `fb2k_playlist_shuffle` | `playlist.shuffle` | `playlist?: integer >= 0` | Shuffle track order |
 
-### fb2k_playlist_clear 
+Title-format examples include `%title%`, `%album artist% - %album% - %tracknumber%`, and `%rating%`.
 
-清空播放列表。
+## Adding and replacing tracks
 
-- **Bridge 方法**: `playlist.clear`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
+| `fb2k_playlist_add_paths` | `playlist.addPaths` | `paths: string[]`, `playlist?: integer >= 0` | Add file paths |
+| `fb2k_playlist_add_handles` | `playlist.addHandles` | `handles: string[]`, `playlist?: integer >= 0` | Add track handles without CUE expansion |
+| `fb2k_playlist_add_paths_sequential` | `playlist.addPathsSequential` | `paths: string[]`, `playlist?: integer >= 0` | Add paths sequentially |
+| `fb2k_playlist_add_paths_async` | `playlist.addPathsAsync` | `paths: string[]`, `playlist?: integer >= 0` | Add paths asynchronously |
+| `fb2k_playlist_replace_all_and_play` | `playlist.replaceAllAndPlay` | `paths: string[]`, `playlist?: integer >= 0`, `playIndex?: integer >= 0 = 0`, `stopFirst?: boolean = true`, `autoPlay?: boolean = true` | Atomically replace playlist contents and optionally play |
 
-### fb2k_playlist_duplicate 
+## Selection and focus
 
-复制播放列表。
-
-- **Bridge 方法**: `playlist.duplicate`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 源播放列表索引 |
-| name | string | ? | 新名称 |
+| `fb2k_playlist_get_selected_tracks` | `playlist.getSelectedTracks` | `playlist?: integer >= 0` | Get selected track details |
+| `fb2k_playlist_get_selection` | `playlist.getSelection` | `playlist?: integer >= 0` | Get selected track indices |
+| `fb2k_playlist_set_selection` | `playlist.setSelection` | `indices: integer[]`, `playlist?: integer >= 0`, `clearOthers?: boolean = true` | Set selected indices |
+| `fb2k_playlist_select_all` | `playlist.selectAll` | `playlist?: integer >= 0` | Select every track |
+| `fb2k_playlist_deselect_all` | `playlist.deselectAll` | `playlist?: integer >= 0` | Clear the selection |
+| `fb2k_playlist_get_focused_track` | `playlist.getFocusedTrack` | `playlist?: integer >= 0` | Get the focused track index |
+| `fb2k_playlist_set_focused_track` | `playlist.setFocusedTrack` | `index: integer >= 0`, `playlist?: integer >= 0` | Set the focused track |
+| `fb2k_playlist_focus_track` | `playlist.focusTrack` | `playlist?: integer >= 0`, `index?: integer >= 0` | Deprecated compatibility tool; use `fb2k_playlist_set_focused_track` |
+| `fb2k_playlist_get_focus_track` | `playlist.getFocusTrack` | `playlist?: integer >= 0` | Deprecated compatibility tool; use `fb2k_playlist_get_focused_track` |
 
-### fb2k_playlist_reorder_playlists 
+## Undo, redo, and locking
 
-重排播放列表顺序。
-
-- **Bridge 方法**: `playlist.reorderPlaylists`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| newOrder | array | ? | 新的播放列表索引顺序 |
+| `fb2k_playlist_undo` | `playlist.undo` | `playlist?: integer >= 0` | Undo the last playlist operation |
+| `fb2k_playlist_redo` | `playlist.redo` | `playlist?: integer >= 0` | Redo the last undone operation |
+| `fb2k_playlist_get_lock_info` | `playlist.getLockInfo` | `playlist?: integer >= 0` | Get playlist lock information |
+| `fb2k_playlist_is_locked` | `playlist.isLocked` | `playlist?: integer >= 0` | Check whether a playlist is locked |
 
-## 曲目操作 
+## Autoplaylists
 
-### fb2k_playlist_insert_tracks 
-
-插入曲目到播放列表。
-
-- **Bridge 方法**: `playlist.insertTracks`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| handles | array | ? | 曲目句柄数组 |
-| playlist | integer | ? | 目标播放列表 |
-| position | integer | ? | 插入位置 |
+| `fb2k_playlist_is_autoplaylist` | `playlist.isAutoplaylist` | `playlist?: integer >= 0` | Check whether a playlist is an autoplaylist |
+| `fb2k_playlist_create_autoplaylist` | `playlist.createAutoplaylist` | `query: string`, `name?: string = "New Autoplaylist"`, `sort?: string`, `keepSorted?: boolean = false` | Create an autoplaylist from a foobar2000 query |
+| `fb2k_playlist_convert_to_autoplaylist` | `playlist.convertToAutoplaylist` | `query: string`, `playlist?: integer >= 0`, `sort?: string`, `keepSorted?: boolean = false` | Convert a playlist to an autoplaylist |
+| `fb2k_playlist_remove_autoplaylist` | `playlist.removeAutoplaylist` | `playlist?: integer >= 0` | Remove autoplaylist behavior while preserving tracks |
+| `fb2k_playlist_get_autoplaylist_info` | `playlist.getAutoplaylistInfo` | `playlist?: integer >= 0` | Get autoplaylist details |
+| `fb2k_playlist_get_autoplaylist_query` | `playlist.getAutoplaylistQuery` | `playlist?: integer >= 0` | Get the autoplaylist query |
 
-### fb2k_playlist_remove_tracks 
-
-按索引移除曲目。
-
-- **Bridge 方法**: `playlist.removeTracks`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| items | array | ? | 要移除的曲目索引数组 |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_remove_selected_tracks 
-
-移除选中的曲目。
-
-- **Bridge 方法**: `playlist.removeSelectedTracks`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_move_tracks 
-
-移动曲目位置。
-
-- **Bridge 方法**: `playlist.moveTracks`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| delta | integer | ? | 移动距离（正数下移，负数上移） |
-| playlist | integer | ? | 播放列表索引 |
-| items | array | ? | 要移动的曲目索引数组 |
-
-### fb2k_playlist_reorder 
-
-自定义曲目排序。
-
-- **Bridge 方法**: `playlist.reorder`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| newOrder | array | ? | 新的曲目索引顺序 |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_reverse 
-
-反转曲目顺序。
-
-- **Bridge 方法**: `playlist.reverse`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_sort 
-
-按格式模式排序。
-
-- **Bridge 方法**: `playlist.sort`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-| pattern | string | ? | Title Formatting 排序模式 |
-| descending | boolean | ? | 是否降序 |
-| selectedOnly | boolean | ? | 是否仅排序选中项 |
-
-::: tip Title Formatting 模式示例
-
-- `%title%` — 按标题排序
-- `%album artist% - %album% - %tracknumber%` — 按专辑+曲号排序
-- `%rating%` — 按评分排序
-
+::: tip Query syntax
+Autoplaylist queries use the same foobar2000 query language as `library.search`, for example `artist IS Mili`.
 :::
-
-### fb2k_playlist_shuffle 
-
-随机打乱曲目顺序。
-
-- **Bridge 方法**: `playlist.shuffle`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-## 添加曲目 
-
-### fb2k_playlist_add_paths 
-
-按文件路径添加曲目。
-
-- **Bridge 方法**: `playlist.addPaths`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| paths | array | ? | 文件路径数组 |
-| playlist | integer | ? | 目标播放列表 |
-
-### fb2k_playlist_add_handles 
-
-按句柄添加曲目。
-
-- **Bridge 方法**: `playlist.addHandles`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| handles | array | ? | 曲目句柄数组 |
-| playlist | integer | ? | 目标播放列表 |
-
-### fb2k_playlist_add_paths_sequential 
-
-顺序添加文件路径（保持顺序）。
-
-- **Bridge 方法**: `playlist.addPathsSequential`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| paths | array | ? | 文件路径数组 |
-| playlist | integer | ? | 目标播放列表 |
-
-### fb2k_playlist_add_paths_async 
-
-异步添加文件路径。
-
-- **Bridge 方法**: `playlist.addPathsAsync`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| paths | array | ? | 文件路径数组 |
-| playlist | integer | ? | 目标播放列表 |
-
-### fb2k_playlist_replace_all_and_play 
-
-原子替换播放列表内容并播放。
-
-- **Bridge 方法**: `playlist.replaceAllAndPlay`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| paths | array | ? | 文件路径数组 |
-| playlist | integer | ? | 目标播放列表 |
-| playIndex | integer | ? | 开始播放的索引 |
-| stopFirst | boolean | ? | 是否先停止播放 |
-| autoPlay | boolean | ? | 是否自动开始播放 |
-
-## 选区 
-
-### fb2k_playlist_get_selected_tracks 
-
-获取选中曲目的详细信息。
-
-- **Bridge 方法**: `playlist.getSelectedTracks`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_get_selection 
-
-获取选中曲目索引。
-
-- **Bridge 方法**: `playlist.getSelection`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_set_selection 
-
-设置选中项。
-
-- **Bridge 方法**: `playlist.setSelection`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| indices | array | ? | 要选中的曲目索引数组 |
-| playlist | integer | ? | 播放列表索引 |
-| clearOthers | boolean | ? | 是否清除其他选中项 |
-
-### fb2k_playlist_select_all 
-
-全选播放列表中的曲目。
-
-- **Bridge 方法**: `playlist.selectAll`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_deselect_all 
-
-取消所有选中。
-
-- **Bridge 方法**: `playlist.deselectAll`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-## 焦点 
-
-### fb2k_playlist_get_focused_track 
-
-获取焦点曲目索引。
-
-- **Bridge 方法**: `playlist.getFocusedTrack`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_set_focused_track 
-
-设置焦点曲目。
-
-- **Bridge 方法**: `playlist.setFocusedTrack`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| index | integer | ? | 曲目索引 |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_focus_track 
-
-::: warning 已弃用
-请使用 `fb2k_playlist_set_focused_track` 代替。
-:::
-
-- **Bridge 方法**: `playlist.focusTrack`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-| index | integer | ? | 曲目索引 |
-
-### fb2k_playlist_get_focus_track 
-
-::: warning 已弃用
-请使用 `fb2k_playlist_get_focused_track` 代替。
-:::
-
-- **Bridge 方法**: `playlist.getFocusTrack`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-## 撤销 / 重做 
-
-### fb2k_playlist_undo 
-
-撤销播放列表操作。
-
-- **Bridge 方法**: `playlist.undo`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_redo 
-
-重做播放列表操作。
-
-- **Bridge 方法**: `playlist.redo`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-## 锁定 
-
-### fb2k_playlist_get_lock_info 
-
-获取播放列表锁定信息。
-
-- **Bridge 方法**: `playlist.getLockInfo`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_is_locked 
-
-检查播放列表是否锁定。
-
-- **Bridge 方法**: `playlist.isLocked`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-## 自动播放列表 
-
-### fb2k_playlist_is_autoplaylist 
-
-检查是否为自动播放列表。
-
-- **Bridge 方法**: `playlist.isAutoplaylist`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_create_autoplaylist 
-
-创建自动播放列表。
-
-- **Bridge 方法**: `playlist.createAutoplaylist`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| query | string | ? | 查询表达式（同 library.search 语法） |
-| name | string | ? | 播放列表名称 |
-
-::: tip 自动播放列表
-自动播放列表的内容由查询表达式自动填充，不可手动编辑曲目。示例：`artist IS Mili`。
-:::
-
-| `sort` | `string` | ? | 排序模式 | | `keepSorted` | `boolean` | ? | 是否保持排序 |
-
-### fb2k_playlist_convert_to_autoplaylist 
-
-将现有播放列表转换为自动播放列表。
-
-- **Bridge 方法**: `playlist.convertToAutoplaylist`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| query | string | ? | 查询表达式 |
-| playlist | integer | ? | 目标播放列表 |
-| sort | string | ? | 排序模式 |
-| keepSorted | boolean | ? | 是否保持排序 |
-
-### fb2k_playlist_remove_autoplaylist 
-
-移除自动播放列表状态（保留曲目）。
-
-- **Bridge 方法**: `playlist.removeAutoplaylist`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_get_autoplaylist_info 
-
-获取自动播放列表详细信息。
-
-- **Bridge 方法**: `playlist.getAutoplaylistInfo`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |
-
-### fb2k_playlist_get_autoplaylist_query 
-
-获取自动播放列表的查询表达式。
-
-- **Bridge 方法**: `playlist.getAutoplaylistQuery`
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| playlist | integer | ? | 播放列表索引 |

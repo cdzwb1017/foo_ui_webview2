@@ -1,50 +1,50 @@
-# fb.replaygain replaygain
+# fb.replaygain ReplayGain
 
-本页是 `fb.replaygain` 的 SDK 视角文档入口。
+`fb.replaygain` reads ReplayGain metadata, controls playback processing settings, and starts host-side scan or clear operations.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### clear()
 
-签名：`fb.replaygain.clear(...args): Promise<unknown>`
+Signature: `fb.replaygain.clear(paths: string[]): Promise<BaseResponse & { clearedCount?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| paths | string[] | Yes | File paths whose ReplayGain metadata should be cleared |
 
-返回值：底层 `replaygain.clear` 调用结果。
+Returns the underlying clear result and may include `clearedCount`.
 
 ```javascript
-const result = await fb.replaygain.clear();
+const result = await fb.replaygain.clear(['E:\\Music\\song.flac']);
 ```
 
 ### get()
 
-签名：`fb.replaygain.get(...args): Promise<unknown>`
+Signature: `fb.replaygain.get(paths: string | string[]): Promise<ReplayGainGetResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| paths | string \| string[] | Yes | One file path or an array of paths; the SDK always sends `{ paths: string[] }` |
 
-返回值：底层 `replaygain.get` 调用结果。
+Returns per-track results with optional track/album gain and peak fields.
 
 ```javascript
-const result = await fb.replaygain.get();
+const result = await fb.replaygain.get('E:\\Music\\song.flac');
 ```
 
 ### getMode()
 
-签名：`fb.replaygain.getMode(...args): Promise<unknown>`
+Signature: `fb.replaygain.getMode(): Promise<ReplayGainGetModeResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `replaygain.getMode` 调用结果。
+Returns `sourceMode` and `processingMode` when available.
 
 ```javascript
 const result = await fb.replaygain.getMode();
@@ -52,13 +52,13 @@ const result = await fb.replaygain.getMode();
 
 ### getPreamp()
 
-签名：`fb.replaygain.getPreamp(...args): Promise<unknown>`
+Signature: `fb.replaygain.getPreamp(): Promise<ReplayGainGetPreampResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `replaygain.getPreamp` 调用结果。
+Returns `withRg` and `withoutRg` preamp values in dB when available.
 
 ```javascript
 const result = await fb.replaygain.getPreamp();
@@ -66,44 +66,47 @@ const result = await fb.replaygain.getPreamp();
 
 ### getSettings()
 
-签名：`fb.replaygain.getSettings(...args): Promise<unknown>`
+Signature: `fb.replaygain.getSettings(): Promise<ReplayGainGetSettingsResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `replaygain.getSettings`, `replaygain.scan` 调用结果。
+Returns the source mode, processing mode, both preamp values, and active state. To start analysis, call `scan(paths, { mode? })`; the default mode is `'track'`, while `'album'` treats the selection as one album.
 
 ```javascript
 const result = await fb.replaygain.getSettings();
+await fb.replaygain.scan(['E:\\Music\\one.flac'], { mode: 'track' });
 ```
 
 ### setMode()
 
-签名：`fb.replaygain.setMode(...args): Promise<unknown>`
+Signature: `fb.replaygain.setMode(sourceMode: string, processingMode?: string): Promise<BaseResponse & { changed?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| sourceMode | string | Yes | ReplayGain source mode |
+| processingMode | string | No | ReplayGain processing mode |
 
-返回值：底层 `replaygain.setMode` 调用结果。
+Returns the update result and may include `changed`.
 
 ```javascript
-const result = await fb.replaygain.setMode();
+const result = await fb.replaygain.setMode('track');
 ```
 
 ### setPreamp()
 
-签名：`fb.replaygain.setPreamp(...args): Promise<unknown>`
+Signature: `fb.replaygain.setPreamp(withRg?: number, withoutRg?: number): Promise<BaseResponse & { changed?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| withRg | number | No | Preamp in dB for tracks with ReplayGain metadata |
+| withoutRg | number | No | Preamp in dB for tracks without ReplayGain metadata |
 
-返回值：底层 `replaygain.setPreamp` 调用结果。
+Only defined arguments are sent. Returns the update result and may include `changed`.
 
 ```javascript
-const result = await fb.replaygain.setPreamp();
+const result = await fb.replaygain.setPreamp(6, 0);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

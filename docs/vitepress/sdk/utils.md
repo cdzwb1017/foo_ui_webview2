@@ -1,37 +1,47 @@
-# fb.utils 工具函数 
+# fb.utils Utilities
 
-## ping() 
+## ping()
 
-测试连接。
+Tests the bridge connection. Resolves to `{ pong: boolean }` from `test.ping`.
 
 ```javascript
-const r = await fb.utils.ping(); // {mock: true} 或实际响应
+const r = await fb.utils.ping(); // { pong: true }
 ```
 
-## formatTitle(pattern, path?) 
+## echo(message)
 
-使用 foobar2000 Title Formatting 语法格式化字符串。
-
-| 参数 | 类型 | 说明 |
-| --- | --- | --- |
-| pattern | string | Title Format 模式串 |
-| path | string | 可选，指定曲目路径（默认当前播放） |
+Echoes a message through `test.echo` and resolves to `{ message: string }`.
 
 ```javascript
-const r = await fb.utils.formatTitle('%artist% - %title%');
-console.log(r); // "The Beatles - Let It Be"
+const { message } = await fb.utils.echo('Hello');
+```
 
-// 指定曲目
+## formatTitle(pattern, path?)
+
+Evaluates a foobar2000 Title Formatting expression through `titleformat.eval`.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| pattern | string | Title Formatting pattern |
+| path | string | Optional track path; omission evaluates against the current track |
+
+The SDK preserves the host response envelope `{ result: string }`; it does not unwrap the string.
+
+```javascript
+const { result } = await fb.utils.formatTitle('%artist% - %title%');
+console.log(result); // "The Beatles - Let It Be"
+
+// Evaluate against a specific track
 const r2 = await fb.utils.formatTitle('%codec% %bitrate%kbps', 'E:\\\\Music\\\\song.flac');
 ```
 
-## getFileInfo(path) 
+## getFileInfo(path)
 
-读取文件元数据（结构化格式）。
+Reads file metadata through `metadata.read` and returns its structured response.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 音频文件路径 |
+| path | string | Audio file path |
 
 ```javascript
 const info = await fb.utils.getFileInfo('E:\\\\Music\\\\song.flac');
@@ -40,22 +50,22 @@ const info = await fb.utils.getFileInfo('E:\\\\Music\\\\song.flac');
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stub
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### echo()
 
-签名：`fb.utils.echo(...args): Promise<unknown>`
+Signature: `fb.utils.echo(message: string): Promise<{ message: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| message | string | Yes | Message forwarded as `{ message }` to `test.echo` |
 
-返回值：底层 `test.echo` 调用结果。
+Returns the result of the underlying `test.echo` call.
 
 ```javascript
-const result = await fb.utils.echo();
+const result = await fb.utils.echo('Hello');
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

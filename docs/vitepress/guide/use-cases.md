@@ -1,11 +1,11 @@
-# 常用场景 
+# Common Use Cases
 
-本页展示常见开发场景的完整代码示例。
+This page shows complete examples for frequent development scenarios.
 
-## 场景 1：构建播放器界面 
+## Scenario 1: build a player UI
 
 ```javascript
-// ========== 工具函数：判断静态文件 ==========
+// ========== Helper: static local file? ==========
 function isStaticLocalFile(path) {
     if (!path) return false;
     if (path.startsWith('http://') || path.startsWith('https://')) return false;
@@ -13,7 +13,7 @@ function isStaticLocalFile(path) {
     return true;
 }
 
-// ========== 初始化播放器状态 ==========
+// ========== Initialize player state ==========
 async function initPlayer() {
     const state = await fb2k.invoke('playback.getState');
     updatePlayButton(state.state === 'playing');
@@ -34,12 +34,12 @@ async function initPlayer() {
     }
 }
 
-// ========== 播放控制按钮 ==========
+// ========== Transport buttons ==========
 document.getElementById('btn-play').onclick = () => fb2k.invoke('playback.playOrPause');
 document.getElementById('btn-prev').onclick = () => fb2k.invoke('playback.previous');
 document.getElementById('btn-next').onclick = () => fb2k.invoke('playback.next');
 
-// ========== 进度条控制 ==========
+// ========== Seek bar ==========
 progressBar.onclick = async (e) => {
     const rect = progressBar.getBoundingClientRect();
     const percent = (e.clientX - rect.left) / rect.width;
@@ -47,12 +47,12 @@ progressBar.onclick = async (e) => {
     await fb2k.invoke('playback.setPosition', { position: percent * track.duration });
 };
 
-// ========== 音量控制 ==========
+// ========== Volume ==========
 volumeSlider.oninput = async (e) => {
     await fb2k.invoke('playback.setVolume', { volume: parseInt(e.target.value) });
 };
 
-// ========== 事件监听 ==========
+// ========== Events ==========
 fb2k.on('playback:trackChanged', async (track) => {
     updateTrackInfo(track);
     const artwork = await fb2k.invoke('artwork.getCurrent');
@@ -71,10 +71,10 @@ fb2k.on('playback:volumeChanged', (data) => {
 });
 ```
 
-## 场景 2：播放列表管理 
+## Scenario 2: playlist management
 
 ```javascript
-// ========== 加载播放列表 ==========
+// ========== Load playlists ==========
 async function loadPlaylists() {
     const playlists = await fb2k.invoke('playlist.getAll');
     const container = document.getElementById('playlists');
@@ -85,14 +85,14 @@ async function loadPlaylists() {
         item.className = 'playlist-item' + (pl.isActive ? ' active' : '');
         item.innerHTML = `
             ${pl.name}
-        ${pl.trackCount} 首
+        ${pl.trackCount} tracks
         `;
         item.onclick = () => switchPlaylist(index);
         container.appendChild(item);
     });
 }
 
-// ========== 加载曲目列表（分页） ==========
+// ========== Load tracks (paged) ==========
 async function loadTracks(playlist, page = 0) {
     const pageSize = 50;
     const result = await fb2k.invoke('playlist.getTracks', {
@@ -115,17 +115,17 @@ async function loadTracks(playlist, page = 0) {
     });
 }
 
-// ========== 监听播放列表变化 ==========
+// ========== Playlist change events ==========
 fb2k.on('playlist:itemsAdded', () => loadTracks(currentPlaylistIndex));
 fb2k.on('playlist:itemsRemoved', () => loadTracks(currentPlaylistIndex));
 fb2k.on('playlist:created', () => loadPlaylists());
 fb2k.on('playlist:removed', () => loadPlaylists());
 ```
 
-## 场景 3：媒体库搜索与封面获取 
+## Scenario 3: library search and artwork
 
 ```javascript
-// ========== 搜索媒体库 ==========
+// ========== Search the media library ==========
 async function searchLibrary(query) {
     const result = await fb2k.invoke('library.search', {
         query, offset: 0, limit: 50
@@ -139,16 +139,16 @@ async function searchLibrary(query) {
             });
             if (artwork.available) coverSrc = artwork.dataUrl;
         }
-        // 渲染搜索结果...
+        // Render search results...
     }
 }
 
-// ========== 搜索语法示例 ==========
-searchLibrary('love');                                    // 简单搜索
-searchLibrary('artist HAS Beatles');                      // 字段搜索
-searchLibrary('artist HAS Beatles AND year GREATER 1968');// 组合搜索
+// ========== Query syntax examples ==========
+searchLibrary('love');                                    // simple search
+searchLibrary('artist HAS Beatles');                      // field search
+searchLibrary('artist HAS Beatles AND year GREATER 1968');// combined search
 
-// ========== 获取专辑列表（带封面） ==========
+// ========== Album list with covers ==========
 async function loadAlbums() {
     const result = await fb2k.invoke('library.getAlbums', {
         sort: 'year', limit: 30, includeTracks: false
@@ -158,30 +158,30 @@ async function loadAlbums() {
         const artwork = await fb2k.invoke('artwork.getForTrack', {
             path: album.firstTrackAbsolutePath, type: 'front'
         });
-        // 渲染专辑卡片...
+        // Render album cards...
     }
 }
 ```
 
-## 场景 4：窗口与外观控制 
+## Scenario 4: window and appearance
 
 ```javascript
-// ========== 窗口控制 ==========
+// ========== Window chrome ==========
 document.getElementById('btn-minimize').onclick = () => fb2k.invoke('window.minimize');
 document.getElementById('btn-maximize').onclick = () => fb2k.invoke('window.maximize');
 document.getElementById('btn-close').onclick = () => fb2k.invoke('window.close');
 
-// ========== Mica/毛玻璃效果 ==========
+// ========== Mica / acrylic ==========
 async function applyMicaEffect() {
     await fb2k.invoke('window.setMica', { enabled: true });
-    // Windows 10 可用 Acrylic:
+    // Acrylic is available on Windows 10:
     // await fb2k.invoke('window.setAcrylic', { enabled: true });
 }
 
-// ========== 圆角窗口 (Windows 11) ==========
-await fb2k.invoke('window.setCornerPreference', { preference: 'round' });
+// ========== Rounded corners (Windows 11) ==========
+await fb2k.invoke('window.setCornerPreference', { mode: 'round' });
 
-// ========== 监听窗口状态 ==========
+// ========== Window state events ==========
 fb2k.on('window:stateChanged', (state) => {
     updateMaximizeButton(state.isMaximized);
 });
@@ -193,27 +193,33 @@ fb2k.on('panel:blur', () => {
     document.body.classList.add('window-inactive');
 });
 
-// ========== 自定义标题栏拖拽 ==========
+// ========== Custom title-bar drag ==========
 document.getElementById('titlebar').setAttribute('data-webview-drag', 'true');
 document.querySelectorAll('.titlebar-button').forEach(btn => {
     btn.setAttribute('data-webview-drag', 'false');
 });
 ```
 
-## 场景 5：全局快捷键 
+## Scenario 5: global hotkeys
 
 ```javascript
 async function registerHotkeys() {
+    // C++ contract: key + action (+ optional global). Registration returns a numeric id.
     await fb2k.invoke('keyboard.registerHotkey', {
-        id: 'play-pause', key: 'Space', modifiers: ['ctrl', 'shift']
+        key: 'Ctrl+Shift+Space',
+        action: 'play-pause',
+        global: true
     });
     await fb2k.invoke('keyboard.registerHotkey', {
-        id: 'next-track', key: 'Right', modifiers: ['ctrl', 'shift']
+        key: 'Ctrl+Shift+Right',
+        action: 'next-track',
+        global: true
     });
 }
 
 fb2k.on('keyboard:hotkey', async (data) => {
-    switch (data.id) {
+    // Event payload: { id: number, key, action }
+    switch (data.action) {
         case 'play-pause': await fb2k.invoke('playback.playOrPause'); break;
         case 'next-track': await fb2k.invoke('playback.next'); break;
     }
@@ -222,7 +228,7 @@ fb2k.on('keyboard:hotkey', async (data) => {
 registerHotkeys();
 ```
 
-## 场景 6：配置与文件存储 
+## Scenario 6: config and file storage
 
 ```javascript
 const CONFIG_PREFIX = 'myapp.';
@@ -238,33 +244,34 @@ async function loadConfig(key, defaultValue = null) {
     return result.value ? JSON.parse(result.value) : defaultValue;
 }
 
-// ========== 文件读写 ==========
+// ========== File read/write ==========
 async function exportPlaylistToFile() {
     const result = await fb2k.invoke('dialog.saveFile', {
-        title: '导出播放列表',
-        filters: [{ name: 'JSON 文件', spec: '*.json' }],
+        title: 'Export playlist',
+        filters: [{ name: 'JSON files', spec: '*.json' }],
         defaultName: 'playlist-backup.json'
     });
-    if (!result.cancelled) {
+    // dialog.saveFile returns { canceled, filePath }
+    if (!result.canceled) {
         const { tracks } = await fb2k.invoke('playlist.getTracks', { count: 10000 });
         await fb2k.invoke('file.write', {
-            path: result.path,
+            path: result.filePath,
             content: JSON.stringify(tracks, null, 2)
         });
     }
 }
 ```
 
-## 场景 7：路径处理与封面获取最佳实践 
+## Scenario 7: path handling and artwork best practices
 
 ```javascript
-// ❌ 错误：使用 path 可能失败
+// ❌ Wrong: path may be a non-filesystem URI
 const tracks = await fb2k.invoke('playlist.getTracks', { count: 1 });
 const artwork = await fb2k.invoke('artwork.getForTrack', {
-    path: tracks.tracks[0].path  // 可能是 file-relative://...
+    path: tracks.tracks[0].path  // may be file-relative://...
 });
 
-// ✅ 正确：使用 absolutePath
+// ✅ Correct: use absolutePath
 const t = tracks.tracks[0];
 if (getFileType(t.absolutePath) !== 'stream') {
     const artwork = await fb2k.invoke('artwork.getForTrack', {
@@ -272,12 +279,12 @@ if (getFileType(t.absolutePath) !== 'stream') {
     });
 }
 
-// ✅ 更好：使用 getByPlaylistItem（不需要路径，自动处理）
+// ✅ Better: getByPlaylistItem needs no path and handles resolution
 const artwork = await fb2k.invoke('artwork.getByPlaylistItem', {
     playlist: 0, index: 0, type: 'front'
 });
 
-// ========== 批量获取封面 ==========
+// ========== Batch cover loading ==========
 async function loadCoversForTracks(tracks) {
     const batchSize = 5;
     for (let i = 0; i < tracks.length; i += batchSize) {

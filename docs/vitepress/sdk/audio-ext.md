@@ -1,182 +1,182 @@
-# 音频扩展
+# Audio Extensions
 
-涵盖 `fb.dsp`、`fb.output`、`fb.replaygain` 三个命名空间。
+Covers the `fb.dsp`, `fb.output`, and `fb.replaygain` namespaces.
 
-## fb.dsp DSP 管理 
+## fb.dsp DSP Management
 
-### getChain() 
+### getChain()
 
-获取当前 DSP 处理链。返回当前激活的 DSP 列表。
+Returns the active DSP chain in execution order, along with best-effort active-preset information.
 
 ```javascript
 const chain = await fb.dsp.getChain();
-// chain.dsps: [{ guid, name, ... }, ...]
+// chain.dsps: [{ index, guid, name }, ...]
 ```
 
-### setChain(dsps) 
+### setChain(dsps)
 
-设置 DSP 处理链。
+Replaces the active DSP chain.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| dsps | array | DSP 配置数组 |
+| dsps | unknown[] | DSP configuration array passed to `dsp.setChain` |
 
 ```javascript
 await fb.dsp.setChain([{ guid: '...', enabled: true }]);
 ```
 
-### getPresets() 
+### getPresets()
 
-获取所有 DSP 预设列表。
+Returns all DSP presets, their count, and the selected preset index.
 
 ```javascript
 const r = await fb.dsp.getPresets();
 // r.presets: [{ name, index }, ...]
 ```
 
-### applyPreset(indexOrName) 
+### applyPreset(indexOrName)
 
-应用 DSP 预设。支持按索引（number）或名称（string）。
+Applies a DSP preset by numeric index or string name.
 
 ```javascript
-await fb.dsp.applyPreset(0);           // 按索引
-await fb.dsp.applyPreset('My Preset'); // 按名称
+await fb.dsp.applyPreset(0);           // By index
+await fb.dsp.applyPreset('My Preset'); // By name
 ```
 
-### getAvailable() 
+### getAvailable()
 
-获取所有可用的 DSP 插件列表。
+Returns the available DSP entries. Each entry includes `guid`, `name`, and `hasConfig`.
 
 ```javascript
 const r = await fb.dsp.getAvailable();
-// r.dsps: [{ guid, name }, ...]
+// r.dsps: [{ guid, name, hasConfig }, ...]
 ```
 
-### addDsp(guid, position?) 
+### addDsp(guid, position?)
 
-添加 DSP 到处理链。
+Adds a DSP to the active chain.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| guid | string | DSP 插件 GUID |
-| position | number | 可选，插入位置（默认追加到末尾） |
+| guid | string | DSP entry GUID |
+| position | number | Optional insertion position; omission appends to the chain |
 
 ```javascript
 await fb.dsp.addDsp('{xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}');
 ```
 
-### removeDsp(index) 
+### removeDsp(index)
 
-从处理链移除指定位置的 DSP。
-
-```javascript
-await fb.dsp.removeDsp(2); // 移除第3个DSP
-```
-
-### moveDsp(from, to) 
-
-移动 DSP 在处理链中的位置。
+Removes the DSP at the specified chain index.
 
 ```javascript
-await fb.dsp.moveDsp(0, 2); // 将第1个DSP移到第3位
+await fb.dsp.removeDsp(2); // Remove the third DSP
 ```
 
-## fb.output 输出设备 
+### moveDsp(from, to)
 
-### getDevices() 
-
-获取所有可用的音频输出设备。
+Moves a DSP within the active chain.
 
 ```javascript
-const r = await fb.output.getDevices();
-// r.devices: [{ id, name, isDefault }, ...]
+await fb.dsp.moveDsp(0, 2); // Move the first DSP to the third position
 ```
 
-### getEntries() 
+## fb.output Output Devices
 
-获取输出插件条目。
+### getDevices()
+
+Returns a flat array of available audio output devices. The SDK unwraps the host's `{ devices, count }` envelope.
+
+```javascript
+const devices = await fb.output.getDevices();
+// [{ id, name, isCurrent, outputId, deviceId }, ...]
+```
+
+### getEntries()
+
+Returns output-module entries and their capabilities.
 
 ```javascript
 const r = await fb.output.getEntries();
 ```
 
-### getSettings() 
+### getSettings()
 
-获取当前输出设置。
+Returns the available output module names and any host note. This endpoint does not return the active device configuration.
 
 ```javascript
 const settings = await fb.output.getSettings();
 ```
 
-## fb.replaygain ReplayGain 
+## fb.replaygain ReplayGain
 
-### get(paths) 
+### get(paths)
 
-获取指定文件的 ReplayGain 信息。支持单个路径或路径数组。
+Returns ReplayGain metadata for one path or an array of paths. The SDK always sends a `{ paths: string[] }` request.
 
 ```javascript
 const r = await fb.replaygain.get('E:\\\\Music\\\\song.flac');
 const r2 = await fb.replaygain.get(['song1.flac', 'song2.flac']);
 ```
 
-### getMode() 
+### getMode()
 
-获取当前 ReplayGain 模式。
+Returns the current source and processing modes.
 
 ```javascript
 const r = await fb.replaygain.getMode();
 // r.sourceMode, r.processingMode
 ```
 
-### setMode(sourceMode, processingMode?) 
+### setMode(sourceMode, processingMode?)
 
-设置 ReplayGain 模式。
+Updates the ReplayGain source mode and, optionally, the processing mode.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| sourceMode | string | 来源模式 |
-| processingMode | string | 可选，处理模式 |
+| sourceMode | string | Source mode |
+| processingMode | string | Optional processing mode |
 
 ```javascript
 await fb.replaygain.setMode('track');
 ```
 
-### getPreamp() 
+### getPreamp()
 
-获取 ReplayGain 前置增益。
+Returns the preamp values for tracks with and without ReplayGain metadata.
 
 ```javascript
 const r = await fb.replaygain.getPreamp();
 // r.withRg, r.withoutRg (dB)
 ```
 
-### setPreamp(withRg?, withoutRg?) 
+### setPreamp(withRg?, withoutRg?)
 
-设置 ReplayGain 前置增益。
+Updates either or both ReplayGain preamp values, in dB.
 
 ```javascript
 await fb.replaygain.setPreamp(6.0, 0.0);
 ```
 
-### getSettings() 
+### getSettings()
 
-获取完整的 ReplayGain 设置。
+Returns the complete ReplayGain settings snapshot.
 
 ```javascript
 const settings = await fb.replaygain.getSettings();
 ```
 
-### scan(paths) 
+### scan(paths)
 
-扫描文件的 ReplayGain 值。
+Starts a ReplayGain scan through the host context-menu pipeline. The default mode is `'track'`; pass `{ mode: 'album' }` to treat the selection as one album.
 
 ```javascript
 await fb.replaygain.scan(['E:\\\\Music\\\\song1.flac', 'E:\\\\Music\\\\song2.flac']);
 ```
 
-### clear(paths) 
+### clear(paths)
 
-清除文件的 ReplayGain 值。
+Clears ReplayGain metadata from the specified files.
 
 ```javascript
 await fb.replaygain.clear(['E:\\\\Music\\\\song.flac']);

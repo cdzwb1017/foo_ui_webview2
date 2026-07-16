@@ -1,39 +1,48 @@
-# fb.output output
+# fb.output Audio Output Discovery
 
-本页是 `fb.output` 的 SDK 视角文档入口。
+`fb.output` exposes audio-output devices, output modules, and output settings.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### getEntries()
 
-签名：`fb.output.getEntries(...args): Promise<unknown>`
+Signature: `fb.output.getEntries(): Promise<OutputGetEntriesResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `output.getEntries` 调用结果。
+Returns available output-module descriptors in `entries`. Each `OutputEntryInfo` includes `guid`, `name`, and capability flags such as `needsBitdepthConfig`, `supportsMultipleStreams`, `isHighLatency`, and `isLowLatency`.
 
 ```javascript
-const result = await fb.output.getEntries();
+const { entries = [] } = await fb.output.getEntries();
 ```
 
 ### getSettings()
 
-签名：`fb.output.getSettings(...args): Promise<unknown>`
+Signature: `fb.output.getSettings(): Promise<OutputGetSettingsResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `output.getSettings` 调用结果。
+Returns the host's output settings summary, including optional `availableOutputs` and `note` fields.
 
 ```javascript
-const result = await fb.output.getSettings();
+const settings = await fb.output.getSettings();
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Device List
+
+`fb.output.getDevices(): Promise<OutputDevice[]>` invokes `output.getDevices` and unwraps the host's `{ devices, count }` envelope. A device includes `id`, `deviceId`, `outputId`, `name`, and `isCurrent`.
+
+```javascript
+const devices = await fb.output.getDevices();
+const current = devices.find((device) => device.isCurrent);
+```

@@ -1,211 +1,200 @@
-# 权限系统
+# Permissions reference
 
-foo_ui_webview2 v1.4.1 起，所有涉及文件路径的 API 端点由 BridgeCore decorator 统一校验路径安全。非法路径请求将被拦截并返回 `PERMISSION_DENIED` 错误码，不会触达底层文件系统或 foobar2000 SDK。
+Path-bearing Bridge endpoints are validated by BridgeCore path-security specs before the handler body runs. Rejected requests return `PERMISSION_DENIED` and never reach the filesystem or foobar2000 SDK path side effects.
 
-## 五级权限模型
+Authority counts are taken from current `RegisterApi` path-security specs of the form `{ param, SecurityLevel::... }` in `src/api/**`:
 
-| 级别 | 说明 | 校验逻辑 |
-|------|------|----------|
-| **None** | 不涉及文件路径的 API | 无路径校验 |
-| **Read** | 只读文件系统操作 | 禁止系统盘保护目录（`Windows`、`Program Files`、`ProgramData`），禁止设备路径（`\\.\`、`\\?\`），禁止目录遍历（`..`） |
-| **Write** | 写入文件系统 | 仅允许 foobar2000 配置目录和系统临时目录 |
-| **MediaRead** | 读取媒体文件元数据/内容 | Read 规则 + 文件必须在 foobar2000 媒体库或播放列表中 |
-| **MediaWrite** | 修改媒体文件（标签/歌词等） | MediaRead 规则 + 黑名单目录校验 + 无非系统盘自动放行 |
+| Level | Spec count | Meaning |
+| --- | ---: | --- |
+| `Read` | 9 | Ordinary filesystem read checks |
+| `Write` | 1 | Strict write destinations (config/temp style policy) |
+| `MediaRead` | 39 | Media-context read checks |
+| `MediaWrite` | 17 | Media-context write checks |
+| **Total** | **66** | **64 unique APIs** |
 
-::: tip 权限层级关系
-`None < Read < Write`（独立写入通道）  
-`None < Read < MediaRead < MediaWrite`（媒体通道）  
+## Five-level model
 
-Write 和 MediaWrite 是两条独立通道：Write 严格限制在配置/临时目录，MediaWrite 限制在媒体库范围。
+| Level | Description | Validation summary |
+| --- | --- | --- |
+| `None` | No file-path parameter | No path validation |
+| `Read` | Read-only filesystem operations | Blocks system protected directories, device paths, and `..` traversal |
+| `Write` | Write destinations under the strict write policy | Allowed only under foobar2000 profile / temp destinations enforced by PathSecurity |
+| `MediaRead` | Media metadata/content reads | Read rules plus media-library / playlist context trust |
+| `MediaWrite` | Media mutation (tags, lyrics, artwork, counts) | MediaRead rules plus write blacklist and no free non-system-drive bypass |
+
+::: tip Level relationships
+`None < Read < Write` forms the ordinary filesystem channel.
+`None < Read < MediaRead < MediaWrite` forms the media channel.
+`Write` and `MediaWrite` are independent write channels.
 :::
 
-## 错误响应
-
-当路径校验失败时，API 返回统一的错误信封：
+## Error response
 
 ```json
 {
-  "error": "PERMISSION_DENIED",
-  "details": "Path rejected by security policy: C:\\Windows\\System32\\config.ini"
+  "success": false,
+  "error": "Path rejected by security policy: C:\\Windows\\System32\\config.ini",
+  "code": "PERMISSION_DENIED"
 }
 ```
-
-主题脚本可以捕获此错误并提示用户：
 
 ```javascript
-try {
-  const data = await fb2k.invoke('file.read', { path: somePath });
-} catch (e) {
-  if (e.error === 'PERMISSION_DENIED') {
-    console.warn('路径被安全策略拒绝:', e.details);
-  }
+const result = await fb2k.invoke('file.read', { path: somePath });
+if (!result.success && result.code === 'PERMISSION_DENIED') {
+  console.warn('Path rejected by security policy:', result.error);
 }
 ```
 
-## API 权限对照表
+## API permission matrix
 
-下表列出所有受路径校验保护的 API 端点（共 64 条 spec，覆盖 62 个唯一端点）。
+### Read — filesystem read (9 specs)
 
-### Read — 只读文件系统（9 条）
+| API | Parameter | Array | Nested key | Notes |
+| --- | --- | --- | --- | --- |
+| `artwork.getFolderImages` | `directory` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `clipboard.writeFiles` | `paths` | yes | — | Runtime authority: `ClipboardApi.cpp` |
+| `file.copy` | `source` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.exists` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.getInfo` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.list` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.read` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `shell.openWith` | `path` | — | — | Runtime authority: `ShellApi.cpp` |
+| `shell.showInExplorer` | `path` | — | — | Runtime authority: `ShellApi.cpp` |
 
-| API | 参数 | 数组 | 说明 |
-|-----|------|------|------|
-| `clipboard.writeFiles` | `paths` | ? | 复制文件路径到剪贴板 |
-| `file.copy` | `source` | — | 复制文件（源路径） |
-| `file.exists` | `path` | — | 检查文件是否存在 |
-| `file.getInfo` | `path` | — | 获取文件信息 |
-| `file.list` | `path` | — | 列出目录内容 |
-| `file.read` | `path` | — | 读取文件内容 |
-| `shell.openWith` | `path` | — | 用外部程序打开文件 |
-| `shell.showInExplorer` | `path` | — | 在资源管理器中显示 |
-| `artwork.getFolderImages` | `directory` | — | 获取文件夹中的图片 |
+### Write — strict write destinations (1 specs)
 
-### Write — 写入文件系统（8 条 / 6 个 API）
+| API | Parameter | Array | Nested key | Notes |
+| --- | --- | --- | --- | --- |
+| `http.download` | `saveTo` | — | — | Runtime authority: `HttpApi.cpp` |
 
-| API | 参数 | 数组 | 说明 |
-|-----|------|------|------|
-| `file.copy` | `destination` | — | 复制文件（目标路径） |
-| `file.delete` | `path` | — | 删除文件 |
-| `file.mkdir` | `path` | — | 创建目录 |
-| `file.move` | `source` | — | 移动文件（源路径） |
-| `file.move` | `destination` | — | 移动文件（目标路径） |
-| `file.rename` | `path` | — | 重命名文件 |
-| `file.write` | `path` | — | 写入文件内容 |
-| `http.download` | `saveTo` | — | 下载文件到指定路径 |
+### MediaRead — media reads (39 specs)
 
-::: warning 注意
-`file.copy` 同时有 Read（source）和 Write（destination）两条校验。  
-`file.move` 对 source 和 destination 均执行 Write 校验。
+| API | Parameter | Array | Nested key | Notes |
+| --- | --- | --- | --- | --- |
+| `artwork.getAvailableArtwork` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getAvailableTypes` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getBatch` | `paths` | yes | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getByPath` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getFb2kUrlByPath` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getFb2kUrlByPathBatch` | `paths` | yes | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getForTrack` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getLyrics` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `artwork.getMetadata` | `path` | — | — | Runtime authority: `ArtworkApi.cpp` |
+| `audio.analyzeBPM` | `path` | — | — | Runtime authority: `AudioApi.cpp` |
+| `audio.generateFullWaveform` | `path` | — | — | Runtime authority: `AudioApi.cpp` |
+| `audio.generateWaveform` | `path` | — | — | Runtime authority: `AudioApi.cpp` |
+| `discovery.executeContextMenuByPath` | `trackPath` | — | — | Runtime authority: `DiscoveryApi.cpp` |
+| `jitQueue.enqueueNext` | `url` | — | — | Runtime authority: `QueueApi.cpp` |
+| `jitQueue.playNow` | `url` | — | — | Runtime authority: `QueueApi.cpp` |
+| `jitQueue.preloadBatch` | `urls` | yes | — | Runtime authority: `QueueApi.cpp` |
+| `library.getByPath` | `path` | — | — | Runtime authority: `LibraryApi.cpp` |
+| `lyrics.exists` | `path` | — | — | Runtime authority: `LyricsApi.cpp` |
+| `lyrics.get` | `path` | — | — | Runtime authority: `LyricsApi.cpp` |
+| `metadata.read` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.readBatch` | `paths` | yes | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.readByPath` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.readRaw` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `playback.playPath` | `path` | — | — | Runtime authority: `PlaybackApi.cpp` |
+| `playback.playPaths` | `paths` | yes | — | Runtime authority: `PlaybackApi.cpp` |
+| `playcount.get` | `paths` | yes | — | Runtime authority: `PlaycountApi.cpp` |
+| `playcount.getBatch` | `paths` | yes | — | Runtime authority: `PlaycountApi.cpp` |
+| `playlist.addPaths` | `paths` | yes | — | Runtime authority: `PlaylistApi.cpp` |
+| `playlist.addPathsAsync` | `paths` | yes | — | Runtime authority: `PlaylistApi.cpp` |
+| `playlist.addPathsSequential` | `paths` | yes | — | Runtime authority: `PlaylistApi.cpp` |
+| `playlist.replaceAllAndPlay` | `paths` | yes | — | Runtime authority: `PlaylistApi.cpp` |
+| `queue.addPaths` | `paths` | yes | — | Runtime authority: `QueueApi.cpp` |
+| `rating.get` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `replaygain.get` | `paths` | yes | — | Runtime authority: `ReplayGainApi.cpp` |
+| `replaygain.scan` | `paths` | yes | — | Runtime authority: `ReplayGainApi.cpp` |
+| `titleformat.eval` | `path` | — | — | Runtime authority: `TitleformatApi.cpp` |
+| `titleformat.evalBatch` | `paths` | yes | — | Runtime authority: `TitleformatApi.cpp` |
+| `titleformat.evalFields` | `path` | — | — | Runtime authority: `TitleformatApi.cpp` |
+| `titleformat.evalFieldsBatch` | `paths` | yes | — | Runtime authority: `TitleformatApi.cpp` |
+
+### MediaWrite — media mutation (17 specs)
+
+| API | Parameter | Array | Nested key | Notes |
+| --- | --- | --- | --- | --- |
+| `file.copy` | `destination` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.delete` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.mkdir` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.move` | `destination` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.move` | `source` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.rename` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `file.write` | `path` | — | — | Runtime authority: `FileApi.cpp` |
+| `lyrics.save` | `path` | — | — | Runtime authority: `LyricsApi.cpp` |
+| `metadata.embedArtwork` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.removeEmbeddedArt` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.removeField` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.removeTag` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.write` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `metadata.writeBatch` | `items` | yes | `path` | Runtime authority: `MetadataApi.cpp` |
+| `playcount.set` | `path` | — | — | Runtime authority: `PlaycountApi.cpp` |
+| `rating.set` | `path` | — | — | Runtime authority: `MetadataApi.cpp` |
+| `replaygain.clear` | `paths` | yes | — | Runtime authority: `ReplayGainApi.cpp` |
+
+::: info Nested array validation
+`metadata.writeBatch` validates each object in `items` by reading the nested `path` key.
 :::
 
-### MediaRead — 读取媒体文件（37 条）
+## Custom / non-decorator policy
 
-| API | 参数 | 数组 | 说明 |
-|-----|------|------|------|
-| `artwork.getAvailableArtwork` | `path` | — | 获取可用封面 |
-| `artwork.getAvailableTypes` | `path` | — | 获取封面类型 |
-| `artwork.getBatch` | `paths` | ? | 批量获取封面 |
-| `artwork.getByPath` | `path` | — | 按路径获取封面 |
-| `artwork.getFb2kUrlByPath` | `path` | — | 获取封面 fb2k URL |
-| `artwork.getFb2kUrlByPathBatch` | `paths` | ? | 批量获取封面 URL |
-| `artwork.getForTrack` | `path` | — | 获取曲目封面 |
-| `artwork.getLyrics` | `path` | — | 获取歌词 |
-| `artwork.getMetadata` | `path` | — | 获取元数据 |
-| `audio.analyzeBPM` | `path` | — | 分析 BPM |
-| `audio.generateFullWaveform` | `path` | — | 生成完整波形 |
-| `audio.generateWaveform` | `path` | — | 生成波形 |
-| `discovery.executeContextMenuByPath` | `trackPath` | — | 按路径执行上下文菜单 |
-| `jitQueue.enqueueNext` | `url` | — | JIT 队列下一首 |
-| `jitQueue.playNow` | `url` | — | JIT 队列立即播放 |
-| `library.getByPath` | `path` | — | 按路径查询媒体库 |
-| `lyrics.exists` | `path` | — | 检查歌词文件是否存在 |
-| `lyrics.get` | `path` | — | 获取歌词 |
-| `metadata.read` | `path` | — | 读取元数据 |
-| `metadata.readBatch` | `paths` | ? | 批量读取元数据 |
-| `metadata.readByPath` | `path` | — | 按路径读取元数据 |
-| `playback.playPath` | `path` | — | 播放指定路径 |
-| `playback.playPaths` | `paths` | ? | 播放多个路径 |
-| `playcount.get` | `paths` | ? | 获取播放次数 |
-| `playcount.getBatch` | `paths` | ? | 批量获取播放次数 |
-| `playlist.addPaths` | `paths` | ? | 向播放列表添加路径 |
-| `playlist.addPathsAsync` | `paths` | ? | 异步添加路径 |
-| `playlist.addPathsSequential` | `paths` | ? | 顺序添加路径 |
-| `playlist.replaceAllAndPlay` | `paths` | ? | 替换并播放 |
-| `queue.addPaths` | `paths` | ? | 向队列添加路径 |
-| `rating.get` | `path` | — | 获取评分 |
-| `replaygain.get` | `paths` | ? | 获取 ReplayGain 值 |
-| `replaygain.scan` | `paths` | ? | 扫描 ReplayGain |
-| `titleformat.eval` | `path` | — | 评估 Titleformat |
-| `titleformat.evalBatch` | `paths` | ? | 批量评估 Titleformat |
-| `titleformat.evalFields` | `path` | — | 评估 Titleformat 字段 |
-| `titleformat.evalFieldsBatch` | `paths` | ? | 批量评估字段 |
+These endpoints manage their own policy outside ordinary decorator specs:
 
-### MediaWrite — 修改媒体文件（10 条）
+| API | Policy notes |
+| --- | --- |
+| `shell.exec` | No executable whitelist; optional `cwd` still goes through PathSecurity |
+| `shell.spawn` | No executable whitelist; absolute executable path and `cwd` are path-checked |
+| `console.log` | Log directory restriction, reserved device names, and `.log` / `.txt` extension allowlist |
+| `playlist.insertTracks` | Operates on playlist handles rather than raw filesystem paths |
 
-| API | 参数 | 数组 | 嵌套键 | 说明 |
-|-----|------|------|--------|------|
-| `lyrics.save` | `path` | — | — | 保存歌词文件 |
-| `metadata.embedArtwork` | `path` | — | — | 嵌入封面到文件 |
-| `metadata.removeEmbeddedArt` | `path` | — | — | 移除嵌入封面 |
-| `metadata.removeField` | `path` | — | — | 移除元数据字段 |
-| `metadata.removeTag` | `path` | — | — | 移除完整标签 |
-| `metadata.write` | `path` | — | — | 写入元数据 |
-| `metadata.writeBatch` | `items` | ? | `path` | 批量写入元数据 |
-| `playcount.set` | `path` | — | — | 设置播放次数 |
-| `rating.set` | `path` | — | — | 设置评分 |
-| `replaygain.clear` | `paths` | ? | — | 清除 ReplayGain |
+## Path security details
 
-::: info 嵌套数组校验
-`metadata.writeBatch` 的参数 `items` 是对象数组，系统自动提取每个元素的 `path` 字段进行校验。
-:::
+### Common rejections
 
-## 自定义策略 API
+- Device paths: `\\.\...` and `\\?\...`
+- Directory traversal containing `..`
+- Empty or relative paths (absolute paths required)
 
-以下 API 的安全策略由内部逻辑自行管理，不通过 decorator 校验：
+### Read
 
-| API | 校验方式 |
-|-----|----------|
-| `shell.exec` | 无命令白名单（信任主题作者）+ cwd 路径校验 |
-| `shell.spawn` | 无可执行白名单（信任主题作者）+ 绝对路径/cwd 路径校验 |
-| `console.log` | 日志目录限制 + 保留设备名过滤 + 文件扩展名白名单（.log/.txt） |
-| `playlist.insertTracks` | 参数为 playlist handle 而非文件路径，不需要路径校验 |
+System-drive protected directories include:
 
-## 路径安全规则详解
+| Directory | Reason |
+| --- | --- |
+| `C:\\Windows\\` | OS files |
+| `C:\\Program Files\\` | Installed programs |
+| `C:\\Program Files (x86)\\` | 32-bit programs |
+| `C:\\ProgramData\\` | System configuration data |
 
-### 通用拦截（所有级别）
+Non-system drives are generally allowed for portable / NAS media workflows under Read.
 
-- **设备路径**: `\\.\` 和 `\\?\` 前缀一律拒绝
-- **目录遍历**: 包含 `..` 的路径一律拒绝
-- **空路径 / 相对路径**: 必须是绝对路径
+### Write
 
-### Read 级别
+Only destinations accepted by the strict write policy succeed. In practice this is the foobar2000 profile directory and the system temporary directory.
 
-系统盘（通常为 `C:`）上的以下目录被禁止访问：
+### MediaRead
 
-| 保护目录 | 原因 |
-|----------|------|
-| `C:\Windows\` | 系统文件 |
-| `C:\Program Files\` | 程序文件 |
-| `C:\Program Files (x86)\` | 32 位程序文件 |
-| `C:\ProgramData\` | 系统配置数据 |
+In addition to Read rules, the target must resolve into:
 
-非系统盘（`D:`、`E:` 等）默认放行，以支持 NAS 和便携版场景。
+- the foobar2000 media library, or
+- any playlist item (playlist scan is bounded by the runtime implementation).
 
-### Write 级别
+### MediaWrite
 
-仅允许写入以下两个目录（及其子目录）：
+In addition to MediaRead:
 
-| 允许目录 | 用途 |
-|----------|------|
-| foobar2000 配置目录 | `%APPDATA%\foobar2000\` 或便携版 profile |
-| 系统临时目录 | `%TEMP%` |
+- system-protected directories remain blocked even if the item appears in a library/playlist context
+- non-system-drive automatic bypass is not applied
 
-### MediaRead 级别
+## Counts summary
 
-在 Read 规则之上，额外要求文件必须存在于：
-- foobar2000 **媒体库** 中，或
-- 任意 **播放列表** 中（遍历全部播放列表，上限 50,000 项）
+| Level | Specs | Unique APIs in this level table |
+| --- | ---: | ---: |
+| Read | 9 | 9 |
+| Write | 1 | 1 |
+| MediaRead | 39 | 39 |
+| MediaWrite | 17 | 16 |
+| **Total** | **66** | **64** |
 
-::: tip 路径规范化
-输入路径会通过 `filesystem::g_get_canonical_path` 规范化后再比较，支持大小写不敏感、斜杠统一、CUE 子轨道匹配等场景。
-:::
-
-### MediaWrite 级别
-
-在 MediaRead 规则之上，额外增加：
-- **黑名单目录校验** — 即使文件在媒体库中，处于系统保护目录的文件仍然拒绝写入
-- **无非系统盘自动放行** — 与 Read 不同，MediaWrite 不会因为路径在非系统盘就自动放行
-
-## 统计
-
-| 权限级别 | spec 条数 | 唯一 API 数 | 含数组参数 | 含嵌套键 |
-|----------|-----------|-------------|-----------|----------|
-| Read | 9 | 9 | 1 | 0 |
-| Write | 8 | 6 | 0 | 0 |
-| MediaRead | 37 | 37 | 17 | 0 |
-| MediaWrite | 10 | 10 | 2 | 1 |
-| **合计** | **64** | **62** | **20** | **1** |
-
-::: tip 为什么 spec 数 > API 数？
-`file.copy` 同时有 Read（source）+ Write（destination）两条 spec；`file.move` 有两条 Write spec。因此 64 条 spec 对应 62 个唯一 API。
-:::
+These counts are regenerated from the C++ `RegisterApi` path-security specs in the component source.

@@ -1,49 +1,76 @@
-# 安全限制
+# Security reference
 
-## 威胁模型 
+This component is a specialized, vertical foobar2000 UI host. Themes come from the user or other trusted sources; installing a theme has roughly the same trust boundary as installing a foobar2000 component.
 
-本组件是围绕 foobar2000 设计的**专用、垂直** UI 宿主，主题来自用户自己或可信来源，安装一个主题的信任边界等同于安装一个 foobar2000 组件。因此安全设计目标是 **fail-safe（防主题 bug 误伤系统）**，而非 **sandbox（防不可信代码越权）**——对一个专用组件做过度防护只会自缚手脚。`shell.exec` / `shell.spawn` 不限制可执行程序，真正的护栏是路径校验（PathSecurity）与协议限制。
+Security goals are therefore **fail-safe** (prevent a buggy theme from damaging the system), not a full **sandbox** against untrusted code.
 
-## shell.exec - 无命令白名单 
+## Threat model
 
-不限制可执行命令。若提供 `cwd`，会经 PathSecurity 路径校验拒绝越界路径。
+- Primary guardrails are PathSecurity and protocol restrictions.
+- `shell.exec` / `shell.spawn` intentionally do **not** maintain an executable whitelist.
+- Path-bearing Bridge APIs still go through decorator validation and return `PERMISSION_DENIED` on rejection.
 
-## shell.spawn - 无可执行白名单 
+## shell.exec
 
-不限制可执行文件。
+- No executable command whitelist.
+- If `cwd` is provided, it is path-checked and rejected when out of policy.
 
-特性:
+## shell.spawn
 
-- 参数化调用，不需要拼接 shell 命令字符串
-- 可选 `waitForExitMs` 检测进程早退（例如 Node 启动即崩溃）
-- 绝对路径可执行文件与 `cwd` 会执行路径安全校验
+- No executable whitelist.
+- Parameterized launch avoids string concatenation into a shell command.
+- Optional `waitForExitMs` can detect early process exit.
+- Absolute executable paths and `cwd` are path-checked.
 
-## shell.openWith - 可执行黑名单 
+## shell.openWith
 
-被禁止的扩展名 (29 种):
+Blocked extensions (29):
 
-.exe .com .cmd .bat .ps1 .vbs .vbe .js .jse .wsf .wsh .msc
-.scr .pif .hta .cpl .msi .msp .msu .dll .ocx .sys .drv
-.lnk .url .reg .inf .jar .application
+`.exe .com .cmd .bat .ps1 .vbs .vbe .js .jse .wsf .wsh .msc .scr .pif .hta .cpl .msi .msp .msu .dll .ocx .sys .drv .lnk .url .reg .inf .jar .application`
 
-## file.read - 路径安全 
+## file.read
 
-禁止访问的目录（系统盘）: `C:\Windows\`、`C:\Program Files\`、`C:\Program Files (x86)\`、`C:\ProgramData\`
+Blocked system-drive directories include:
 
-非系统盘（D:、E: 等）默认放行，支持 NAS 和便携版使用场景。
+- `C:\\Windows\\`
+- `C:\\Program Files\\`
+- `C:\\Program Files (x86)\\`
+- `C:\\ProgramData\\`
 
-## file.write - 写入限制 
+Non-system drives are generally allowed for NAS / portable layouts.
 
-允许写入的目录: foobar2000 配置目录 (`%APPDATA%\foobar2000\`) 和系统临时目录 (`%TEMP%`)。
+## file.write
 
-## http.get/post - SSRF 防护 
+Write destinations must pass PathSecurity write policy. In practice this means the foobar2000 profile directory and the system temporary directory.
 
-被禁止的地址: `localhost`/`127.x.x.x`、`192.168.x.x`、`10.x.x.x`、`172.16-31.x.x`、`169.254.x.x`、`::1`
+## http.get / http.post
 
-::: tip 启用内网访问
+SSRF protections reject:
+
+- `localhost` / `127.x.x.x`
+- `192.168.x.x`
+- `10.x.x.x`
+- `172.16-31.x.x`
+- `169.254.x.x`
+- `::1`
+
+::: tip Enabling local-network access
 **Preferences → Advanced → Tools → WebView UI → Allow local network access**
 :::
 
-## DevTools 
+## DevTools
 
-默认禁用，启用方法: Preferences → Advanced → Tools → WebView UI → Enable DevTools，重启 foobar2000。
+Disabled by default. Enable via:
+
+**Preferences → Advanced → Tools → WebView UI → Enable DevTools**, then restart foobar2000.
+
+## Related runtime tokens
+
+- `file.read`
+- `file.write`
+- `http.get`
+- `http.post`
+- `shell.exec`
+- `shell.openWith`
+- `shell.spawn`
+- `PERMISSION_DENIED`

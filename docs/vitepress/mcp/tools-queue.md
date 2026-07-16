@@ -1,15 +1,15 @@
-# Queue 工具 
+# Queue Tools
 
-播放队列管理。共 8 个工具。
+Eight tools manage the playback queue.
 
 ## fb2k_queue_get 
 
-获取队列中的所有曲目。
+Gets every item in the playback queue.
 
-- **参数**: 无
-- **Bridge 方法**: `queue.get`
+- **Parameters**: none
+- **Bridge method**: `queue.get`
 
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -20,9 +20,9 @@
       "absolutePath": "D:\\\\Music\\\\track.flac",
       "subsong": 0,
       "fileSize": 28456789,
-      "title": "天ノ弱",
+      "title": "Redo",
       "artist": "164",
-      "album": "天ノ弱",
+      "album": "Millennium Mother",
       "albumArtist": "164",
       "genre": "Vocaloid",
       "date": "2011",
@@ -41,90 +41,90 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| queueIndex | integer | 队列中的位置 |
-| playlist | integer | 来源播放列表索引 |
-| playlistItem | integer | 来源播放列表中的项索引 |
-| 曲目字段 | — | 同 getCurrentTrack 的字段结构 |
+| `queueIndex` | integer | Position in the queue |
+| `playlist` | integer | Source playlist index |
+| `playlistItem` | integer | Source item index |
+| Track fields | — | Same track-data family as `playback.getCurrentTrack` |
 
 ## fb2k_queue_add 
 
-添加曲目到队列。
+Adds one or more playlist items to the queue.
 
-- **Bridge 方法**: `queue.add`
+- **Bridge method**: `queue.add`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| playlist | integer | ? | 源播放列表索引（默认活动列表） |
-| tracks | integer[] | ? | 曲目索引数组（批量添加） |
-| track | integer | ? | 单个曲目索引（与 tracks 二选一） |
+| `playlist` | integer | No | Source playlist; the Bridge defaults to the active playlist |
+| `tracks` | integer[] | Conditional | Track indices for batch addition |
+| `track` | integer | Conditional | One track index as an alternative to `tracks` |
 
-::: tip TIP
-`tracks` 和 `track` 二选一。使用 `tracks` 一次添加多个，使用 `track` 添加单个。
+::: tip Conditional input
+Supply either `tracks` or `track`. The MCP schema leaves both optional because the exclusivity rule is enforced by the Bridge handler.
 :::
 
 ## fb2k_queue_add_paths 
 
-按文件路径添加曲目到队列。
+Adds file paths or URLs to the queue.
 
-- **Bridge 方法**: `queue.addPaths`
+- **Bridge method**: `queue.addPaths`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | string[] | ? | 文件路径数组，支持 path\|subsong:N 格式 |
-| useQueuePlaylist | boolean | ? | 是否使用专用队列播放列表（默认 true） |
-| playlist | integer | ? | 目标播放列表索引（仅当 useQueuePlaylist=false 时有效） |
+| `paths` | string[] | Yes | File paths or URLs, optionally using `path|subsong:N` |
+| `useQueuePlaylist` | boolean | No | Use the dedicated queue playlist; default `true` |
+| `playlist` | integer | No | Target playlist, used when `useQueuePlaylist` is `false` |
 
 ## fb2k_queue_remove 
 
-移除队列中指定位置的曲目。
+Removes one or more queue positions.
 
-- **Bridge 方法**: `queue.remove`
+- **Bridge method**: `queue.remove`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| index | integer | ? | 单个队列索引（最小 0） |
-| indices | integer[] | ? | 索引数组（与 index 二选一） |
+| `index` | integer | Conditional | One queue index; minimum `0` |
+| `indices` | integer[] | Conditional | Queue indices as an alternative to `index` |
 
 ## fb2k_queue_clear 
 
-清空播放队列。
+Clears the playback queue.
 
-- **参数**: 无
-- **Bridge 方法**: `queue.clear`
+- **Parameters**: none
+- **Bridge method**: `queue.clear`
 
 ## fb2k_queue_get_count 
 
-获取队列中曲目数。
+Gets the queue item count.
 
-- **参数**: 无
-- **Bridge 方法**: `queue.getCount`
+- **Parameters**: none
+- **Bridge method**: `queue.getCount`
 
-**返回值**:
+**Example result:**
 
 ```json
 { "count": 3, "hasItems": true }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| count | integer | 队列曲目数 |
-| hasItems | boolean | 队列是否非空 |
+| `count` | integer | Queue item count |
+| `hasItems` | boolean | Whether the queue is non-empty |
 
 ## fb2k_queue_move_to_top 
 
-将指定曲目移至队列顶部。
+Moves a queue item to the top so it plays next.
 
-- **Bridge 方法**: `queue.moveToTop`
+- **Bridge method**: `queue.moveToTop`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| index | integer | ? | 队列中的曲目索引 |
+| `index` | integer | Yes | Queue index; minimum `0` |
 
 ## fb2k_queue_flush 
 
-刷新播放队列（`queue.clear` 的别名）。
+Flushes the playback queue. The mapped Bridge method is an alias of `queue.clear`.
 
-- **参数**: 无
-- **Bridge 方法**: `queue.flush`
+- **Parameters**: none
+- **Bridge method**: `queue.flush`

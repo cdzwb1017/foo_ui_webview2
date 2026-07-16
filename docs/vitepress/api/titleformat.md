@@ -1,142 +1,86 @@
-# Titleformat API 
+# Titleformat API
 
-foobar2000 Titleformat 表达式求值。共 5 个 API。
+English API reference for the `titleformat` family.
 
-## 单文件求值 
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-### titleformat.eval 
+## titleformat
 
-对单个文件求值单个 titleformat 表达式。
+### titleformat.eval
 
-| 参数 | 类型 | 必填 | 描述 |
+Public API method. Runtime authority: `src/api/TitleformatApi.cpp:401`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-| pattern | string | ✓ | Titleformat 表达式 |
+| `path` | `string` | No | Optional; default . |
+| `pattern` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","path":"...","pattern":"...","result":"...","success":true}`
 
-```json
-{
-    "success": true,
-    "path": "C:\\\\Music\\\\song.flac",
-    "pattern": "%artist%",
-    "result": "Artist Name"
-}
+```js
+const result = await fb2k.invoke('titleformat.eval', { path: /* value */, pattern: /* value */ });
 ```
 
-```javascript
-const r = await fb2k.invoke('titleformat.eval', {
-    path: 'C:\\\\Music\\\\song.flac',
-    pattern: '%artist% - %title%'
-});
-console.log(r.result);
-```
+### titleformat.evalBatch
 
-### titleformat.evalFields 
+Public API method. Runtime authority: `src/api/TitleformatApi.cpp:402`.
 
-对单个文件求值多个字段。内部合并为单次 `format_title()` 调用，比多次 `eval` 更高效。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
-| fields | object | ✓ | { fieldName: pattern } 映射 |
+| `paths` | `array` | Yes | Required. |
+| `pattern` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","errorCount":"...","pattern":"...","results":"...","success":true,"successCount":"...","total":"..."}`
 
-```json
-{
-    "success": true,
-    "path": "C:\\\\Music\\\\song.flac",
-    "artist": "Artist Name",
-    "album": "Album Name"
-}
+```js
+const result = await fb2k.invoke('titleformat.evalBatch', { paths: /* value */, pattern: /* value */ });
 ```
 
-```javascript
-const r = await fb2k.invoke('titleformat.evalFields', {
-    path: track.absolutePath,
-    fields: {
-        artist: '%artist%',
-        album: '%album%',
-        year: '$year(%date%)'
-    }
-});
-```
+### titleformat.evalFields
 
-## 批量求值 
+Public API method. Runtime authority: `src/api/TitleformatApi.cpp:403`.
 
-### titleformat.evalBatch 
-
-对多个文件求值同一个 titleformat 表达式。模式只编译一次。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | string[] | ✓ | 文件路径数组 |
-| pattern | string | ✓ | Titleformat 表达式 |
+| `fields` | `object` | Yes | Required. |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","path":"...","success":true}`
 
-```json
-{
-    "success": true,
-    "pattern": "%artist%",
-    "total": 100,
-    "successCount": 98,
-    "errorCount": 2,
-    "results": [
-        { "path": "...", "success": true, "result": "Artist" }
-    ]
-}
+```js
+const result = await fb2k.invoke('titleformat.evalFields', { fields: /* value */, path: /* value */ });
 ```
 
-### titleformat.evalFieldsBatch 
+### titleformat.evalFieldsBatch
 
-对多个文件求值多个字段。合并所有字段为单次调用，100 路径 × 10 字段仅需 100 次 `format_title()`。
+Public API method. Runtime authority: `src/api/TitleformatApi.cpp:404`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | string[] | ✓ | 文件路径数组 |
-| fields | object | ✓ | { fieldName: pattern } 映射 |
+| `fields` | `object` | Yes | Required. |
+| `paths` | `array` | Yes | Required. |
 
-**返回值**:
+**Returns**: `{"error":"...","errorCount":"...","results":"...","success":true,"successCount":"...","total":"..."}`
 
-```json
-{
-    "success": true,
-    "total": 100,
-    "successCount": 100,
-    "errorCount": 0,
-    "results": [
-        { "path": "...", "success": true, "artist": "...", "album": "..." }
-    ]
-}
+```js
+const result = await fb2k.invoke('titleformat.evalFieldsBatch', { fields: /* value */, paths: /* value */ });
 ```
 
-## 参考 
+### titleformat.getBuiltinFields
 
-### titleformat.getBuiltinFields 
+Public API method. Runtime authority: `src/api/TitleformatApi.cpp:405`.
 
-获取内置 titleformat 字段参考表。
+_No parameters._
 
-- **参数**: 无
+**Returns**: `{"fields":[],"success":true}`
 
-**返回值**:
-
-```json
-{
-    "success": true,
-    "fields": {
-        "artist": "%artist%",
-        "album": "%album%",
-        "title": "%title%",
-        "duration": "%length%",
-        "playCount": "%play_count%",
-        "rating": "%rating%",
-        "added": "%added%"
-    }
-}
+```js
+const result = await fb2k.invoke('titleformat.getBuiltinFields');
 ```
 
-::: tip TIP
-完整字段列表包含标准标签、技术信息、文件信息、foo_playcount 字段和常用组合模式。
-:::
+## Evaluation semantics
+
+- `titleformat.eval` requires a non-empty `path` and `pattern`. Invalid patterns and unavailable files return `success: false` with `error`.
+- `titleformat.evalBatch` requires an array `paths` and a non-empty `pattern`; per-item failures are retained in `results`, while `successCount` and `errorCount` summarize the batch.
+- `titleformat.evalFields` and `titleformat.evalFieldsBatch` require an object `fields`. Each key becomes a response property; non-string field expressions are returned as `null` for that key.
+- `titleformat.getBuiltinFields` is a convenience reference generated by the runtime. It does not guarantee that optional component fields such as play-count data are populated for every installation or track.

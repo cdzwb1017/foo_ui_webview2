@@ -1,403 +1,366 @@
-# File & Dialog & Shell
+# File API
 
-安全的文件系统操作。所有路径支持变量替换：`%profile%`、`%component%`、`%music%`、`%APPDATA%`、`%TEMP%`。
+English API reference for the `dialog`, `file`, `shell` family.
 
-::: warning 安全限制
-读取仅允许白名单目录（profile/component/music/appdata/temp）。写入更严格，仅允许 profile/temp 目录。
-:::
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-## File API - 文件系统
+## dialog
 
-### file.read 
+### dialog.confirm
 
-读取文件内容。
+Public API method. Runtime authority: `src/api/DialogApi.cpp:407`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径（支持路径变量） |
-| encoding | string | ✗ | "utf-8"（默认）或 "binary"（返回 base64） |
+| `buttons` | `array` | No | Optional; default omitted. |
+| `defaultButton` | `integer` | No | Optional; default 0. |
+| `message` | `string` | No | Optional; default . |
+| `title` | `string` | No | Optional; default Confirm. |
+| `type` | `string` | No | Optional; default question. |
 
-**返回值**: `{ "success": true, "content": "...", "size": 1024 }`
+**Returns**: `{"response":"..."}`
 
-二进制模式额外返回 `"encoding": "base64"`。
-
-```javascript
-// 读取文本文件
-const { content } = await fb2k.invoke('file.read', { path: '%profile%\\\\config.json' });
-
-// 读取二进制文件
-const bin = await fb2k.invoke('file.read', { path: '%profile%\\\\data.bin', encoding: 'binary' });
-console.log(bin.encoding); // "base64"
+```js
+const result = await fb2k.invoke('dialog.confirm', { buttons: /* value */, defaultButton: /* value */, message: /* value */, title: /* value */, type: /* value */ });
 ```
 
-### file.write 
+### dialog.openFile
 
-写入文件内容。父目录不存在时自动创建。
+Public API method. Runtime authority: `src/api/DialogApi.cpp:398`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径 |
-| content | string | ✓ | 写入内容（二进制时使用 "base64:..." 前缀） |
-| encoding | string | ✗ | "utf-8"（默认）或 "binary" |
-| append | boolean | ✗ | 是否追加模式（默认 false） |
+| `defaultPath` | `string` | No | Optional; default empty. Supports `%music%` expansion. |
+| `filters` | `array` | No | Optional filter specs `{ name, extensions[] }` parsed by `ParseFilterSpecs`. |
+| `multiple` | `boolean` | No | Optional; default false. |
+| `title` | `string` | No | Optional; default Open File. |
 
-**返回值**: `{ "success": true, "bytesWritten": 1024 }`
+**Returns**: `{"canceled":"...","error":"...","filePaths":"..."}`
 
-```javascript
-// 写入 JSON 配置
-await fb2k.invoke('file.write', {
-    path: '%profile%\\\\my-skin\\\\config.json',
-    content: JSON.stringify({ theme: 'dark' })
-});
-
-// 追加日志
-await fb2k.invoke('file.write', {
-    path: '%profile%\\\\debug.log', content: 'log entry\\n', append: true
-});
+```js
+const result = await fb2k.invoke('dialog.openFile', { defaultPath: /* value */, multiple: /* value */, title: /* value */, filters: /* value */ });
 ```
 
-### file.exists 
+### dialog.openFolder
 
-检查文件或目录是否存在。
+Public API method. Runtime authority: `src/api/DialogApi.cpp:404`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件或目录路径 |
+| `title` | `string` | No | Optional; default Select Folder. |
 
-**返回值**: `{ "exists": true, "isFile": true, "isDirectory": false }`
+**Returns**: `{"canceled":"...","error":"...","folderPath":"..."}`
 
-```javascript
-const { exists, isFile } = await fb2k.invoke('file.exists', { path: '%profile%\\\\config.json' });
+```js
+const result = await fb2k.invoke('dialog.openFolder', { title: /* value */ });
 ```
 
-### file.list 
+### dialog.saveFile
 
-列出目录内容。
+Public API method. Runtime authority: `src/api/DialogApi.cpp:401`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 目录路径 |
-| pattern | string | ✗ | 通配符过滤（默认 "*"），如 "*.flac" |
-| recursive | boolean | ✗ | 是否递归（默认 false） |
+| `defaultName` | `string` | No | Optional; default empty. |
+| `filters` | `array` | No | Optional filter specs `{ name, extensions[] }` parsed by `ParseFilterSpecs`. |
+| `title` | `string` | No | Optional; default Save File. |
 
-**返回值**: `{ "success": true, "files": [...], "directories": [...] }`
+**Returns**: `{"canceled":"...","error":"...","filePath":"..."}`
 
-> 非递归模式下 `files` 返回文件名；递归模式下返回完整路径。
-
-```javascript
-// 列出配置目录下的 JSON 文件
-const { files } = await fb2k.invoke('file.list', {
-    path: '%profile%', pattern: '*.json'
-});
+```js
+const result = await fb2k.invoke('dialog.saveFile', { defaultName: /* value */, title: /* value */, filters: /* value */ });
 ```
 
-### file.delete 
+## file
 
-删除文件。默认移至回收站。
+### file.copy
 
-| 参数 | 类型 | 必填 | 描述 |
+Public API method. Runtime authority: `src/api/FileApi.cpp:656`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径 |
-| moveToTrash | boolean | ✗ | 是否移至回收站（默认 true） |
+| `destination` | `string` | No | Optional; default . |
+| `overwrite` | `boolean` | No | Optional; default false. |
+| `source` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"destination":"...","error":"...","source":"...","success":true}`
 
-```javascript
-// 删除到回收站（安全）
-await fb2k.invoke('file.delete', { path: '%profile%\\\\old-config.json' });
-
-// 永久删除
-await fb2k.invoke('file.delete', { path: '%temp%\\\\cache.tmp', moveToTrash: false });
+```js
+const result = await fb2k.invoke('file.copy', { destination: /* value */, overwrite: /* value */, source: /* value */ });
 ```
 
-### file.mkdir 
+### file.delete
 
-创建目录（支持多级创建）。
+Public API method. Runtime authority: `src/api/FileApi.cpp:650`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 目录路径 |
+| `moveToTrash` | `boolean` | No | Optional; default true. |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "created": true }`
+**Returns**: `{"error":"...","success":true}`
 
-### file.copy 
-
-复制文件或目录（支持递归）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| source | string | ✓ | 源路径 |
-| destination | string | ✓ | 目标路径 |
-| overwrite | boolean | ✗ | 是否覆盖（默认 false） |
-
-**返回值**: `{ "success": true, "source": "...", "destination": "..." }`
-
-```javascript
-await fb2k.invoke('file.copy', {
-    source: '%profile%\\\\config.json',
-    destination: '%profile%\\\\config.bak.json'
-});
+```js
+const result = await fb2k.invoke('file.delete', { moveToTrash: /* value */, path: /* value */ });
 ```
 
-### file.move 
+### file.exists
 
-移动文件或目录。
+Public API method. Runtime authority: `src/api/FileApi.cpp:644`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| source | string | ✓ | 源路径 |
-| destination | string | ✓ | 目标路径 |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "source": "...", "destination": "..." }`
+**Returns**: `{"error":"...","exists":"...","isDirectory":"...","isFile":"...","success":true}`
 
-### file.rename 
-
-重命名文件或目录。新名称不能包含路径分隔符。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 原始路径 |
-| newName | string | ✓ | 新文件名 |
-
-**返回值**: `{ "success": true, "oldPath": "...", "newPath": "..." }`
-
-### file.getInfo 
-
-获取文件或目录的详细信息。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| path | string | ✓ | 文件或目录路径 |
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "exists": true,
-    "isDirectory": false,
-    "isFile": true,
-    "size": 5242880,
-    "modified": 1736064000000,
-    "name": "song.flac",
-    "extension": ".flac",
-    "parent": "C:\\\\Music"
-}
+```js
+const result = await fb2k.invoke('file.exists', { path: /* value */ });
 ```
 
-## Dialog API - 对话框 
+### file.getInfo
 
-系统原生对话框。
+Public API method. Runtime authority: `src/api/FileApi.cpp:671`.
 
-### dialog.openFile 
-
-打开文件选择对话框。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| title | string | ✗ | 对话框标题（默认 "Open File"） |
-| filters | array | ✗ | 文件过滤器，每项 { name, extensions } |
-| multiple | boolean | ✗ | 允许多选（默认 false） |
-| defaultPath | string | ✗ | 默认打开路径（支持 %music% 变量） |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "canceled": false, "filePaths": ["C:\\\\Music\\\\song.mp3"] }`
+**Returns**: `{"error":"...","exists":"...","extension":"...","isDirectory":"...","isFile":"...","modified":"...","name":"...","parent":"...","size":"...","success":true}`
 
-用户取消时 `canceled` 为 `true`，`filePaths` 为空数组。
-
-```javascript
-const result = await fb2k.invoke('dialog.openFile', {
-    title: '选择音频文件',
-    filters: [{ name: 'Audio', extensions: ['mp3', 'flac', 'wav'] }],
-    multiple: true,
-    defaultPath: '%music%'
-});
-if (!result.canceled) {
-    console.log('选中文件:', result.filePaths);
-}
+```js
+const result = await fb2k.invoke('file.getInfo', { path: /* value */ });
 ```
 
-### dialog.saveFile 
+### file.list
 
-打开文件保存对话框。
+Public API method. Runtime authority: `src/api/FileApi.cpp:647`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| title | string | ✗ | 对话框标题（默认 "Save File"） |
-| defaultName | string | ✗ | 默认文件名 |
-| filters | array | ✗ | 文件过滤器，每项 { name, extensions } |
+| `path` | `string` | No | Optional; default . |
+| `pattern` | `string` | No | Optional; default *. |
+| `recursive` | `boolean` | No | Optional; default false. |
 
-**返回值**: `{ "canceled": false, "filePath": "C:\\\\Music\\\\export.json" }`
+**Returns**: `{"directories":"...","error":"...","files":"...","items":"...","success":true}`
 
-```javascript
-const result = await fb2k.invoke('dialog.saveFile', {
-    title: '导出播放列表',
-    defaultName: 'playlist.json',
-    filters: [{ name: 'JSON', extensions: ['json'] }]
-});
-if (!result.canceled) {
-    await fb2k.invoke('file.write', { path: result.filePath, content: data });
-}
+```js
+const result = await fb2k.invoke('file.list', { path: /* value */, pattern: /* value */, recursive: /* value */ });
 ```
 
-### dialog.openFolder 
+### file.mkdir
 
-打开文件夹选择对话框。
+Public API method. Runtime authority: `src/api/FileApi.cpp:653`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| title | string | ✗ | 对话框标题（默认 "Select Folder"） |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "canceled": false, "folderPath": "C:\\\\Music" }`
+**Returns**: `{"created":"...","error":"...","message":"...","success":true}`
 
-```javascript
-const result = await fb2k.invoke('dialog.openFolder', { title: '选择音乐文件夹' });
-if (!result.canceled) {
-    console.log('选中文件夹:', result.folderPath);
-}
+```js
+const result = await fb2k.invoke('file.mkdir', { path: /* value */ });
 ```
 
-### dialog.confirm 
+### file.move
 
-显示确认对话框。使用 Windows TaskDialog 实现，支持自定义按钮。
+Public API method. Runtime authority: `src/api/FileApi.cpp:662`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| title | string | ✗ | 对话框标题（默认 "Confirm"） |
-| message | string | ✓ | 提示消息 |
-| type | string | ✗ | 图标类型: info, warning, error, question（默认 question） |
-| buttons | string[] | ✗ | 按钮标签数组（默认 ["OK", "Cancel"]） |
-| defaultButton | number | ✗ | 默认选中的按钮索引（默认 0） |
+| `destination` | `string` | No | Optional; default . |
+| `source` | `string` | No | Optional; default . |
 
-**返回值**: `{ "response": 0 }`
+**Returns**: `{"destination":"...","error":"...","source":"...","success":true}`
 
-`response` 为用户点击的按钮索引（从 0 开始）。
-
-```javascript
-const { response } = await fb2k.invoke('dialog.confirm', {
-    title: '确认删除',
-    message: '确定要删除选中的曲目吗？',
-    type: 'warning',
-    buttons: ['删除', '取消']
-});
-if (response === 0) {
-    // 用户点击了"删除"
-}
+```js
+const result = await fb2k.invoke('file.move', { destination: /* value */, source: /* value */ });
 ```
 
-## Shell API - 系统集成 
+### file.read
 
-### shell.showInExplorer 
+Public API method. Runtime authority: `src/api/FileApi.cpp:638`.
 
-在资源管理器中显示文件（选中该文件）。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径 |
+| `encoding` | `string` | No | Optional; default utf-8. |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"content":"...","encoding":"...","error":"...","size":"...","success":true}`
 
-```javascript
-await fb2k.invoke('shell.showInExplorer', { path: 'C:\\\\Music\\\\song.flac' });
+```js
+const result = await fb2k.invoke('file.read', { encoding: /* value */, path: /* value */ });
 ```
 
-### shell.openExternal 
+### file.rename
 
-用默认程序打开 URL 或文件。
+Public API method. Runtime authority: `src/api/FileApi.cpp:668`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| url | string | ✓ | URL 或文件路径 |
+| `newName` | `string` | No | Optional; default . |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"error":"...","newPath":"...","oldPath":"...","success":true}`
 
-```javascript
-await fb2k.invoke('shell.openExternal', { url: 'https://www.foobar2000.org' });
+```js
+const result = await fb2k.invoke('file.rename', { newName: /* value */, path: /* value */ });
 ```
 
-### shell.exec 
+### file.write
 
-执行系统命令。
+Public API method. Runtime authority: `src/api/FileApi.cpp:641`.
 
-::: warning 安全限制
-不限制可执行命令（信任主题作者，信任边界等同于安装一个 foobar2000 组件）。若提供 `cwd`，会经 PathSecurity 路径校验拒绝越界路径。破坏性文件操作请用 `fb.file.*`（受路径黑名单保护）。
-:::
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| command | string | ✓ | 要执行的命令 |
-| args | string[] | ✗ | 命令参数数组 |
-| cwd | string | ✗ | 工作目录 |
-| hidden | boolean | ✗ | 是否隐藏窗口（默认 true） |
+| `append` | `boolean` | No | Optional; default false. |
+| `content` | `string` | No | Optional; default . |
+| `encoding` | `string` | No | Optional; default utf-8. |
+| `path` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "processId": 12345 }`
+**Returns**: `{"bytesWritten":"...","error":"...","success":true}`
 
-::: tip 行为说明
-`shell.exec` 是 fire-and-forget 语义，只表示命令进程已发起，不保证目标服务已经就绪。
-:::
-
-```javascript
-// 启动 Node.js 服务器
-await fb2k.invoke('shell.exec', { command: 'cmd /c start /b node "E:\\\\server.js"' });
-
-// 无命令白名单：任意命令均可执行（信任主题作者）
-await fb2k.invoke('shell.exec', { command: 'curl http://example.com' });
+```js
+const result = await fb2k.invoke('file.write', { append: /* value */, content: /* value */, encoding: /* value */, path: /* value */ });
 ```
 
-### shell.spawn 
+## shell
 
-结构化启动进程（推荐用于启动本地服务）。
+### shell.exec
 
-::: warning 安全限制
-不限制可执行文件（信任主题作者）。绝对路径可执行文件与 `cwd` 会经路径安全校验，拒绝指向系统目录等越界路径。
-:::
+Public API method. Runtime authority: `src/api/ShellApi.cpp:427`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| executable | string | ✓ | 可执行文件名或绝对路径 |
-| args | string[] | ✗ | 参数数组 |
-| cwd | string | ✗ | 工作目录 |
-| hidden | boolean | ✗ | 是否隐藏窗口（默认 true） |
-| waitForExitMs | number | ✗ | 启动后等待退出毫秒数（用于检测早退） |
+| `args` | `array` | No | Optional; default omitted. |
+| `command` | `string` | No | Optional; default . |
+| `cwd` | `string` | No | Optional; default . |
+| `hidden` | `boolean` | No | Optional; default true. |
 
-**返回值**:
+**Returns**: `{"error":"...","processId":"...","success":true}`
 
-```json
-{
-  "success": true,
-  "processId": 12345,
-  "exited": false
-}
+```js
+const result = await fb2k.invoke('shell.exec', { args: /* value */, command: /* value */, cwd: /* value */, hidden: /* value */ });
 ```
 
-```javascript
-// ✅ 推荐：直接启动 node server.js（可检测 CreateProcess 失败）
-const result = await fb2k.invoke('shell.spawn', {
-  executable: 'E:\\\\FB2K\\\\Runtime\\\\node.exe',
-  args: ['E:\\\\FB2K\\\\NeteaseApi\\\\server.js'],
-  cwd: 'E:\\\\FB2K\\\\NeteaseApi',
-  hidden: true,
-  waitForExitMs: 900
-});
+### shell.openExternal
 
-if (result.success === false) {
-  console.error(result.error, result.exitCode);
-}
-```
+Public API method. Runtime authority: `src/api/ShellApi.cpp:424`.
 
-### shell.openWith 
-
-使用系统默认程序打开文件。
-
-::: danger 安全限制
-禁止打开可执行文件（.exe/.bat/.cmd 等 30+ 种扩展名）。
-:::
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 文件路径（不能是可执行文件） |
+| `url` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"error":"...","success":true}`
 
-```javascript
-await fb2k.invoke('shell.openWith', { path: 'C:\\\\Music\\\\notes.txt' });
+```js
+const result = await fb2k.invoke('shell.openExternal', { url: /* value */ });
 ```
+
+### shell.openWith
+
+Public API method. Runtime authority: `src/api/ShellApi.cpp:421`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('shell.openWith', { path: /* value */ });
+```
+
+### shell.showInExplorer
+
+Public API method. Runtime authority: `src/api/ShellApi.cpp:418`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | No | Optional; default . |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('shell.showInExplorer', { path: /* value */ });
+```
+
+### shell.spawn
+
+Public API method. Runtime authority: `src/api/ShellApi.cpp:430`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `args` | `array` | No | Optional; default omitted. |
+| `cwd` | `string` | No | Optional; default . |
+| `executable` | `string` | No | Optional; default . |
+| `hidden` | `boolean` | No | Optional; default true. |
+| `waitForExitMs` | `integer` | No | Optional; default 0. |
+
+**Returns**: `{"error":"...","exitCode":"...","exited":"...","processId":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('shell.spawn', { args: /* value */, cwd: /* value */, executable: /* value */, hidden: /* value */, waitForExitMs: /* value */ });
+```
+
+## Phase 3 contract supplements
+
+The sections below close public-contract findings from the strict parameter audit without replacing existing explanations.
+
+<!-- phase3-supplement:dialog.openFile -->
+### Contract supplement: `dialog.openFile`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/DialogApi.cpp:62-167`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultPath` | `string` | No | `` | Optional; default empty. Supports `%music%` expansion. |
+| `filters` | `array` | No | `omitted` | Optional filter specs `{ name, extensions[] }` parsed by `ParseFilterSpecs`. |
+| `multiple` | `boolean` | No | `false` | Optional; default false. |
+| `title` | `string` | No | `Open File` | Optional; default Open File. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `canceled` | `json` | No |
+| `error` | `string` | Yes |
+| `filePaths` | `json` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('dialog.openFile', { defaultPath: /* value */, filters: /* value */, multiple: /* value */, title: /* value */ });
+```
+<!-- phase3-supplement:dialog.saveFile -->
+### Contract supplement: `dialog.saveFile`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/DialogApi.cpp:171-231`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `defaultName` | `string` | No | `` | Optional; default empty. |
+| `filters` | `array` | No | `omitted` | Optional filter specs `{ name, extensions[] }` parsed by `ParseFilterSpecs`. |
+| `title` | `string` | No | `Save File` | Optional; default Save File. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `canceled` | `json` | No |
+| `error` | `string` | Yes |
+| `filePath` | `json` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('dialog.saveFile', { defaultName: /* value */, filters: /* value */, title: /* value */ });
+```
+
+## Files, dialogs, and shell boundaries
+
+- File APIs expand the documented path variables before access. Read and media-write permissions are enforced by their registered `SecurityLevel`; `file.write` creates missing parent directories, while `file.delete` defaults to the Recycle Bin.
+- `file.list` returns names in non-recursive mode and full paths in recursive mode. `file.getInfo` returns `exists: false` as a successful absence result.
+- Native dialog cancellation returns `canceled: true` with an empty result path/list. Dialog initialization failures add `error` and set `canceled: false`.
+- `shell.openExternal` accepts only `http://`, `https://`, or `mailto:` URLs. `shell.openWith` rejects executable, script, installer, shortcut, library, and related dangerous extensions.
+- `shell.exec` and `shell.spawn` intentionally do not impose a command allowlist. Their `cwd` and any absolute executable path are validated; `shell.spawn.waitForExitMs` optionally reports early process exit.

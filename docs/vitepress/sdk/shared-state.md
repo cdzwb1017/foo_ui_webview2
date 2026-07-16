@@ -1,53 +1,79 @@
-# fb.sharedState 跨窗口共享状态
+# fb.sharedState Cross-window Shared State
 
-本页是 `fb.sharedState` 的 SDK 视角文档入口。
+`fb.sharedState` exposes a cross-window key/value store. It is distinct from the synchronous `fb.state` playback mirror: shared-state values can be assigned a TTL and changes are published through the `state:*` event family.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### delete()
 
-签名：`fb.sharedState.delete(...args): Promise<unknown>`
+Signature: `fb.sharedState.delete(key: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `key` | `string` | Yes | Logical key to remove. |
 
-返回值：底层 `state.delete` 调用结果。
+Returns the `state.delete` response envelope. A successful explicit removal emits `state:deleted` with `reason: 'deleted'`.
 
 ```javascript
-const result = await fb.sharedState.delete();
+const result = await fb.sharedState.delete('playlist:active-filter');
 ```
 
 ### keys()
 
-签名：`fb.sharedState.keys(...args): Promise<unknown>`
+Signature: `fb.sharedState.keys(pattern = '*'): Promise<{ keys: string[] }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `pattern` | `string` | No | Key pattern; defaults to `'*'`. |
 
-返回值：底层 `state.keys` 调用结果。
+Returns the matching keys in `{ keys }`.
 
 ```javascript
-const result = await fb.sharedState.keys();
+const { keys } = await fb.sharedState.keys('playlist:*');
 ```
 
 ### set()
 
-签名：`fb.sharedState.set(...args): Promise<unknown>`
+Signature: `fb.sharedState.set(key: string, value: unknown, silent = false, ttlMs?: number): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `key` | `string` | Yes | Logical key to update. |
+| `value` | `unknown` | Yes | JSON-serializable value. |
+| `silent` | `boolean` | No | Suppresses the change event when `true`; defaults to `false`. |
+| `ttlMs` | `number` | No | Time to live in milliseconds. |
 
-返回值：底层 `state.set` 调用结果。
+Returns the `state.set` response envelope.
 
 ```javascript
-const result = await fb.sharedState.set();
+await fb.sharedState.set('playlist:active-filter', 'favorites', false, 60_000);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Additional Methods
+
+### get()
+
+`fb.sharedState.get(key: string): Promise<{ value: unknown }>` reads one value.
+
+```javascript
+const { value } = await fb.sharedState.get('playlist:active-filter');
+```
+
+## Events
+
+- `fb.sharedState.onChange(handler)` subscribes to `state:changed` and returns an unsubscribe function. The typed payload is `StateChangedPayload<T>` with `key`, `value`, `previousValue`, `sourceWindowId`, and optional `expiresAt` fields.
+- `fb.sharedState.onDelete(handler)` subscribes to `state:deleted` and returns an unsubscribe function. `StateDeletedPayload.reason` is either `'deleted'` or `'expired'`.
+
+```javascript
+const off = fb.sharedState.onChange(({ key, value }) => {
+	console.log(key, value);
+});
+
+off();
+```

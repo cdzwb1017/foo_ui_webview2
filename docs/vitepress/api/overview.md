@@ -1,52 +1,57 @@
-# 底层 API 概述 
+# API Overview
 
-底层 API 是 foo_ui_webview2 的原生通信接口，通过 `fb2k.invoke()` 直接与 C++ 后端交互。
+This section documents the public Bridge APIs registered by the component.
 
-## 与 SDK 的区别 
+Current dynamic inventory: **428** public methods across **40** namespaces (**6** internal `*.__*` endpoints excluded).
 
-| 维度 | SDK (fb.*) | 底层 API (fb2k.invoke) |
-| --- | --- | --- |
-| 调用方式 | fb.player.play() | fb2k.invoke('playback.play') |
-| 一致性 | SDK 含缓存层，部分属性为最终一致 | 强一致，每次都从后端获取真实值 |
-| 适用场景 | 日常开发、UI 渲染 | 事务性操作、精确控制、错误处理 |
-| 依赖 | 需加载 bridge.js | 插件自动注入 window.fb2k |
+## Public namespaces
 
-## 何时使用底层 API 
+- `artwork` (13 methods)
+- `audio` (14 methods)
+- `clipboard` (4 methods)
+- `config` (29 methods)
+- `console` (3 methods)
+- `cursor` (2 methods)
+- `dialog` (4 methods)
+- `discovery` (15 methods)
+- `dnd` (4 methods)
+- `dsp` (8 methods)
+- `event` (2 methods)
+- `file` (10 methods)
+- `http` (8 methods)
+- `jitQueue` (8 methods)
+- `keyboard` (4 methods)
+- `library` (25 methods)
+- `log` (3 methods)
+- `lyrics` (3 methods)
+- `menu` (8 methods)
+- `metadata` (10 methods)
+- `misc` (9 methods)
+- `output` (3 methods)
+- `panel` (2 methods)
+- `playback` (27 methods)
+- `playcount` (4 methods)
+- `playlist` (47 methods)
+- `port` (5 methods)
+- `queue` (8 methods)
+- `rating` (2 methods)
+- `replaygain` (8 methods)
+- `selection` (6 methods)
+- `shell` (5 methods)
+- `state` (4 methods)
+- `system` (9 methods)
+- `taskbar` (5 methods)
+- `test` (2 methods)
+- `titleformat` (5 methods)
+- `tray` (14 methods)
+- `ui` (5 methods)
+- `window` (81 methods)
 
-- 需要获取后端返回值来做分支判断（SDK 的 fire-and-forget 写入无返回值）
-- 批量操作需要每步确认成功后再继续
-- SDK 未封装的 API（如多窗口管理 `window.createPopup` 等）
-- 需要精确错误信息的场景
+## Conventions
 
-## 调用方式 
-
-```javascript
-// 所有调用都返回 Promise
-const result = await fb2k.invoke('namespace.method', { param1: value1 });
-
-// 事件监听
-const unsubscribe = fb2k.on('namespace:eventName', (data) => { ... });
-unsubscribe(); // 取消
-```
-
-> 方法名使用 **dot 格式**（`playback.play`），事件名使用 **colon 格式**（`playback:trackChanged`）。
-
-## API 命名空间 
-
-| 命名空间 | 描述 | 数量 |
-| --- | --- | --- |
-| playback | 播放控制、状态、音量 | 27 |
-| playlist | 播放列表管理、智能列表 | 45 |
-| library | 媒体库浏览、搜索 | 21 |
-| artwork | 封面获取、fb2k:// 协议 | 12 |
-| window | 窗口控制、DWM 效果、多窗口 | 72 |
-| taskbar | 任务栏缩略图按钮、进度条、覆盖图标 | 5 |
-| tray | 系统托盘图标、右键菜单、行为控制 | 13 |
-| config | 配置、设备、持久化存储 | 29 |
-| metadata | 元数据读写 | 9 |
-| audio | 音频分析、频谱 | 12 |
-| queue / jitQueue | 播放队列 | 15 |
-| discovery | 服务发现、上下文菜单 | 15 |
-| 其他 | file、dialog、shell、http、ui、keyboard、lyrics、console、dnd、dsp、output、replaygain、playcount、titleformat、selection、menu、misc、panel、test | 111 |
-
-详细文档见左侧各命名空间页面。
+- Invoke: `fb2k.invoke('namespace.method', params)`
+- Events: `fb2k.on('namespace:eventName', handler)`
+- The high-level SDK can expose helpers such as `fb.player.play()`; use the family pages when an application needs the precise Bridge request or response shape.
+- For example, `playback:trackChanged` is an event subscription, not an invoke method.
+- Internal endpoints matching `*.__*` are not part of the public API surface.
+- Each family page owns one or more namespaces via the Phase 3 page map.

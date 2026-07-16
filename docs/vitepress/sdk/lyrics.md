@@ -1,39 +1,60 @@
-# fb.lyrics lyrics
+# fb.lyrics Lyrics
 
-本页是 `fb.lyrics` 的 SDK 视角文档入口。
+`fb.lyrics` locates, checks, and saves lyrics for a track. When no path is supplied to `get()`, the host uses the currently playing track.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### exists()
 
-签名：`fb.lyrics.exists(...args): Promise<unknown>`
+Signature: `fb.lyrics.exists(path: string): Promise<{ exists: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path to inspect. |
 
-返回值：底层 `lyrics.exists` 调用结果。
+Returns `{ exists }`.
 
 ```javascript
-const result = await fb.lyrics.exists();
+const { exists } = await fb.lyrics.exists('E:\\Music\\song.flac');
 ```
 
 ### get()
 
-签名：`fb.lyrics.get(...args): Promise<unknown>`
+Signature: `fb.lyrics.get(path?: string, options?: Omit<LyricsGetParams, 'path'>): Promise<LyricsGetResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | No | Track path; omit it to use the current track. |
+| `options.source` | `string` | No | `'embedded'`, `'file'`, or `'any'`. |
+| `options.type` | `string` | No | `'synced'`, `'unsynced'`, or `'any'`. |
+| `options.format` | `string` | No | `'lrc'`, `'txt'`, or `'any'`. |
 
-返回值：底层 `lyrics.get` 调用结果。
+Returns `LyricsGetResponse`. Read `available` first; successful matches can include `source`, `sourcePath`, `tagName`, `lyrics`, and `synced`.
 
 ```javascript
-const result = await fb.lyrics.get();
+const result = await fb.lyrics.get(undefined, { type: 'synced' });
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Save Lyrics
+
+`fb.lyrics.save(path, lyricsText, options?)` invokes `lyrics.save`. `options` is `Omit<LyricsSaveParams, 'path' | 'lyrics'>` and can include `filename`, `tagName`, `format`, and `target`.
+
+The SDK return type is `BaseResponse & { results?: Array<{ target: string; success: boolean; error?: string }>; savedTo?: string[] }`.
+
+```javascript
+const result = await fb.lyrics.save(
+	'E:\\Music\\song.flac',
+	'[00:00.00]Lyrics...',
+	{
+		target: ['file', 'embedded'],
+		format: 'lrc',
+		tagName: 'SYNCEDLYRICS',
+	},
+);
+```

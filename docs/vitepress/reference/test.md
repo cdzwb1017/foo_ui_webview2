@@ -1,21 +1,27 @@
-# Test API 
+# Test reference
 
-用于测试 Bridge 通信是否正常的工具 API。
+Bridge connectivity helpers registered beside the playback family.
 
-## test.echo 
+Runtime authority: `src/api/PlaybackApi.cpp`.
 
-回显传入的参数，用于验证 Bridge 通信。
+## test.echo
+
+Echoes the provided parameters so themes can verify invoke transport.
 
 ```javascript
 const result = await fb2k.invoke('test.echo', { message: 'hello' });
-// { "message": "hello" }
+// { "success": true, "echo": "hello", "input": { "message": "hello" } }
 ```
 
-## test.ping 
+If `message` is omitted, both `echo` and `input` contain the full params object.
 
-测试连接是否存活。
+## test.ping
+
+Lightweight liveness probe.
 
 ```javascript
 const result = await fb2k.invoke('test.ping');
 // { "pong": true, "timestamp": 1234567890 }
 ```
+
+`timestamp` is a Unix epoch seconds value from the host.

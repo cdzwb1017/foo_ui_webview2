@@ -1,123 +1,113 @@
-# fb.discovery 服务发现
+# fb.discovery Service Discovery
 
-本页是 `fb.discovery` 的 SDK 视角文档入口。
+`fb.discovery` enumerates foobar2000 services, menus, installed components, input formats, UI elements, DSP entries, output devices, and preference pages.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### getComponents()
+### getAllServices()
 
-签名：`fb.discovery.getComponents(...args): Promise<unknown>`
+Signature: `fb.discovery.getAllServices(): Promise<DiscoveryGetAllServicesResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Returns category counts in `services` and their sum in `totalServices`.
 
-返回值：底层 `discovery.getComponents` 调用结果。
+### getMainMenuCommands()
 
-```javascript
-const result = await fb.discovery.getComponents();
-```
+Signature: `fb.discovery.getMainMenuCommands(): Promise<DiscoveryGetMainMenuCommandsResponse>`
+
+Returns `{ commands, count }`. Each command includes `name`, `description`, `guid`, `parentGuid`, and `index`.
+
+### getMainMenuGroups()
+
+Signature: `fb.discovery.getMainMenuGroups(): Promise<DiscoveryGetMainMenuGroupsResponse>`
+
+Returns `{ groups, count }`. Group descriptors include `guid`, `parentGuid`, `name`, and `sortPriority`.
+
+### executeMainMenuCommand(guid)
+
+Signature: `fb.discovery.executeMainMenuCommand(guid: string): Promise<BaseResponse>`
+
+Executes a main-menu command by GUID.
 
 ### getContextMenuCommands()
 
-签名：`fb.discovery.getContextMenuCommands(...args): Promise<unknown>`
+Signature: `fb.discovery.getContextMenuCommands(): Promise<DiscoveryGetContextMenuCommandsResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Returns a flat list of discoverable context-menu commands.
 
-返回值：底层 `discovery.getContextMenuCommands` 调用结果。
+### executeContextMenuCommand(options)
 
-```javascript
-const result = await fb.discovery.getContextMenuCommands();
-```
+Signature: `fb.discovery.executeContextMenuCommand(options: DiscoveryExecuteContextMenuCommandParams): Promise<BaseResponse & { itemCount?: number }>`
+
+Executes a context-menu command by `options.guid`.
+
+### executeContextMenuByPath(options)
+
+Signature: `fb.discovery.executeContextMenuByPath(options: DiscoveryExecuteContextMenuByPathParams): Promise<BaseResponse & { foundName?: string; itemCount?: number }>`
+
+Executes a context-menu item by menu `path`, optionally for `trackPath`.
 
 ### getContextMenuTree()
 
-签名：`fb.discovery.getContextMenuTree(...args): Promise<unknown>`
+Signature: `fb.discovery.getContextMenuTree(): Promise<DiscoveryGetContextMenuTreeResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Returns a recursive `tree` of `command`, `popup`, `separator`, or `unknown` nodes, plus an optional `itemCount`.
 
-返回值：底层 `discovery.getContextMenuTree` 调用结果。
+### getInputFormats()
+
+Signature: `fb.discovery.getInputFormats(): Promise<DiscoveryGetInputFormatsResponse>`
+
+Returns `{ fileTypes, count }`; each file type includes `name`, file-mask `mask`, and `index`.
+
+### getComponents()
+
+Signature: `fb.discovery.getComponents(): Promise<DiscoveryGetComponentsResponse>`
+
+Returns `{ components, count }`. Components include `filename`, `name`, `version`, and `about`.
 
 ```javascript
-const result = await fb.discovery.getContextMenuTree();
+const { components } = await fb.discovery.getComponents();
 ```
 
 ### getDspEntries()
 
-签名：`fb.discovery.getDspEntries(...args): Promise<unknown>`
+Signature: `fb.discovery.getDspEntries(): Promise<DiscoveryGetDspEntriesResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `discovery.getDspEntries` 调用结果。
+Returns `{ entries, count }`; each entry has a DSP `guid` and display `name`.
 
 ```javascript
-const result = await fb.discovery.getDspEntries();
-```
-
-### getMainMenuGroups()
-
-签名：`fb.discovery.getMainMenuGroups(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `discovery.getMainMenuGroups` 调用结果。
-
-```javascript
-const result = await fb.discovery.getMainMenuGroups();
+const { entries } = await fb.discovery.getDspEntries();
 ```
 
 ### getOutputDevices()
 
-签名：`fb.discovery.getOutputDevices(...args): Promise<unknown>`
+Signature: `fb.discovery.getOutputDevices(): Promise<DiscoveryGetOutputDevicesResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `discovery.getOutputDevices` 调用结果。
-
-```javascript
-const result = await fb.discovery.getOutputDevices();
-```
+Returns `{ devices, count }`. Discovery device descriptors currently contain only `guid`.
 
 ### getPreferencePages()
 
-签名：`fb.discovery.getPreferencePages(...args): Promise<unknown>`
+Signature: `fb.discovery.getPreferencePages(): Promise<DiscoveryGetPreferencePagesResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `discovery.getPreferencePages` 调用结果。
-
-```javascript
-const result = await fb.discovery.getPreferencePages();
-```
+Returns `{ pages, count }`; each page includes `guid`, `parentGuid`, and `name`.
 
 ### getUIElements()
 
-签名：`fb.discovery.getUIElements(...args): Promise<unknown>`
+Signature: `fb.discovery.getUIElements(): Promise<DiscoveryGetUIElementsResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Returns `{ elements, count }`; each element includes `guid`, `subclassGuid`, `name`, `description`, and `isUserAddable`.
 
-返回值：底层 `discovery.getUIElements` 调用结果。
+### searchCommands(query)
+
+Signature: `fb.discovery.searchCommands(query: string): Promise<DiscoverySearchCommandsResponse>`
+
+Searches main-menu commands and returns the echoed `query`, `results`, and `count`. The result `type` taxonomy currently uses `mainmenu`.
 
 ```javascript
-const result = await fb.discovery.getUIElements();
+const result = await fb.discovery.searchCommands('preferences');
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

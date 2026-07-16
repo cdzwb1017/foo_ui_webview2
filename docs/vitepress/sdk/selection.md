@@ -1,25 +1,26 @@
-# fb.selection 选择同步
+# fb.selection Selection
 
-本页是 `fb.selection` 的 SDK 视角文档入口。
+`fb.selection` reads and updates the current foobar2000 selection and resolves the track currently being viewed.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stub
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### getViewerMode()
 
-签名：`fb.selection.getViewerMode(...args): Promise<unknown>`
+Signature: `fb.selection.getViewerMode(): Promise<{ mode: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `selection.getViewerMode` 调用结果。
+Returns the current viewer mode as `{ mode }`. Related methods include `get({ offset?, limit? })`, `getType()`, `set(handles)`, `setPlaylistTracking(mode)`, and `getViewingTrack({ includeTrackInfo? })`. Playlist tracking defaults to `'selection'`; pass `'playlist'` to track the active playlist instead.
 
 ```javascript
 const result = await fb.selection.getViewerMode();
+console.log(result.mode);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

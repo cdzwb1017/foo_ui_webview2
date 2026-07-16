@@ -1,306 +1,313 @@
-# 菜单与杂项
+# Menus and Miscellaneous APIs
 
-涵盖 `fb.menu`、`fb.console`、`fb.log`、`fb.lyrics`、`fb.notification`、`fb.panel`、`fb.misc`、`fb.dnd` 八个命名空间。
+This page covers the `fb.menu`, `fb.console`, `fb.log`, `fb.lyrics`, `fb.notification`, `fb.panel`, `fb.misc`, and `fb.dnd` namespaces.
 
-## fb.menu 菜单命令 
+## fb.menu Menu Commands
 
-### getMainMenu(root?) 
+### getMainMenu(root?)
 
-获取主菜单树。可选 `root` 参数限定子树范围。
+Returns the main-menu tree. The optional `root` scopes the returned subtree, for example `'Main'` or `'View'`.
 
 ```javascript
 const menu = await fb.menu.getMainMenu();
-const fileMenu = await fb.menu.getMainMenu('File');
+const viewMenu = await fb.menu.getMainMenu('View');
 ```
 
-### getContextMenu(options?) 
+### getContextMenu(options?)
 
-获取右键菜单。
+Returns a context-menu tree.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| options.mode | string | 'auto' / 'playlist' / 'nowPlaying' / 'handles' |
-| options.handles | array | mode 为 'handles' 时提供 |
+| `options.mode` | `'auto' \| 'playlist' \| 'nowPlaying' \| 'handles'` | Selects the context source. |
+| `options.handles` | `unknown[]` | Handle list used with `mode: 'handles'`. |
+| `options.path` | `string` | Optional track path. |
+| `options.subsong` | `number` | Optional subsong index. |
+| `options.locale` | `string` | Locale selector; defaults to `'auto'`. |
+| `options.i18n` | `boolean` | Enables localized labels. |
+| `options.withAvailability` | `boolean` | Includes availability metadata. |
 
 ```javascript
 const ctx = await fb.menu.getContextMenu({ mode: 'nowPlaying' });
 ```
 
-### runMainMenuCommand(command) 
+### runMainMenuCommand(command)
 
-执行主菜单命令（按路径）。
+Executes a main-menu command by path.
 
 ```javascript
 await fb.menu.runMainMenuCommand('File/Preferences');
 ```
 
-### runContextCommand(command) 
+### runContextCommand(command)
 
-执行右键菜单命令。使用默认上下文项。
+Executes a context-menu command against the default context.
 
 ```javascript
 await fb.menu.runContextCommand('Properties');
 ```
 
-### runContextCommandById(id, options?) 
+### runContextCommandById(id, options?)
 
-通过 ID 执行右键菜单命令。
+Executes a context-menu command by numeric ID.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| id | number | 命令 ID |
-| options | object | 可选，{ mode, handles } |
+| `id` | `number` | Command ID. |
+| `options` | `Omit<MenuRunContextCommandByIdParams, 'id'>` | Optional `mode`, `handles`, `path`, and `subsong` context. |
 
-### showNativePopup(options) 
+### showNativePopup(options)
 
-显示原生弹出菜单。
-
-```javascript
-await fb.menu.showNativePopup({ x: 100, y: 200, items: [...] });
-```
-
-## fb.console 控制台 
-
-输出到 foobar2000 控制台。
-
-### log(message) 
+Schedules a native popup menu using `MenuShowNativePopupParams`.
 
 ```javascript
-fb.console.log('调试信息');
+await fb.menu.showNativePopup({ mode: 'playlist' });
 ```
 
-### warn(message) 
+For the WebView-rendered `menu.show`, `menu.close`, and `menu.popup` APIs, see [fb.menu](./menu).
+
+## fb.console Console Output
+
+Writes messages to the foobar2000 console. Each method returns a `Promise<BaseResponse>`.
+
+### log(message)
 
 ```javascript
-fb.console.warn('警告信息');
+await fb.console.log('Debug information');
 ```
 
-### error(message) 
+### warn(message)
 
 ```javascript
-fb.console.error('错误信息');
+await fb.console.warn('Warning message');
 ```
 
-## fb.log 日志文件 
-
-### write(message, options?) 
-
-写入日志文件。
+### error(message)
 
 ```javascript
-await fb.log.write('操作记录', { level: 'info' });
+await fb.console.error('Error message');
 ```
 
-### read(lines?) 
+## fb.log Log File
 
-读取日志。可选指定行数。
+### write(message, options?)
+
+Writes a message with optional `LogWriteParams`, including `level`, `append`, `timestamp`, `file`, and `args`. The response may include the log-file `path`.
 
 ```javascript
-const r = await fb.log.read(100); // 最近100行
+await fb.log.write('Operation completed', { level: 'info' });
 ```
 
-### clear() 
+### read(lines?)
 
-清空日志文件。
+Reads log lines. The default host limit is 100 when `lines` is omitted.
+
+```javascript
+const { lines } = await fb.log.read(100);
+```
+
+### clear()
+
+Clears the log file.
 
 ```javascript
 await fb.log.clear();
 ```
 
-## fb.lyrics 歌词 
+## fb.lyrics Lyrics
 
-### get(path?, options?) 
+### get(path?, options?)
 
-获取歌词。不传 `path` 时获取当前播放曲目的歌词。
+Returns lyrics for `path`, or for the current track when `path` is omitted.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 可选，文件路径（空则取当前播放曲目） |
-| options | object | 可选，筛选参数 |
-| options.source | string | 'embedded' / 'file' / 'any'（默认） |
-| options.type | string | 'synced' / 'unsynced' / 'any'（默认） |
-| options.format | string | 'lrc' / 'txt' / 'any'（默认，仅 source=file 时生效） |
+| `path` | `string` | Optional track path. |
+| `options.source` | `'embedded' \| 'file' \| 'any'` | Source filter; defaults to `'any'`. |
+| `options.type` | `'synced' \| 'unsynced' \| 'any'` | Synchronization filter; defaults to `'any'`. |
+| `options.format` | `'lrc' \| 'txt' \| 'any'` | File-format filter; defaults to `'any'`. |
 
 ```javascript
-const r = await fb.lyrics.get();                                 // 当前曲目
-const r2 = await fb.lyrics.get(path, { source: 'embedded' });   // 仅嵌入歌词
-const r3 = await fb.lyrics.get(undefined, { type: 'synced' });  // 仅同步歌词
+const current = await fb.lyrics.get();
+const embedded = await fb.lyrics.get(path, { source: 'embedded' });
+const synced = await fb.lyrics.get(undefined, { type: 'synced' });
 ```
 
-### exists(path) 
+### exists(path)
 
-检查文件是否存在歌词。
+Checks whether lyrics are available for a track path.
 
 ```javascript
 const r = await fb.lyrics.exists('E:\\\\Music\\\\song.flac');
 console.log(r.exists);
 ```
 
-### save(path, lyrics, options?) 
+### save(path, lyrics, options?)
 
-保存歌词到文件、标签或两者。
+Saves lyrics to one or more configured targets.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 文件路径 |
-| lyrics | string | 歌词文本 |
-| options.target | string \| string[] | 'file' / 'embedded' / 'config' / 'all'，或数组 ['file','config'] |
-| options.filename | string | 可选，自定义文件名 |
-| options.tagName | string | 嵌入标签名（默认 "LYRICS"，仅 target 含 embedded） |
-| options.format | string | 'lrc'（默认）/ 'txt'（仅 target 含 file/config） |
+| `path` | `string` | Track path. |
+| `lyrics` | `string` | Lyrics text. |
+| `options.target` | `string[]` | Target list forwarded by `LyricsSaveParams`. |
+| `options.filename` | `string` | Optional custom sidecar filename. |
+| `options.tagName` | `string` | Embedded tag name; defaults to `'LYRICS'`. |
+| `options.format` | `string` | Sidecar format; defaults to `'lrc'`. |
 
 ```javascript
-await fb.lyrics.save('E:\\\\Music\\\\song.flac', '[00:00.00]歌词内容...');
-await fb.lyrics.save(path, text, { target: 'all' });             // 三合一：文件+标签+配置文件夹
-await fb.lyrics.save(path, text, { target: 'config' });          // 保存到 %profile%\\lyrics\\
-await fb.lyrics.save(path, text, { target: ['file', 'config'] }); // 数组组合
-await fb.lyrics.save(path, text, { target: 'embedded', tagName: 'SYNCEDLYRICS' });
-```
-
-> 返回值与 `lyrics.save` API 保持一致：单目标返回扁平结果，多目标返回 `{success, results:{file, embedded, config}}`。
-
-## fb.notification 通知 
-
-### show(options) 
-
-显示通知。
-
-```javascript
-await fb.notification.show({ title: '提示', message: '操作完成' });
-```
-
-### hide() 
-
-隐藏当前通知。
-
-### showCustomMenu(options) 
-
-显示自定义菜单。
-
-```javascript
-await fb.notification.showCustomMenu({
-    items: [
-        { text: '选项A', id: 'a' },
-        { text: '选项B', id: 'b' }
-    ]
+await fb.lyrics.save('E:\\\\Music\\\\song.flac', '[00:00.00]Lyrics...');
+await fb.lyrics.save(path, text, { target: ['file', 'config'] });
+await fb.lyrics.save(path, text, {
+    target: ['embedded'],
+    tagName: 'SYNCEDLYRICS',
 });
 ```
 
-### showToast(options) 
+The SDK return type is `BaseResponse & { results?: Array<{ target, success, error? }>; savedTo?: string[] }`.
 
-显示 Toast 提示。
+## fb.notification Notifications
 
-```javascript
-await fb.notification.showToast({ message: '已添加到播放列表' });
-```
+### show(options)
 
-## fb.panel 面板配置 
-
-### getConfig() 
-
-获取当前面板配置。
+Shows a host notification. `UiShowNotificationParams` uses `body`, not `message`.
 
 ```javascript
-const config = await fb.panel.getConfig();
+await fb.notification.show({ title: 'Notice', body: 'Operation completed' });
 ```
 
-### setConfig(options) 
+### hide()
 
-设置面板配置。
+Hides the current notification.
+
+### showCustomMenu(options)
+
+Shows a host custom menu and returns optional `selectedId`.
 
 ```javascript
-await fb.panel.setConfig({ theme: 'dark', layout: 'compact' });
+const { selectedId } = await fb.notification.showCustomMenu({
+    items: [
+        { label: 'Option A', id: 'a' },
+        { label: 'Option B', id: 'b' },
+    ],
+});
 ```
 
-## fb.misc 杂项工具 
+### showToast(options)
 
-### exit() 
+Shows a toast.
 
-退出 foobar2000。
+```javascript
+await fb.notification.showToast({ message: 'Added to the playlist' });
+```
 
-### restart() 
+## fb.panel Panel Configuration
 
-重启 foobar2000。
+### getConfig()
+
+Returns the current panel configuration envelope.
+
+```javascript
+const { config } = await fb.panel.getConfig();
+```
+
+### setConfig(options)
+
+Updates fields supported by `PanelSetConfigParams`: `panelName`, `transparentBackground`, `grabFocus`, and `enableDragDrop`.
+
+```javascript
+await fb.panel.setConfig({ panelName: 'Library', enableDragDrop: true });
+```
+
+## fb.misc Host Actions
+
+### exit()
+
+Exits foobar2000.
+
+### restart()
+
+Restarts foobar2000.
 
 ```javascript
 await fb.misc.restart();
 ```
 
-### getComponentPath() 
+### getComponentPath()
 
-获取组件 DLL 所在路径。
+Returns `{ path }` for the component DLL directory.
 
 ```javascript
 const r = await fb.misc.getComponentPath();
-console.log(r.path); // 组件路径
+console.log(r.path);
 ```
 
-### getFoobarPath() 
+### getFoobarPath()
 
-获取 foobar2000.exe 所在路径。
+Returns `{ path }` for the foobar2000 executable directory.
 
-### getProfilePath() 
+### getProfilePath()
 
-获取配置文件目录路径。
+Returns `{ path }` for the profile directory.
 
-### showConsole() 
+### showConsole()
 
-显示 foobar2000 控制台窗口。
+Shows the foobar2000 console window.
 
-### showLibrarySearch(query?) 
+### showLibrarySearch(query?)
 
-打开媒体库搜索。可选传入初始查询。
+Opens Media Library Search with an optional initial query.
 
 ```javascript
 await fb.misc.showLibrarySearch('artist IS Beatles');
 ```
 
-### showPopupMessage(message, title?) 
+### showPopupMessage(message, title?)
 
-显示弹出消息框。
+Shows a popup message box.
 
 ```javascript
-await fb.misc.showPopupMessage('操作完成', '提示');
+await fb.misc.showPopupMessage('Operation completed', 'Notice');
 ```
 
-### showPreferences() 
+### showPreferences()
 
-打开 foobar2000 偏好设置。
+Opens foobar2000 Preferences.
 
-## fb.dnd 拖放 
+## fb.dnd Drag and Drop
 
-### registerDropZone(options) 
+### registerDropZone(options)
 
-注册拖放区域。
+Registers a drop zone. `DndRegisterDropZoneParams` accepts `selector`, `event`, and `accept`; the host returns `{ zoneId }`.
 
 ```javascript
-await fb.dnd.registerDropZone({
-    zoneId: 'my-zone',
+const { zoneId } = await fb.dnd.registerDropZone({
+    selector: '#drop-area',
+    event: 'dnd:drop',
     accept: ['audio/*'],
-    element: '#drop-area'
 });
 ```
 
-### unregisterDropZone(zoneId) 
+### unregisterDropZone(zoneId)
 
-注销拖放区域。注意 C++ 端参数键为 `zoneId`。
+Unregisters a drop zone by the ID returned from `registerDropZone()`.
 
 ```javascript
-await fb.dnd.unregisterDropZone('my-zone');
+await fb.dnd.unregisterDropZone(zoneId);
 ```
 
-### startDrag(type, options?) 
+### startDrag(type, options?)
 
-开始拖动操作。
+Starts a drag operation.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| type | string | 拖动类型 |
-| options | object | 可选配置 |
+| `type` | `string` | Drag type. |
+| `options` | `Omit<DndStartDragParams, 'type'>` | Optional `data` and `paths` payload. |
 
-### getDropZones() 
+### getDropZones()
 
-获取所有已注册的拖放区域。
+Returns `{ success, zones, count }`. Each `DropZone` contains `id`, `selector`, `accept`, and `event`.
 
 ```javascript
 const zones = await fb.dnd.getDropZones();
@@ -308,19 +315,19 @@ const zones = await fb.dnd.getDropZones();
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### exit()
 
-签名：`fb.misc.exit(...args): Promise<unknown>`
+Signature: `fb.misc.exit(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `misc.exit` 调用结果。
+Returns the `misc.exit` response envelope.
 
 ```javascript
 const result = await fb.misc.exit();
@@ -328,13 +335,13 @@ const result = await fb.misc.exit();
 
 ### getFoobarPath()
 
-签名：`fb.misc.getFoobarPath(...args): Promise<unknown>`
+Signature: `fb.misc.getFoobarPath(): Promise<{ path: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `misc.getFoobarPath` 调用结果。
+Returns the foobar2000 path in `{ path }`.
 
 ```javascript
 const result = await fb.misc.getFoobarPath();
@@ -342,13 +349,13 @@ const result = await fb.misc.getFoobarPath();
 
 ### getProfilePath()
 
-签名：`fb.misc.getProfilePath(...args): Promise<unknown>`
+Signature: `fb.misc.getProfilePath(): Promise<{ path: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `misc.getProfilePath` 调用结果。
+Returns the profile path in `{ path }`.
 
 ```javascript
 const result = await fb.misc.getProfilePath();
@@ -356,13 +363,13 @@ const result = await fb.misc.getProfilePath();
 
 ### showConsole()
 
-签名：`fb.misc.showConsole(...args): Promise<unknown>`
+Signature: `fb.misc.showConsole(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `misc.showConsole` 调用结果。
+Returns the `misc.showConsole` response envelope.
 
 ```javascript
 const result = await fb.misc.showConsole();
@@ -370,13 +377,13 @@ const result = await fb.misc.showConsole();
 
 ### showPreferences()
 
-签名：`fb.misc.showPreferences(...args): Promise<unknown>`
+Signature: `fb.misc.showPreferences(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `misc.showPreferences` 调用结果。
+Returns the `misc.showPreferences` response envelope.
 
 ```javascript
 const result = await fb.misc.showPreferences();

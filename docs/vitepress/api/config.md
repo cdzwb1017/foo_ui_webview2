@@ -1,452 +1,548 @@
-# Config API 
+# Config API
 
-配置存储、系统信息、输出设备、高级配置、DSP 预设、播放行为配置。共 29 个 API。
+English API reference for the `config` family.
 
-## 配置存储 
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-### config.get 
+## config
 
-获取配置值。
+### config.export
 
-| 参数 | 类型 | 必填 | 描述 |
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:923`.
+
+_No parameters._
+
+**Returns**: `{"count":0,"data":"...","json":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('config.export');
+```
+
+### config.get
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:920`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ✓ | 配置键名 |
-| default | any | ✗ | 默认值 |
+| `default` | `json` | No | Optional; default omitted. |
+| `key` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "key": "theme", "value": "dark", "found": true }`
+**Returns**: `{"error":"...","found":"...","key":"...","success":true,"value":"..."}`
 
-> 键不存在时 `found` 为 `false`，若提供了 `default` 参数则返回默认值。
-
-```javascript
-const theme = await fb2k.invoke('config.get', { key: 'theme', default: 'light' });
+```js
+const result = await fb2k.invoke('config.get', { default: /* value */, key: /* value */ });
 ```
 
-### config.set 
+### config.getActiveDspPreset
 
-设置配置值。持久化存储在 foobar2000 配置系统中。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:950`.
 
-| 参数 | 类型 | 必填 | 描述 |
+_No parameters._
+
+**Returns**: `{"index":0,"isActive":true,"name":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getActiveDspPreset');
+```
+
+### config.getAdvancedConfig
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:932`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ✓ | 配置键名 |
-| value | any | ✓ | 配置值 |
+| `parentGuid` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "key": "volume" }`
+**Returns**: JSON object from the runtime handler.
 
-```javascript
-await fb2k.invoke('config.set', { key: 'volume', value: 0.8 });
+```js
+const result = await fb2k.invoke('config.getAdvancedConfig', { parentGuid: /* value */ });
 ```
 
-### config.remove 
+### config.getAdvancedConfigValue
 
-删除配置项。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:933`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ✓ | 配置键名 |
+| `guid` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "key": "theme", "existed": true }`
+**Returns**: `{"guid":"...","name":"...","type":"...","value":"..."}`
 
-### config.getAll 
-
-获取所有配置项。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "items": {
-        "theme": "dark",
-        "volume": 0.8
-    },
-    "configs": { },
-    "count": 2
-}
+```js
+const result = await fb2k.invoke('config.getAdvancedConfigValue', { guid: /* value */ });
 ```
 
-> `items` 和 `configs` 内容相同（后者为兼容别名）。
+### config.getAll
 
-```javascript
-const cfg = await fb2k.invoke('config.getAll');
-console.log(`配置项数: ${cfg.count}`, cfg.items);
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:922`.
+
+_No parameters._
+
+**Returns**: `{"configs":"...","count":"...","items":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('config.getAll');
 ```
 
-### config.export 
+### config.getComponents
 
-导出所有配置为 JSON。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:940`.
 
-- **参数**: 无
+_No parameters._
 
-**返回值**:
+**Returns**: JSON object from the runtime handler.
 
-```json
-{
-    "success": true,
-    "data": { "theme": "dark" },
-    "json": "{\\"theme\\":\\"dark\\"}",
-    "count": 1
-}
+```js
+const result = await fb2k.invoke('config.getComponents');
 ```
 
-> `data` 为 JSON 对象，`json` 为序列化字符串。
+### config.getCursorFollowPlayback
 
-```javascript
-const exported = await fb2k.invoke('config.export');
-localStorage.setItem('fb2k_backup', exported.json);
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:954`.
+
+_No parameters._
+
+**Returns**: `{"enabled":"...","value":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getCursorFollowPlayback');
 ```
 
-## 系统信息 
+### config.getDspPresets
 
-### config.getVersionInfo 
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:949`.
 
-获取 foobar2000 版本信息。
+_No parameters._
 
-- **参数**: 无
+**Returns**: JSON object from the runtime handler.
 
-**返回值**:
-
-```json
-{
-    "version": "foobar2000 v2.0",
-    "foobar2000": "foobar2000 v2.0",
-    "versionFull": "foobar2000 v2.0 (x64)",
-    "is64bit": true,
-    "isPortable": false,
-    "plugin": {
-        "name": "foo_ui_webview2",
-        "version": "1.0.0"
-    },
-    "profilePath": "C:\\\\Users\\\\user\\\\AppData\\\\Roaming\\\\foobar2000-v2"
-}
+```js
+const result = await fb2k.invoke('config.getDspPresets');
 ```
 
-```javascript
-const info = await fb2k.invoke('config.getVersionInfo');
-console.log(`${info.versionFull} | ${info.is64bit ? '64-bit' : '32-bit'}`);
+### config.getLibraryFilePatterns
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:945`.
+
+_No parameters._
+
+**Returns**: `{"images":[],"tracks":[]}`
+
+```js
+const result = await fb2k.invoke('config.getLibraryFilePatterns');
 ```
 
-### config.getComponents 
+### config.getLibraryStatus
 
-获取已安装的组件列表。返回数组（不是对象）。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:944`.
 
-- **参数**: 无
+_No parameters._
 
-**返回值**:
+**Returns**: `{"enabled":true,"initialized":"...","itemCount":"..."}`
 
-```json
-[
-    {
-        "name": "foo_ui_webview2",
-        "version": "1.1.0",
-        "fileName": "foo_ui_webview2.dll",
-        "filename": "foo_ui_webview2.dll"
-    }
-]
+```js
+const result = await fb2k.invoke('config.getLibraryStatus');
 ```
 
-> `fileName` 和 `filename` 相同（后者为兼容别名）。
+### config.getOutputConfig
 
-### config.getOutputDevices 
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:927`.
 
-获取可用的音频输出设备。返回数组。
+_No parameters._
 
-- **参数**: 无
+**Returns**: `{"bitDepth":"...","bufferLength":"...","deviceId":"...","deviceName":"...","outputId":"...","outputName":"...","useDither":"...","useFades":"..."}`
 
-**返回值**:
-
-```json
-[
-    {
-        "name": "DS: Speakers (Realtek)",
-        "id": "{GUID}",
-        "outputId": "{GUID}",
-        "deviceId": "{GUID}",
-        "isCurrent": true
-    }
-]
+```js
+const result = await fb2k.invoke('config.getOutputConfig');
 ```
 
-```javascript
-const devices = await fb2k.invoke('config.getOutputDevices');
-const current = devices.find(d => d.isCurrent);
-console.log(`当前输出: ${current.name}`);
+### config.getOutputDevices
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:926`.
+
+_No parameters._
+
+**Returns**: JSON object from the runtime handler.
+
+```js
+const result = await fb2k.invoke('config.getOutputDevices');
 ```
 
-### config.setOutputDevice 
+### config.getPlaybackFollowCursor
 
-设置音频输出设备。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:956`.
 
-| 参数 | 类型 | 必填 | 描述 |
+_No parameters._
+
+**Returns**: `{"enabled":"...","value":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getPlaybackFollowCursor');
+```
+
+### config.getPreferencesPages
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:938`.
+
+_No parameters._
+
+**Returns**: JSON object from the runtime handler.
+
+```js
+const result = await fb2k.invoke('config.getPreferencesPages');
+```
+
+### config.getPreferencesStandardGuids
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:939`.
+
+_No parameters._
+
+**Returns**: `{"advanced":"...","components":"...","core":"...","display":"...","dsp":"...","hidden":"...","input":"...","keyboardShortcuts":"...","mediaLibrary":"...","output":"...","playback":"...","root":"...","shell":"...","tagWriting":"...","tagging":"...","tools":"...","visualisations":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getPreferencesStandardGuids');
+```
+
+### config.getReplaygainMode
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:960`.
+
+_No parameters._
+
+**Returns**: `{"mode":"...","value":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getReplaygainMode');
+```
+
+### config.getVersionInfo
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:941`.
+
+_No parameters._
+
+**Returns**: `{"foobar2000":"...","is64bit":true,"isPortable":true,"plugin":"...","profilePath":"...","version":"...","versionFull":"..."}`
+
+```js
+const result = await fb2k.invoke('config.getVersionInfo');
+```
+
+### config.remove
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:921`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| outputId | string | ✓ | 输出模块 ID |
-| deviceId | string | ✓ | 设备 ID |
+| `key` | `string` | No | Optional; default . |
 
-```javascript
-await fb2k.invoke('config.setOutputDevice', { outputId: '{...}', deviceId: '{...}' });
+**Returns**: `{"error":"...","existed":"...","key":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('config.remove', { key: /* value */ });
 ```
 
-### config.getOutputConfig 
+### config.resetAdvancedConfig
 
-获取当前输出配置。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:935`.
 
-- **参数**: 无
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `guid` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"success":true}`
 
-```json
-{
-    "outputId": "{GUID}",
-    "deviceId": "{GUID}",
-    "outputName": "DS",
-    "deviceName": "Speakers",
-    "bufferLength": 1.0,
-    "bitDepth": 0,
-    "useDither": false,
-    "useFades": true
-}
+```js
+const result = await fb2k.invoke('config.resetAdvancedConfig', { guid: /* value */ });
 ```
 
-### config.setOutputBuffer 
+### config.set
 
-设置输出缓冲区大小。
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:919`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| bufferLength | number | ✓ | 缓冲区大小（秒，0.05-2.0），兼容别名: milliseconds（自动转换） |
+| `key` | `string` | No | Optional; default . |
+| `value` | `json` | Yes | Required. |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"error":"...","key":"...","success":true}`
 
-## 高级配置 
-
-### config.getAdvancedConfig 
-
-获取高级配置项树。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| parentGuid | string | ✗ | 父节点 GUID（默认为根节点） |
-
-**返回值**: 数组，每个元素包含 `name`、`guid`、`type`（`"branch"`/`"checkbox"`/`"radio"`/`"string"`/`"integer"`）、`value`、`children`（分支时）。
-
-### config.getAdvancedConfigValue 
-
-获取指定高级配置项的值。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| guid | string | ✓ | 配置项 GUID |
-
-**返回值**: `{ "name": "...", "guid": "...", "type": "checkbox", "value": true }`
-
-### config.setAdvancedConfigValue 
-
-设置指定高级配置项的值。checkbox 类型要求 boolean，string/integer 类型要求 string。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| guid | string | ✓ | 配置项 GUID |
-| value | any | ✓ | 新值（类型必须与配置项匹配） |
-
-**返回值**: `{ "success": true }`
-
-### config.resetAdvancedConfig 
-
-重置指定高级配置项为默认值。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| guid | string | ✓ | 配置项 GUID |
-
-**返回值**: `{ "success": true }`
-
-```javascript
-// 获取、修改、重置高级配置项
-const val = await fb2k.invoke('config.getAdvancedConfigValue', { guid: '{...}' });
-await fb2k.invoke('config.setAdvancedConfigValue', { guid: '{...}', value: true });
-await fb2k.invoke('config.resetAdvancedConfig', { guid: '{...}' });
+```js
+const result = await fb2k.invoke('config.set', { key: /* value */, value: /* value */ });
 ```
 
-## 偏好设置 
+### config.setActiveDspPreset
 
-### config.getPreferencesPages 
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:951`.
 
-获取所有偏好设置页面列表，包含页面和分支。
-
-- **参数**: 无
-
-**返回值**: 数组，每项包含 `name`、`guid`、`parentGuid`、`sortPriority`，分支额外包含 `isBranch: true`。
-
-### config.getPreferencesStandardGuids 
-
-获取标准偏好设置页面的 GUID 列表。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "root": "{GUID}",
-    "core": "{GUID}",
-    "display": "{GUID}",
-    "playback": "{GUID}",
-    "output": "{GUID}",
-    "mediaLibrary": "{GUID}",
-    "advanced": "{GUID}",
-    "components": "{GUID}",
-    "dsp": "{GUID}",
-    "tagging": "{GUID}",
-    "tagWriting": "{GUID}",
-    "input": "{GUID}",
-    "visualisations": "{GUID}",
-    "shell": "{GUID}",
-    "keyboardShortcuts": "{GUID}",
-    "tools": "{GUID}",
-    "hidden": "{GUID}"
-}
-```
-
-## 媒体库配置 
-
-### config.getLibraryStatus 
-
-获取媒体库状态。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "enabled": true,
-    "itemCount": 5000,
-    "initialized": true
-}
-```
-
-### config.getLibraryFilePatterns 
-
-获取媒体库新文件模式配置。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "tracks": { "directory": "...", "format": "..." },
-    "images": { "directory": "...", "format": "..." }
-}
-```
-
-### config.showLibraryPreferences 
-
-打开媒体库偏好设置页。
-
-- **参数**: 无
-- **返回值**: `{ "success": true }`
-
-## DSP 预设 
-
-### config.getDspPresets 
-
-获取所有 DSP 预设列表。
-
-- **参数**: 无
-
-**返回值**: 数组，每项包含 `index` 和 `name`。
-
-```javascript
-const presets = await fb2k.invoke('config.getDspPresets');
-presets.forEach(p => console.log(`${p.index}: ${p.name}`));
-```
-
-### config.getActiveDspPreset 
-
-获取当前激活的 DSP 预设。
-
-- **参数**: 无
-
-**返回值**: `{ "index": 0, "name": "My Preset", "isActive": true }`
-
-> 无激活预设时 `index` 和 `name` 为 `null`，`isActive` 为 `false`。
-
-### config.setActiveDspPreset 
-
-设置激活的 DSP 预设。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| index | number | ✓ | 预设索引 |
+| `index` | `integer` | Yes | Required. |
 
-**返回值**: `{ "success": true }`
+**Returns**: `{"success":true}`
 
-## 播放行为配置 
-
-### config.getCursorFollowPlayback 
-
-获取「光标跟随播放」设置。
-
-- **参数**: 无
-
-**返回值**: `{ "enabled": true, "value": true }`
-
-### config.setCursorFollowPlayback 
-
-设置「光标跟随播放」。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| enabled | boolean | ✓ | 是否启用 |
-
-**返回值**: `{ "success": true, "enabled": true }`
-
-### config.getPlaybackFollowCursor 
-
-获取「播放跟随光标」设置。
-
-- **参数**: 无
-
-**返回值**: `{ "enabled": false, "value": false }`
-
-### config.setPlaybackFollowCursor 
-
-设置「播放跟随光标」。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| enabled | boolean | ✓ | 是否启用 |
-
-**返回值**: `{ "success": true, "enabled": false }`
-
-### config.getReplaygainMode 
-
-获取 ReplayGain source mode。
-
-- **参数**: 无
-
-**返回值**: `{ "mode": 0, "value": 0 }`
-
-| mode 值 | 含义 |
-| --- | --- |
-| 0 | none |
-| 1 | track |
-| 2 | album |
-| 3 | byPlaybackOrder (auto) |
-
-### config.setReplaygainMode 
-
-设置 ReplayGain source mode。支持数字索引或字符串名称。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| mode | number | - | source mode 索引 (0-3)，兼容别名: value |
-| sourceMode | string | - | "none" / "track" / "album" / "auto" / "byPlaybackOrder"（"auto" 与 "byPlaybackOrder" 等价） |
-
-```javascript
-await fb2k.invoke('config.setReplaygainMode', { mode: 1 });
-// 或
-await fb2k.invoke('config.setReplaygainMode', { sourceMode: 'track' });
+```js
+const result = await fb2k.invoke('config.setActiveDspPreset', { index: /* value */ });
 ```
+
+### config.setAdvancedConfigValue
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:934`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `guid` | `string` | No | Optional; default . |
+| `value` | `boolean` | Yes | Required. |
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('config.setAdvancedConfigValue', { guid: /* value */, value: /* value */ });
+```
+
+### config.setCursorFollowPlayback
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:955`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | No | Optional; default false. |
+| `value` | `boolean` | No | Optional; default false. |
+
+**Returns**: `{"enabled":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('config.setCursorFollowPlayback', { enabled: /* value */, value: /* value */ });
+```
+
+### config.setOutputBuffer
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:929`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `bufferLength` | `number` | No | Optional; default 0. |
+| `milliseconds` | `number` | No | Optional; default 0. |
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('config.setOutputBuffer', { bufferLength: /* value */, milliseconds: /* value */ });
+```
+
+### config.setOutputDevice
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:928`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `deviceId` | `string` | No | Optional; default . |
+| `outputId` | `string` | No | Optional; default . |
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('config.setOutputDevice', { deviceId: /* value */, outputId: /* value */ });
+```
+
+### config.setPlaybackFollowCursor
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:957`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | No | Optional; default false. |
+| `value` | `boolean` | No | Optional; default false. |
+
+**Returns**: `{"enabled":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('config.setPlaybackFollowCursor', { enabled: /* value */, value: /* value */ });
+```
+
+### config.setReplaygainMode
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:961`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `mode` | `integer` | No | Optional; default -1. |
+| `sourceMode` | `string` | No | Optional; default omitted. |
+| `value` | `integer` | No | Optional; default -1. |
+
+**Returns**: `{"code":"...","error":"...","mode":"...","success":true,"value":"..."}`
+
+```js
+const result = await fb2k.invoke('config.setReplaygainMode', { mode: /* value */, sourceMode: /* value */, value: /* value */ });
+```
+
+### config.showLibraryPreferences
+
+Public API method. Runtime authority: `src/api/ConfigApi.cpp:946`.
+
+_No parameters._
+
+**Returns**: `{"success":true}`
+
+```js
+const result = await fb2k.invoke('config.showLibraryPreferences');
+```
+
+## Phase 3 contract supplements
+
+The sections below close public-contract findings from the strict parameter audit without replacing existing explanations.
+
+<!-- phase3-supplement:config.set -->
+### Contract supplement: `config.set`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:821-840`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `key` | `string` | No | `` | Optional; default . |
+| `value` | `json` | Yes | none | Required. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `error` | `string` | Yes |
+| `success` | `boolean` | No |
+| `key` | `json` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.set', { key: /* value */, value: /* value */ });
+```
+<!-- phase3-supplement:config.setAdvancedConfigValue -->
+### Contract supplement: `config.setAdvancedConfigValue`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:321-387`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `guid` | `string` | No | `` | Optional; default . |
+| `value` | `boolean` | Yes | none | Required. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.setAdvancedConfigValue', { guid: /* value */, value: /* value */ });
+```
+<!-- phase3-supplement:config.setCursorFollowPlayback -->
+### Contract supplement: `config.setCursorFollowPlayback`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:689-697`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `enabled` | `boolean` | No | `false` | Optional; default false. |
+| `value` | `boolean` | No | `false` | Optional; default false. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `enabled` | `json` | No |
+| `success` | `boolean` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.setCursorFollowPlayback', { enabled: /* value */, value: /* value */ });
+```
+<!-- phase3-supplement:config.setOutputBuffer -->
+### Contract supplement: `config.setOutputBuffer`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:138-164`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `bufferLength` | `number` | No | `0` | Optional; default 0. |
+| `milliseconds` | `number` | No | `0` | Optional; default 0. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.setOutputBuffer', { bufferLength: /* value */, milliseconds: /* value */ });
+```
+<!-- phase3-supplement:config.setPlaybackFollowCursor -->
+### Contract supplement: `config.setPlaybackFollowCursor`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:702-710`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `enabled` | `boolean` | No | `false` | Optional; default false. |
+| `value` | `boolean` | No | `false` | Optional; default false. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `enabled` | `json` | No |
+| `success` | `boolean` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.setPlaybackFollowCursor', { enabled: /* value */, value: /* value */ });
+```
+<!-- phase3-supplement:config.setReplaygainMode -->
+### Contract supplement: `config.setReplaygainMode`
+
+Phase 3 verified contract supplement. Runtime authority: `src/api/ConfigApi.cpp:720-744`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `mode` | `integer` | No | `-1` | Optional; default -1. |
+| `sourceMode` | `string` | No | omitted | Optional; default omitted. |
+| `value` | `integer` | No | `-1` | Optional; default -1. |
+
+#### Return fields
+
+| Field | Type | Optional |
+| --- | --- | --- |
+| `code` | `string` | Yes |
+| `error` | `string` | Yes |
+| `mode` | `json` | No |
+| `success` | `boolean` | No |
+| `value` | `json` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('config.setReplaygainMode', { mode: /* value */, sourceMode: /* value */, value: /* value */ });
+```
+
+## Storage and preference semantics
+
+`config.set`, `config.get`, `config.remove`, `config.getAll`, and
+`config.export` operate on the component's persistent configuration object.
+`config.get` requires `key`; when the key is absent it returns `found: false`
+and uses the optional `default` value when supplied. `config.set` requires both
+`key` and `value`; the value can be any JSON value.
+
+Output and advanced-preference methods use foobar2000 services. In particular,
+`config.setOutputDevice` requires valid `outputId` and `deviceId` GUIDs, while
+`config.setOutputBuffer` accepts either seconds in `bufferLength` or
+milliseconds in `milliseconds`. Advanced entries require a valid `guid`; their
+accepted `value` type depends on the entry type rather than a single universal
+schema.
+
+The cursor-follow and ReplayGain setters accept their documented compatibility
+forms. For ReplayGain, `mode` and `value` are numeric forms, while
+`sourceMode` accepts `track`, `album`, `auto`, `byPlaybackOrder`, or `none`.
+The handler returns `INVALID_PARAMS` for an unknown string source mode.

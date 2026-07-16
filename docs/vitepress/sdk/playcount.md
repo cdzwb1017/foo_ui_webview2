@@ -1,53 +1,68 @@
-# fb.playcount playcount
+# fb.playcount Playback Statistics
 
-本页是 `fb.playcount` 的 SDK 视角文档入口。
+`fb.playcount` reads playback statistics supplied by `foo_playcount`. The namespace provides single-track and batch reads plus library-wide aggregates.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### getBatch()
 
-签名：`fb.playcount.getBatch(...args): Promise<unknown>`
+Signature: `fb.playcount.getBatch(paths: string[]): Promise<PlaycountGetResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `paths` | `string[]` | Yes | Track paths to inspect. |
 
-返回值：底层 `playcount.getBatch` 调用结果。
+Returns `{ success, count, results }`. Each `PlaycountInfo` result carries its own `success` flag and may include `playCount`, `firstPlayed`, `lastPlayed`, `added`, `rating`, and `inLibrary`.
 
 ```javascript
-const result = await fb.playcount.getBatch();
+const result = await fb.playcount.getBatch([
+	'E:\\Music\\one.flac',
+	'E:\\Music\\two.flac',
+]);
 ```
 
 ### getStats()
 
-签名：`fb.playcount.getStats(...args): Promise<unknown>`
+Signature: `fb.playcount.getStats(): Promise<PlaycountStats>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `playcount.getStats` 调用结果。
+Returns aggregate fields including `totalTracks`, `playedTracks`, `unplayedTracks`, `ratedTracks`, `totalPlayCount`, `maxPlayCount`, `averagePlayCount`, and `averageRating`.
 
 ```javascript
-const result = await fb.playcount.getStats();
+const stats = await fb.playcount.getStats();
 ```
 
 ### set()
 
-签名：`fb.playcount.set(...args): Promise<unknown>`
+Signature: `fb.playcount.set(path: string, count: number): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
+| `count` | `number` | Yes | Compatibility argument accepted by the SDK facade. |
 
-返回值：底层 `playcount.set` 调用结果。
+This method is deprecated. The host does not support direct play-count mutation and returns `{ success: false }`; the `count` argument is not applied. Use `fb.rating.set()` for ratings, and let actual playback update play counts.
 
 ```javascript
-const result = await fb.playcount.set();
+const result = await fb.playcount.set('E:\\Music\\song.flac', 10);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Single-track Read
+
+`fb.playcount.get(path: string): Promise<PlaycountInfo | null>` calls the registered `playcount.get` handler with `paths: [path]` and unwraps the first result. It resolves to `null` when the host returns an empty or failed envelope.
+
+```javascript
+const info = await fb.playcount.get('E:\\Music\\song.flac');
+if (info?.success) {
+	console.log(info.playCount, info.lastPlayed);
+}
+```

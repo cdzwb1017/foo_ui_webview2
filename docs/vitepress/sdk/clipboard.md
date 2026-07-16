@@ -1,67 +1,54 @@
-# fb.clipboard 剪贴板
+# fb.clipboard Clipboard
 
-本页是 `fb.clipboard` 的 SDK 视角文档入口。
+`fb.clipboard` reads and writes text, HTML, and file-list clipboard data through the host process.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
 ### read()
 
-签名：`fb.clipboard.read(...args): Promise<unknown>`
+Signature: `fb.clipboard.read(): Promise<{ text: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `clipboard.read` 调用结果。
+Reads clipboard text.
 
 ```javascript
-const result = await fb.clipboard.read();
+const { text } = await fb.clipboard.read();
 ```
 
-### write()
+### write(text)
 
-签名：`fb.clipboard.write(...args): Promise<unknown>`
+Signature: `fb.clipboard.write(text: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `clipboard.write` 调用结果。
+Writes plain text to the clipboard.
 
 ```javascript
-const result = await fb.clipboard.write();
+await fb.clipboard.write('Copied from the theme');
 ```
 
-### writeFiles()
+### writeFiles(paths)
 
-签名：`fb.clipboard.writeFiles(...args): Promise<unknown>`
+Signature: `fb.clipboard.writeFiles(paths: string[]): Promise<BaseResponse & { fileCount?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `clipboard.writeFiles` 调用结果。
+Writes a list of file paths for pasting into file-aware applications.
 
 ```javascript
-const result = await fb.clipboard.writeFiles();
+const result = await fb.clipboard.writeFiles([
+	'C:\\Music\\one.flac',
+	'C:\\Music\\two.flac'
+]);
 ```
 
-### writeHTML()
+### writeHTML(html, plainText?)
 
-签名：`fb.clipboard.writeHTML(...args): Promise<unknown>`
+Signature: `fb.clipboard.writeHTML(html: string, plainText?: string): Promise<BaseResponse & { htmlWritten?: boolean; textWritten?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `clipboard.writeHTML` 调用结果。
+Writes HTML and, when a non-empty `plainText` value is supplied, a plain-text fallback.
 
 ```javascript
-const result = await fb.clipboard.writeHTML();
+await fb.clipboard.writeHTML('<strong>Now playing</strong>', 'Now playing');
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

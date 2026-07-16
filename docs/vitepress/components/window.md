@@ -1,8 +1,8 @@
-# E. 窗口管理 
+# E. Window Management
 
 ## `<fb-titlebar>` {#fb-titlebar}
 
-自定义标题栏拖拽区域。双击切换最大化/还原，右键显示系统菜单。
+Custom title-bar drag region. Double-clicking toggles maximize/restore, and right-clicking opens the system menu.
 
 ```html
 <fb-titlebar>
@@ -11,24 +11,24 @@
 </fb-titlebar>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| maximized | boolean | — | 只读反映：窗口是否最大化 |
+| `maximized` | boolean | — | Read-only reflection of whether the window is maximized |
 
 **CSS Parts:** `drag-region`
-**Slots:** `left`, `right`（不参与拖拽）
+**Slots:** `left`, `right` (slotted content is excluded from the drag region)
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-titlebar-dblclick', e => {
-  console.log('双击标题栏');
+  console.log('Title bar double-clicked');
 });
 ```
 
 ## `<fb-window-controls>` {#fb-window-controls}
 
-窗口控制按钮（最小化/最大化/关闭）。`maximized` 时 maximize-button 和 restore-icon 互斥显示。
+Minimize, maximize/restore, and close buttons. The `maximize-button` and `restore-icon` parts are shown mutually exclusively according to the `maximized` state.
 
 ```html
 <fb-window-controls>
@@ -39,66 +39,66 @@ el.addEventListener('fb-titlebar-dblclick', e => {
 </fb-window-controls>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| maximized | boolean | — | 只读反映：窗口是否最大化 |
+| `maximized` | boolean | — | Read-only reflection of whether the window is maximized |
 
 **CSS Parts:** `controls`, `minimize-button`, `maximize-button`, `restore-icon`, `close-button`
-**Slots:** `minimize-icon`（默认 —）, `maximize-icon`（默认 □）, `restore-icon`（默认 ❐）, `close-icon`（默认 ✕）
+**Slots:** `minimize-icon` (default: —), `maximize-icon` (default: □), `restore-icon` (default: ❐), `close-icon` (default: ✕)
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-window-minimize', e => { /* 最小化 */ });
-el.addEventListener('fb-window-maximize', e => { /* 最大化/还原 */ });
-el.addEventListener('fb-window-close', e => { /* 关闭 */ });
+el.addEventListener('fb-window-minimize', e => { /* minimize requested */ });
+el.addEventListener('fb-window-maximize', e => { /* maximize/restore requested */ });
+el.addEventListener('fb-window-close', e => { /* close requested */ });
 ```
 
 ## `<fb-popup-panel>` {#fb-popup-panel}
 
-弹出面板，`disconnectedCallback` 自动关闭弹窗。
+Declarative popup-window trigger. Removing the element closes its popup automatically.
 
 ```html
-<fb-popup-panel url="settings.html" width="600" height="400" popup-title="设置">
-  ⚙️ 打开设置
+<fb-popup-panel url="settings.html" width="600" height="400" popup-title="Settings">
+  ⚙️ Open settings
 </fb-popup-panel>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| url | string | — | 弹窗页面 URL |
-| width | string | '400' | 弹窗宽度 |
-| height | string | '300' | 弹窗高度 |
-| popup-title | string | — | 弹窗标题 |
-| resizable | boolean | true | 允许调整大小 |
-| always-on-top | boolean | false | 置顶 |
-| show-in-taskbar | boolean | false | 在任务栏显示 |
-| frame | boolean | true | 显示窗口边框 |
-| transparent | boolean | false | 背景透明 |
-| before-close | boolean | — | 设置后关闭前弹出确认 |
-| open | boolean | — | 只读反映：弹窗是否打开 |
-| window-id | string | — | 只读反映：弹窗窗口 ID |
+| `url` | string | `''` | Popup page URL |
+| `width` | string | `'400'` | Width in pixels |
+| `height` | string | `'300'` | Height in pixels |
+| `popup-title` | string | `''` | Popup title |
+| `resizable` | string | enabled | Set to the exact string `false` to disable resizing |
+| `always-on-top` | boolean | false | Enables always-on-top when present |
+| `show-in-taskbar` | boolean | false | Shows the popup in the taskbar when present |
+| `frame` | string | enabled | Set to the exact string `false` to disable the frame |
+| `transparent` | boolean | false | Enables transparency when present |
+| `before-close` | boolean | false | Requests confirmation before closing when present |
+| `open` | boolean | — | Read-only reflection of whether the popup is open |
+| `window-id` | string | — | Read-only reflection of the current popup window ID |
 
-**Slots:** 默认 slot（触发弹窗的按钮内容）
+**Slots:** default slot (the clickable popup trigger)
 
-**JS API：**
+**JavaScript API:**
 
 ```js
-const windowId = await el.open();  // 打开弹窗，返回 windowId
-el.close();                         // 关闭弹窗
-console.log(el.windowId);           // 当前窗口 ID
+const windowId = await el.open(); // opens once; returns the window ID or null
+await el.close();                 // requests closure; no-op when already closed
+console.log(el.windowId);         // current window ID or null
 ```
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-popup-open', e => {
-  console.log('弹窗打开:', e.detail.windowId);
+  console.log('Popup opened:', e.detail.windowId);
 });
 el.addEventListener('fb-popup-close', e => {
-  console.log('弹窗关闭:', e.detail.windowId);
+  console.log('Popup closed:', e.detail.windowId);
 });
 el.addEventListener('fb-popup-message', e => {
-  console.log('弹窗消息:', e.detail);
+  console.log('Popup message:', e.detail.sourceWindowId, e.detail.targetWindowId, e.detail.message);
 });
 ```

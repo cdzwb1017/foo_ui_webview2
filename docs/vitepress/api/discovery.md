@@ -1,204 +1,204 @@
-# Discovery 服务发现
+# Discovery API
 
-主动发现 foobar2000 中其他组件注册的服务。v1.1.3+。共 15 个 API。
+English API reference for the `discovery` family.
 
-> 与 PluginRegistry 的被动注册模式不同，Discovery API 主动枚举系统中所有已注册的服务。
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-## 服务发现 
+## discovery
 
-### discovery.getAllServices 
+### discovery.executeContextMenuByPath
 
-获取所有可发现服务的统计摘要。
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:860`.
 
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "services": {
-        "mainMenuCommands": 156,
-        "mainMenuGroups": 40,
-        "inputFormats": 30,
-        "uiElements": 25,
-        "dspEntries": 18,
-        "outputDevices": 3,
-        "preferencePages": 20,
-        "components": 32
-    },
-    "totalServices": 324
-}
-```
-
-```javascript
-const summary = await fb2k.invoke('discovery.getAllServices');
-console.log(`共 ${summary.totalServices} 个服务`);
-```
-
-### discovery.getComponents 
-
-获取所有已安装组件的信息。
-
-**返回值**:
-
-```json
-{
-    "count": 32,
-    "components": [
-        {
-            "filename": "foo_ui_webview2.dll",
-            "name": "WebView UI",
-            "version": "1.1.3",
-            "about": "..."
-        }
-    ]
-}
-```
-
-### discovery.getInputFormats 
-
-获取支持的音频输入格式。
-
-**返回值**: `{ "success": true, "fileTypes": [{ "name": "FLAC", "mask": "*.FLAC", "index": 0 }], "count": 30 }`
-
-### discovery.getUIElements 
-
-获取所有已注册的 UI 元素。
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "elements": [
-        {
-            "guid": "{...}",
-            "subclassGuid": "{...}",
-            "name": "Spectrum Analyzer",
-            "description": "...",
-            "isUserAddable": true
-        }
-    ],
-    "count": 25
-}
-```
-
-### discovery.getDspEntries 
-
-获取所有可用的 DSP 处理器条目。
-
-**返回值**: `{ "success": true, "entries": [{ "guid": "{...}", "name": "Equalizer" }], "count": 18 }`
-
-### discovery.getOutputDevices 
-
-获取音频输出设备列表。
-
-**返回值**: `{ "success": true, "devices": [{ "guid": "{...}" }], "count": 3 }`
-
-### discovery.getPreferencePages 
-
-获取所有偏好设置页面。
-
-**返回值**: `{ "success": true, "pages": [{ "guid": "{...}", "parentGuid": "{...}", "name": "Display" }], "count": 20 }`
-
-## 主菜单 
-
-### discovery.getMainMenuCommands 
-
-获取所有主菜单命令。
-
-- **参数**: 无
-
-**返回值**: `{ "success": true, "commands": [{ "name": "...", "description": "...", "guid": "{...}", "parentGuid": "{...}", "index": 0 }], "count": 156 }`
-
-### discovery.getMainMenuGroups 
-
-获取主菜单组结构。
-
-- **参数**: 无
-
-**返回值**: `{ "success": true, "groups": [{ "guid": "{...}", "parentGuid": "{...}", "name": "File", "sortPriority": 0 }], "count": 40 }`
-
-### discovery.executeMainMenuCommand 
-
-通过 GUID 执行主菜单命令。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| guid | string | ✓ | 命令 GUID |
+| `path` | `string` | No | Optional; default . |
+| `trackPath` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "guid": "{...}" }`
+**Returns**: `{"error":"...","foundName":"...","itemCount":"...","path":"...","success":true}`
 
-### discovery.searchCommands 
-
-按名称/描述搜索主菜单命令（不区分大小写）。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| query | string | ✓ | 搜索关键词 |
-
-**返回值**: `{ "success": true, "query": "lyric", "results": [{ "name": "...", "description": "...", "guid": "{...}", "type": "mainmenu" }], "count": 3 }`
-
-```javascript
-// 搜索并执行命令
-const result = await fb2k.invoke('discovery.searchCommands', { query: 'lyric' });
-if (result.results[0]) {
-    await fb2k.invoke('discovery.executeMainMenuCommand', { guid: result.results[0].guid });
-}
+```js
+const result = await fb2k.invoke('discovery.executeContextMenuByPath', { path: /* value */, trackPath: /* value */ });
 ```
 
-## 右键菜单 
+### discovery.executeContextMenuCommand
 
-### discovery.getContextMenuCommands 
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:859`.
 
-获取所有已注册的右键菜单命令。
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `guid` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"error":"...","guid":"...","itemCount":"...","success":true}`
 
-```json
-{
-    "success": true,
-    "commands": [
-        {
-            "name": "Properties",
-            "description": "Shows track properties",
-            "guid": "{...}",
-            "parentGuid": "{...}",
-            "index": 0
-        }
-    ],
-    "count": 200
-}
+```js
+const result = await fb2k.invoke('discovery.executeContextMenuCommand', { guid: /* value */ });
 ```
 
-### discovery.executeContextMenuCommand 
+### discovery.executeMainMenuCommand
 
-通过 GUID 执行右键菜单命令。作用于当前播放曲目或活动播放列表选中项。
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:857`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| guid | string | ✓ | 命令 GUID |
+| `guid` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "guid": "{...}", "itemCount": 1 }`
+**Returns**: `{"error":"...","guid":"...","success":true}`
 
-### discovery.executeContextMenuByPath 
+```js
+const result = await fb2k.invoke('discovery.executeMainMenuCommand', { guid: /* value */ });
+```
 
-通过菜单路径名称执行右键菜单命令。支持动态子菜单遍历。
+### discovery.getAllServices
 
-| 参数 | 类型 | 必填 | 描述 |
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:854`.
+
+_No parameters._
+
+**Returns**: `{"services":[],"success":true,"totalServices":"..."}`
+
+```js
+const result = await fb2k.invoke('discovery.getAllServices');
+```
+
+### discovery.getComponents
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:863`.
+
+_No parameters._
+
+**Returns**: `{"components":"...","count":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getComponents');
+```
+
+### discovery.getContextMenuCommands
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:858`.
+
+_No parameters._
+
+**Returns**: `{"commands":"...","count":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getContextMenuCommands');
+```
+
+### discovery.getContextMenuTree
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:861`.
+
+_No parameters._
+
+**Returns**: `{"error":"...","itemCount":"...","success":true,"tree":"..."}`
+
+```js
+const result = await fb2k.invoke('discovery.getContextMenuTree');
+```
+
+### discovery.getDspEntries
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:865`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","entries":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getDspEntries');
+```
+
+### discovery.getInputFormats
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:862`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","fileTypes":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getInputFormats');
+```
+
+### discovery.getMainMenuCommands
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:855`.
+
+_No parameters._
+
+**Returns**: `{"commands":"...","count":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getMainMenuCommands');
+```
+
+### discovery.getMainMenuGroups
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:856`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","groups":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getMainMenuGroups');
+```
+
+### discovery.getOutputDevices
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:866`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","devices":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getOutputDevices');
+```
+
+### discovery.getPreferencePages
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:867`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","pages":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getPreferencePages');
+```
+
+### discovery.getUIElements
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:864`.
+
+_No parameters._
+
+**Returns**: `{"count":"...","elements":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('discovery.getUIElements');
+```
+
+### discovery.searchCommands
+
+Public API method. Runtime authority: `src/api/DiscoveryApi.cpp:868`.
+
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 菜单路径，用 / 分隔，如 "Playback Statistics/Rating/5" |
-| trackPath | string | ✗ | 目标曲目路径（省略则用当前播放/选中项） |
+| `query` | `string` | No | Optional; default . |
 
-**返回值**: `{ "success": true, "path": "Playback Statistics/Rating/5", "foundName": "...", "itemCount": 1 }`
+**Returns**: `{"count":"...","error":"...","query":"...","results":"...","success":true}`
 
-### discovery.getContextMenuTree 
+```js
+const result = await fb2k.invoke('discovery.searchCommands', { query: /* value */ });
+```
 
-获取当前曲目的完整右键菜单树结构（调试用）。作用于当前播放曲目或选中项。
+## Discovery scope and execution rules
 
-- **参数**: 无
-
-**返回值**: `{ "success": true, "tree": { ... }, "itemCount": 1 }`
-
-树节点结构：每个节点包含 `name`、`type` (`"command"` / `"popup"` / `"separator"`)、`children`（popup 类型）、`fullName`（command 类型）。最多递归 10 层，每层最多 50 个子节点。
+- Results enumerate services registered in the current foobar2000 process; counts and names vary with installed components and host configuration.
+- `discovery.executeMainMenuCommand` and `discovery.executeContextMenuCommand` require a valid GUID. A context command applies to the now-playing item when available, otherwise to the active playlist selection.
+- `discovery.executeContextMenuByPath` requires `path`; optional `trackPath` is subject to media-read security. Without it, the runtime uses the same now-playing/selection fallback.
+- `discovery.getContextMenuTree` is diagnostic output. It requires an active target item, limits recursion to 10 levels and limits each popup to 50 children.
+- `discovery.searchCommands` requires a non-empty `query` and performs a case-insensitive match over main-menu command names and descriptions.

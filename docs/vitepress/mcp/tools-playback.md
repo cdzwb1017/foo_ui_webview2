@@ -1,61 +1,28 @@
-# Playback 工具 
+# Playback Tools
 
-播放控制、状态获取、音量管理。共 12 个工具。
+Twelve tools provide playback control, state inspection, seeking, and volume management.
 
-## 播放控制 
+## Playback control
 
-### fb2k_playback_play 
+| Tool | Bridge method | Parameters | Result | Description |
+| --- | --- | --- | --- | --- |
+| `fb2k_playback_play` | `playback.play` | none | `success: true` | Start or resume playback |
+| `fb2k_playback_pause` | `playback.pause` | none | `success: true` | Pause playback |
+| `fb2k_playback_stop` | `playback.stop` | none | `success: true` | Stop playback |
+| `fb2k_playback_next` | `playback.next` | none | `success: true` | Skip to the next track |
+| `fb2k_playback_previous` | `playback.previous` | none | `success: true` | Go to the previous track |
+| `fb2k_playback_play_pause` | `playback.playPause` | none | `success: true`; `isPlaying: boolean` | Toggle play and pause; `isPlaying` reports the playing state after the toggle |
 
-开始播放。如果已暂停则恢复播放，如果已停止则从头开始。
+## State
 
-- **参数**: 无
-- **Bridge 方法**: `playback.play`
+### fb2k_playback_get_state
 
-### fb2k_playback_pause 
+Gets the current playback state and capability flags.
 
-暂停播放。
+- **Parameters**: none
+- **Bridge method**: `playback.getState`
 
-- **参数**: 无
-- **Bridge 方法**: `playback.pause`
-
-### fb2k_playback_stop 
-
-停止播放。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.stop`
-
-### fb2k_playback_next 
-
-播放下一首。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.next`
-
-### fb2k_playback_previous 
-
-播放上一首。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.previous`
-
-### fb2k_playback_play_pause 
-
-切换播放/暂停状态。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.playPause`
-
-## 状态获取 
-
-### fb2k_playback_get_state 
-
-获取当前播放状态。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.getState`
-
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -65,36 +32,36 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| state | string | "playing" / "paused" / "stopped" |
-| canSeek | boolean | 是否支持跳转 |
-| canPause | boolean | 是否支持暂停 |
+| `state` | string | `playing`, `paused`, or `stopped` |
+| `canSeek` | boolean | Whether seeking is available |
+| `canPause` | boolean | Whether pausing is available |
 
-### fb2k_playback_get_current_track 
+### fb2k_playback_get_current_track
 
-获取当前播放曲目的详细信息。无播放时 `found` 为 `false`。
+Gets detailed information about the current track. When nothing is playing, the result reports `found: false`.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.getCurrentTrack`
+- **Parameters**: none
+- **Bridge method**: `playback.getCurrentTrack`
 
-**返回值**（正在播放时）:
+**Example result while playing:**
 
 ```json
 {
-  "id": "D:\\\\Music\\\\164\\\\天ノ弱.flac",
-  "title": "天ノ弱",
-  "artist": "164 feat. GUMI",
-  "album": "天ノ弱",
-  "albumArtist": "164",
-  "genre": "Vocaloid",
-  "date": "2011",
+  "id": "D:\\\\Music\\\\Mili\\\\Redo.flac",
+  "title": "Redo",
+  "artist": "Mili",
+  "album": "Millennium Mother",
+  "albumArtist": "Mili",
+  "genre": "Alternative",
+  "date": "2018",
   "trackNumber": 1,
   "discNumber": 1,
   "duration": 263.5,
-  "path": "file://D:\\\\Music\\\\164\\\\天ノ弱.flac",
-  "absolutePath": "D:\\\\Music\\\\164\\\\天ノ弱.flac",
-  "fullPath": "D:\\\\Music\\\\164\\\\天ノ弱.flac",
+  "path": "file://D:\\\\Music\\\\Mili\\\\Redo.flac",
+  "absolutePath": "D:\\\\Music\\\\Mili\\\\Redo.flac",
+  "fullPath": "D:\\\\Music\\\\Mili\\\\Redo.flac",
   "subsong": 0,
   "fileSize": 28456789,
   "bitrate": 876,
@@ -104,79 +71,79 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| id | string | 完整路径标识（含 subsong 后缀） |
-| title | string | 标题 |
-| artist | string | 艺术家 |
-| album | string | 专辑 |
-| albumArtist | string | 专辑艺术家 |
-| genre | string | 流派 |
-| date | string | 发行日期 |
-| trackNumber | integer | 曲目序号 |
-| discNumber | integer | 碟片序号 |
-| duration | number | 时长（秒） |
-| path | string | 原始 foobar2000 路径 |
-| absolutePath | string | 标准化绝对路径（无 subsong） |
-| fullPath | string | 绝对路径 + 可选 \|subsong:N |
-| subsong | integer | 子曲目索引（如 CUE） |
-| fileSize | integer | 文件大小（字节） |
-| bitrate | integer | 比特率（kbps） |
-| sampleRate | integer | 采样率（Hz） |
-| channels | integer | 声道数 |
-| codec | string | 编解码器名称 |
+| `id` | string | Full-path identity, including a subsong suffix when applicable |
+| `title` | string | Track title |
+| `artist` | string | Track artist |
+| `album` | string | Album title |
+| `albumArtist` | string | Album artist |
+| `genre` | string | Genre |
+| `date` | string | Release date |
+| `trackNumber` | integer | Track number |
+| `discNumber` | integer | Disc number |
+| `duration` | number | Duration in seconds |
+| `path` | string | Original foobar2000 path |
+| `absolutePath` | string | Normalized absolute path without a subsong suffix |
+| `fullPath` | string | Absolute path plus an optional `|subsong:N` suffix |
+| `subsong` | integer | Subsong index, for example for a CUE track |
+| `fileSize` | integer | File size in bytes |
+| `bitrate` | integer | Bitrate in kbps |
+| `sampleRate` | integer | Sample rate in Hz |
+| `channels` | integer | Channel count |
+| `codec` | string | Codec name |
 
-**返回值**（未播放时）:
+**Example result while stopped:**
 
 ```json
 { "success": true, "found": false, "playing": false }
 ```
 
-### fb2k_playback_get_position 
+### fb2k_playback_get_position
 
-获取播放位置和总时长。
+Gets the playback position and total duration.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.getPosition`
+- **Parameters**: none
+- **Bridge method**: `playback.getPosition`
 
-**返回值**:
+**Example result:**
 
 ```json
 {
   "position": 45.2,
   "duration": 263.5,
   "subsong": 0,
-  "path": "D:\\\\Music\\\\164\\\\天ノ弱.flac"
+  "path": "D:\\\\Music\\\\Mili\\\\Redo.flac"
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| position | number | 当前播放位置（秒） |
-| duration | number | 总时长（秒） |
-| subsong | integer | 子曲目索引 |
-| path | string | 当前文件路径 |
+| `position` | number | Current position in seconds |
+| `duration` | number | Total duration in seconds |
+| `subsong` | integer | Subsong index |
+| `path` | string | Current file path |
 
-## 音量控制 
+## Seeking and volume
 
-### fb2k_playback_set_position 
+### fb2k_playback_set_position
 
-跳转到指定播放位置。
+Seeks to a playback position.
 
-- **Bridge 方法**: `playback.setPosition`
+- **Bridge method**: `playback.setPosition`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| seconds | number | ? | 目标位置（秒） |
+| `seconds` | number | Yes | Target position in seconds; minimum `0` |
 
-### fb2k_playback_get_volume 
+### fb2k_playback_get_volume
 
-获取当前音量和静音状态。
+Gets the current volume and mute state.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.getVolume`
+- **Parameters**: none
+- **Bridge method**: `playback.getVolume`
 
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -187,19 +154,19 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| volume | number | 音量 0–100（线性百分比） |
-| volumeDb | number | 音量 dB 值 |
-| muted | boolean | 是否静音 |
-| isMuted | boolean | 静音状态（muted 的别名） |
+| `volume` | number | Linear volume from `0` to `100` |
+| `volumeDb` | number | Volume in dB |
+| `muted` | boolean | Mute state |
+| `isMuted` | boolean | Alias of `muted` |
 
-### fb2k_playback_set_volume 
+### fb2k_playback_set_volume
 
-设置音量。
+Sets the playback volume.
 
-- **Bridge 方法**: `playback.setVolume`
+- **Bridge method**: `playback.setVolume`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Constraints |
 | --- | --- | --- | --- |
-| volume | number | ? | 音量值 (0–100) |
+| `volume` | number | Yes | Linear volume from `0` to `100` inclusive |

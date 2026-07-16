@@ -1,53 +1,81 @@
-# fb.keyboard keyboard
+# fb.keyboard Hotkeys and Shortcuts
 
-本页是 `fb.keyboard` 的 SDK 视角文档入口。
+`fb.keyboard` registers hotkeys and shortcuts and exposes the current hotkey inventory.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### getRegisteredHotkeys()
 
-签名：`fb.keyboard.getRegisteredHotkeys(...args): Promise<unknown>`
+Signature: `fb.keyboard.getRegisteredHotkeys(): Promise<KeyboardGetRegisteredHotkeysResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `keyboard.getRegisteredHotkeys` 调用结果。
+Returns `{ success, hotkeys }`. Each `HotkeyInfo` contains `id`, `key`, `action`, and `global`.
 
 ```javascript
-const result = await fb.keyboard.getRegisteredHotkeys();
+const { hotkeys } = await fb.keyboard.getRegisteredHotkeys();
 ```
 
 ### registerShortcut()
 
-签名：`fb.keyboard.registerShortcut(...args): Promise<unknown>`
+Signature: `fb.keyboard.registerShortcut(key: string, action: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `key` | `string` | Yes | Shortcut key expression. |
+| `action` | `string` | Yes | Action identifier sent by the host. |
 
-返回值：底层 `keyboard.registerShortcut` 调用结果。
+Returns the `keyboard.registerShortcut` response envelope.
 
 ```javascript
-const result = await fb.keyboard.registerShortcut();
+const result = await fb.keyboard.registerShortcut('Space', 'toggle');
 ```
 
 ### unregisterHotkey()
 
-签名：`fb.keyboard.unregisterHotkey(...args): Promise<unknown>`
+Signature: `fb.keyboard.unregisterHotkey(options: KeyboardUnregisterHotkeyParams): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `options.key` | `string` | No | Registered key expression. |
+| `options.id` | `number` | No | Numeric registration ID. |
 
-返回值：底层 `keyboard.unregisterHotkey` 调用结果。
+Returns the `keyboard.unregisterHotkey` response envelope.
 
 ```javascript
-const result = await fb.keyboard.unregisterHotkey();
+const result = await fb.keyboard.unregisterHotkey({
+	key: 'Ctrl+Shift+P',
+});
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Register a Hotkey
+
+`fb.keyboard.registerHotkey(key, action, options?)` invokes `keyboard.registerHotkey`. `options` is `Omit<KeyboardRegisterHotkeyParams, 'key' | 'action'>` and can set `global`. The facade currently types the optional response `id` as `string`; `getRegisteredHotkeys()` exposes each registered `HotkeyInfo.id` as `number`.
+
+```javascript
+const result = await fb.keyboard.registerHotkey(
+	'Ctrl+Shift+P',
+	'playPause',
+	{ global: true },
+);
+```
+
+## keyboard:hotkey
+
+When a registered hotkey fires, `keyboard:hotkey` carries `KeyboardHotkeyPayload` with `id`, `key`, and `action`.
+
+```javascript
+const off = fb.on('keyboard:hotkey', ({ id, key, action }) => {
+	console.log(id, key, action);
+});
+
+off();
+```

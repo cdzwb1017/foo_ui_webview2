@@ -1,123 +1,75 @@
-# fb.dsp dsp
+# fb.dsp DSP Chain
 
-本页是 `fb.dsp` 的 SDK 视角文档入口。
+`fb.dsp` inspects and modifies the active digital signal processing chain and applies saved DSP presets.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### addDsp()
+### getChain()
 
-签名：`fb.dsp.addDsp(...args): Promise<unknown>`
+Signature: `fb.dsp.getChain(): Promise<DspGetChainResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dsp.addDsp` 调用结果。
+Returns the active DSP entries in execution order. A successful result may also include `activePreset` and `activePresetIndex`.
 
 ```javascript
-const result = await fb.dsp.addDsp();
+const { dsps, activePreset } = await fb.dsp.getChain();
 ```
 
-### applyPreset()
+### setChain(dsps)
 
-签名：`fb.dsp.applyPreset(...args): Promise<unknown>`
+Signature: `fb.dsp.setChain(dsps: unknown[]): Promise<BaseResponse & { count?: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Replaces the active chain with the supplied DSP descriptors.
 
-返回值：底层 `dsp.applyPreset` 调用结果。
+### getPresets()
+
+Signature: `fb.dsp.getPresets(): Promise<DspGetPresetsResponse>`
+
+Returns `presets`, `count`, and `selectedIndex`. Each preset includes its normal `DspPreset` fields and may include an `active` flag.
+
+### applyPreset(indexOrName)
+
+Signature: `fb.dsp.applyPreset(indexOrName: number | string): Promise<BaseResponse & { appliedPreset?: string; appliedIndex?: number }>`
+
+Applies a saved preset by numeric index or display name.
 
 ```javascript
-const result = await fb.dsp.applyPreset();
+await fb.dsp.applyPreset('Headphones');
 ```
 
 ### getAvailable()
 
-签名：`fb.dsp.getAvailable(...args): Promise<unknown>`
+Signature: `fb.dsp.getAvailable(): Promise<DspGetAvailableResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Returns discoverable DSP entries in `dsps`. Each entry has `guid`, `name`, and `hasConfig` fields.
 
-返回值：底层 `dsp.getAvailable` 调用结果。
+### addDsp(guid, position?)
+
+Signature: `fb.dsp.addDsp(guid: string, position?: number): Promise<BaseResponse & { addedDsp?: string }>`
+
+Adds the DSP identified by `guid`, optionally at a specific chain position.
 
 ```javascript
-const result = await fb.dsp.getAvailable();
+await fb.dsp.addDsp('{00000000-0000-0000-0000-000000000000}', 0);
 ```
 
-### getChain()
+### removeDsp(index)
 
-签名：`fb.dsp.getChain(...args): Promise<unknown>`
+Signature: `fb.dsp.removeDsp(index: number): Promise<BaseResponse & { removedDsp?: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Removes the DSP at the supplied active-chain index.
 
-返回值：底层 `dsp.getChain` 调用结果。
+### moveDsp(from, to)
 
-```javascript
-const result = await fb.dsp.getChain();
-```
+Signature: `fb.dsp.moveDsp(from: number, to: number): Promise<BaseResponse & { movedDsp?: string; message?: string }>`
 
-### getPresets()
-
-签名：`fb.dsp.getPresets(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dsp.getPresets` 调用结果。
+Moves an active DSP from one chain index to another.
 
 ```javascript
-const result = await fb.dsp.getPresets();
-```
-
-### moveDsp()
-
-签名：`fb.dsp.moveDsp(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dsp.moveDsp` 调用结果。
-
-```javascript
-const result = await fb.dsp.moveDsp();
-```
-
-### removeDsp()
-
-签名：`fb.dsp.removeDsp(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dsp.removeDsp` 调用结果。
-
-```javascript
-const result = await fb.dsp.removeDsp();
-```
-
-### setChain()
-
-签名：`fb.dsp.setChain(...args): Promise<unknown>`
-
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dsp.setChain` 调用结果。
-
-```javascript
-const result = await fb.dsp.setChain();
+await fb.dsp.moveDsp(2, 0);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

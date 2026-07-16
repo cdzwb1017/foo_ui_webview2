@@ -1,22 +1,22 @@
-# fb.log log
+# fb.log Log File
 
-本页是 `fb.log` 的 SDK 视角文档入口。
+`fb.log` writes, reads, and clears the SDK host log file. For messages sent to the foobar2000 console window instead, use `fb.console`.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### clear()
 
-签名：`fb.log.clear(...args): Promise<unknown>`
+Signature: `fb.log.clear(): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| None | — | — | This method takes no arguments. |
 
-返回值：底层 `log.clear` 调用结果。
+Returns the `log.clear` response envelope.
 
 ```javascript
 const result = await fb.log.clear();
@@ -24,30 +24,38 @@ const result = await fb.log.clear();
 
 ### read()
 
-签名：`fb.log.read(...args): Promise<unknown>`
+Signature: `fb.log.read(lines?: number): Promise<{ lines: string[] }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `lines` | `number` | No | Maximum number of lines; the host defaults to 100. |
 
-返回值：底层 `log.read` 调用结果。
+Returns the requested log text in `{ lines }`.
 
 ```javascript
-const result = await fb.log.read();
+const { lines } = await fb.log.read(100);
 ```
 
 ### write()
 
-签名：`fb.log.write(...args): Promise<unknown>`
+Signature: `fb.log.write(message: string, options?: LogWriteParams): Promise<BaseResponse & { path?: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `message` | `string` | Yes | Text to write. |
+| `options.level` | `string` | No | Log level; defaults to `'info'`. |
+| `options.append` | `boolean` | No | Appends when `true`; defaults to `true`. |
+| `options.timestamp` | `boolean` | No | Adds a timestamp when `true`; defaults to `true`. |
+| `options.file` | `string` | No | Optional log filename. |
+| `options.args` | `string[]` | No | Additional string arguments accepted by the host contract. |
 
-返回值：底层 `log.write` 调用结果。
+Returns the write response envelope and may include the resolved log-file `path`.
 
 ```javascript
-const result = await fb.log.write();
+const result = await fb.log.write('Playback started', {
+	level: 'info',
+	timestamp: true,
+});
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

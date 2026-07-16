@@ -1,109 +1,182 @@
-# fb.metadata metadata
+# fb.metadata Metadata and Artwork Writes
 
-本页是 `fb.metadata` 的 SDK 视角文档入口。
+`fb.metadata` reads and writes track tags, performs raw file reads, and manages embedded or sidecar artwork. Tag-write methods dispatch asynchronously and report final completion through `metadata:writeComplete`.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block maintains SDK-facing method coverage and may be expanded with complete examples and best practices.
 
 ### read()
 
-签名：`fb.metadata.read(...args): Promise<unknown>`
+Signature: `fb.metadata.read(path: string): Promise<MetadataReadResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
 
-返回值：底层 `metadata.read` 调用结果。
+Returns `{ success, path?, tags?, info? }`. `tags` preserves upstream key casing and each value is a `string` or `string[]`.
 
 ```javascript
-const result = await fb.metadata.read();
+const result = await fb.metadata.read('E:\\Music\\song.flac');
 ```
 
 ### readBatch()
 
-签名：`fb.metadata.readBatch(...args): Promise<unknown>`
+Signature: `fb.metadata.readBatch(paths: string[]): Promise<MetadataReadBatchResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `paths` | `string[]` | Yes | Track paths to read. |
 
-返回值：底层 `metadata.readBatch` 调用结果。
+Returns `results`, one envelope per requested path, plus optional aggregate counters.
 
 ```javascript
-const result = await fb.metadata.readBatch();
+const result = await fb.metadata.readBatch([
+	'E:\\Music\\one.flac',
+	'E:\\Music\\two.flac',
+]);
 ```
 
 ### readByPath()
 
-签名：`fb.metadata.readByPath(...args): Promise<unknown>`
+Signature: `fb.metadata.readByPath(path: string): Promise<JsonObject>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
 
-返回值：底层 `metadata.readByPath`, `metadata.readRaw` 调用结果。
+Returns the flat `metadata.readByPath` object. Tag keys become top-level fields alongside host status and path fields. This method does not invoke `metadata.readRaw`.
 
 ```javascript
-const result = await fb.metadata.readByPath();
+const fields = await fb.metadata.readByPath('E:\\Music\\song.flac');
 ```
 
 ### removeField()
 
-签名：`fb.metadata.removeField(...args): Promise<unknown>`
+Signature: `fb.metadata.removeField(path: string, field: string): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
+| `field` | `string` | Yes | Single tag name to remove. |
 
-返回值：底层 `metadata.removeField` 调用结果。
+Dispatches `metadata.removeField` with `tags: [field]`. The receipt can contain `dispatched`, `subsong`, `removedTags`, `removedCount`, and `note`; final completion is reported by `metadata:writeComplete`.
 
 ```javascript
-const result = await fb.metadata.removeField();
+const receipt = await fb.metadata.removeField(
+	'E:\\Music\\song.flac',
+	'COMMENT',
+);
 ```
 
 ### removeTag()
 
-签名：`fb.metadata.removeTag(...args): Promise<unknown>`
+Signature: `fb.metadata.removeTag(path: string, tags: string[]): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
+| `tags` | `string[]` | Yes | Tag names to remove. |
 
-返回值：底层 `metadata.removeTag` 调用结果。
+Dispatches an asynchronous removal and returns its receipt. Observe `metadata:writeComplete` for the final outcome.
 
 ```javascript
-const result = await fb.metadata.removeTag();
+await fb.metadata.removeTag('E:\\Music\\song.flac', ['COMMENT', 'GROUPING']);
 ```
 
 ### write()
 
-签名：`fb.metadata.write(...args): Promise<unknown>`
+Signature: `fb.metadata.write(path: string, tags: JsonObject): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `path` | `string` | Yes | Track path. |
+| `tags` | `JsonObject` | Yes | Tag updates; a `null` or empty value removes the corresponding tag. |
 
-返回值：底层 `metadata.write` 调用结果。
+Dispatches the write and returns a receipt that can include `canonicalPath`, `handlePath`, `subsong`, and tag counters. The receipt is not the final write result.
 
 ```javascript
-const result = await fb.metadata.write();
+await fb.metadata.write('E:\\Music\\song.flac', {
+	TITLE: 'New title',
+	COMMENT: null,
+});
 ```
 
 ### writeBatch()
 
-签名：`fb.metadata.writeBatch(...args): Promise<unknown>`
+Signature: `fb.metadata.writeBatch(items: Array<{ path: string; tags: JsonObject }>): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| `items` | `Array<{ path: string; tags: JsonObject }>` | Yes | Per-track tag updates. |
 
-返回值：底层 `metadata.embedArtwork`, `metadata.removeEmbeddedArt` 调用结果。
+Invokes `metadata.writeBatch` and can return `successCount`, `failCount`, and per-path `errors`. It does not call either artwork endpoint.
 
 ```javascript
-const result = await fb.metadata.writeBatch();
+const result = await fb.metadata.writeBatch([
+	{ path: 'E:\\Music\\one.flac', tags: { GENRE: 'Ambient' } },
+	{ path: 'E:\\Music\\two.flac', tags: { GENRE: 'Ambient' } },
+]);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->
+
+## Raw File Read
+
+`fb.metadata.readRaw(path, options?)` bypasses the metadb cache and reads the file directly. `options` is `Omit<MetadataReadRawParams, 'path'>` and may contain `cueIndex`. The typed result is `MetadataReadRawResponse`, whose `source` is `'file'` when present.
+
+```javascript
+const raw = await fb.metadata.readRaw('E:\\Music\\album.flac', {
+	cueIndex: 2,
+});
+```
+
+## Artwork
+
+### embedArtwork(path, options?)
+
+`fb.metadata.embedArtwork()` writes an image into the file, to a sibling image file, or to both destinations. `MetadataEmbedArtworkParams` includes `imageData`, `type`, `filename`, and `target`.
+
+- `'embedded'` writes through the host's tag container and may fail for formats such as CUE.
+- `'file'` writes a sidecar such as `cover.<ext>`; the extension is inferred from the image bytes.
+- `['embedded', 'file']` runs both targets through the declared SDK type.
+- `filename` applies only to file output; path separators and `..` are rejected.
+
+```javascript
+const result = await fb.metadata.embedArtwork(
+	'E:\\Music\\song.flac',
+	{
+		imageData: coverDataUrl,
+		type: 'front',
+		target: ['embedded', 'file'],
+	},
+);
+```
+
+### removeEmbeddedArt(path, options?)
+
+`fb.metadata.removeEmbeddedArt()` accepts `type` and `removeAll` through `MetadataRemoveEmbeddedArtParams`. The response may include `removedTypes`.
+
+```javascript
+await fb.metadata.removeEmbeddedArt('E:\\Music\\song.flac', {
+	type: 'front',
+});
+```
+
+## Asynchronous Completion and Default Logging
+
+`metadata.write`, `metadata.removeField`, `metadata.removeTag`, and batch variants dispatch work before the file operation finishes. Subscribe to `metadata:writeComplete` for the final `MetadataWriteCompletePayload`: `operation`, `path`, `subsong`, `code`, `success`, and `status`.
+
+The SDK installs a default listener that logs failed completions to the JavaScript console. Call `fb.metadata.disableDefaultLogger()` to detach it before installing custom UI handling; the operation is idempotent.
+
+```javascript
+fb.metadata.disableDefaultLogger();
+
+const off = fb.on('metadata:writeComplete', (event) => {
+	if (!event.success) {
+		console.error(event.operation, event.path, event.status, event.code);
+	}
+});
+```

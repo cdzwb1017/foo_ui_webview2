@@ -1,25 +1,25 @@
-# fb.playlist 播放列表 
+# `fb.playlist` playlist management
 
 ## getAll() 
 
-获取所有播放列表。
+Returns all playlists as `PlaylistInfo[]`.
 
 ```javascript
 const playlists = await fb.playlist.getAll();
 // [{index: 0, name: "Default", trackCount: 100, isActive: true, isPlaying: false, isLocked: false, isAutoplaylist: false}, ...]
 ```
 
-::: tip TIP
-v1.1.18 起 `getAll()` 不再返回 `duration` 字段。如需 duration，请使用 `fb.playlist.getActive()` 或 `fb.playlist.getPlaying()`。
+::: tip
+`PlaylistInfo` does not expose a `duration` field. Use the documented fields such as `index`, `name`, `trackCount`, `isActive`, `isPlaying`, `isLocked`, and optional `isAutoplaylist`.
 :::
 
 ## getActive() / setActive(index) 
 
-获取/设置当前活动播放列表。
+Gets or sets the active playlist. `getActive()` resolves to `PlaylistInfo | null`.
 
 ```javascript
 const info = await fb.playlist.getActive();
-// {index, name, trackCount, isActive, isPlaying, isLocked, duration}
+// {index, name, trackCount, isActive, isPlaying, isLocked, isAutoplaylist?}
 console.log(info.index, info.name);
 
 await fb.playlist.setActive(1);
@@ -27,59 +27,59 @@ await fb.playlist.setActive(1);
 
 ## getTracks(index, start, count) 
 
-获取播放列表中的曲目（分页）。
+Fetches a slice of playlist tracks. The SDK unwraps the native page envelope and resolves directly to `PlaylistTrack[]`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| start | number | 起始位置（默认 0） |
-| count | number | 获取数量（默认 100） |
-
-返回 `{playlist, start, count, total, tracks: [{title, artist, album, duration, path, absolutePath, ...}]}`。
+| `index` | `number` | Playlist index |
+| `start` | `number?` | Start offset |
+| `count` | `number?` | Maximum number of tracks |
+| `formats` | `Record<string, string>?` | Optional named Title Formatting expressions |
 
 ```javascript
-const r = await fb.playlist.getTracks(0, 0, 50);
-console.log(`共 ${r.total} 首，当前返回 ${r.tracks.length} 首`);
+const tracks = await fb.playlist.getTracks(0, 0, 50);
+console.log(`Received ${tracks.length} tracks`);
 ```
+
+Use `bridge.invoke('playlist.getTracks', ...)` directly only when the native pagination envelope (`playlist`, `start`, `count`, and `total`) is required.
 
 ## playTrack(playlistIndex, trackIndex, options?) 
 
-播放指定曲目。返回 `{success}`。
+Starts a specific playlist item. Returns a `BaseResponse`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| playlistIndex | number | 播放列表索引 |
-| trackIndex | number | 曲目索引 |
-| options.deferred | boolean | 延迟执行（默认 false） |
-| options.muted | boolean | 播放前先静音（默认 false） |
+| `playlistIndex` | `number` | Playlist index |
+| `trackIndex` | `number` | Track index |
+| `options` | `Omit<PlaylistPlayTrackParams, 'playlist' \| 'track'>?` | Optional native play-track fields |
 
 ```javascript
-await fb.playlist.playTrack(0, 4); // 第一个播放列表的第 5 首
-await fb.playlist.playTrack(0, 0, { muted: true }); // 播放但静音
+await fb.playlist.playTrack(0, 4); // Fifth item in the first playlist
+await fb.playlist.playTrack(0, 0, { muted: true });
 ```
 
 ## add(index, paths) 
 
-添加文件到播放列表。返回 `{success, playlist, requestedPaths, addedCount, countBefore, totalCount}`。
+Adds paths or URLs to a playlist. Each entry is limited to 2048 characters; longer entries are skipped and counted in `invalidCount`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| paths | string[] | 文件路径数组 |
+| `index` | `number` | Playlist index |
+| `paths` | `string[]` | Paths or URLs |
 
 ```javascript
 const r = await fb.playlist.add(0, ['E:\\\\Music\\\\song1.flac', 'E:\\\\Music\\\\song2.mp3']);
-console.log(`添加了 ${r.addedCount} 首`);
+console.log(`Added ${r.addedCount} tracks`);
 ```
 
 ## removeTracks(index, indices) 
 
-从播放列表移除指定索引的曲目。返回 `{success}`。
+Removes the specified track indices. Returns a `BaseResponse`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| indices | number[] | 要移除的曲目索引数组 |
+| `index` | `number` | Playlist index |
+| `indices` | `number[]` | Track indices to remove |
 
 ```javascript
 await fb.playlist.removeTracks(0, [0, 2, 5]);
@@ -87,7 +87,7 @@ await fb.playlist.removeTracks(0, [0, 2, 5]);
 
 ## getPlaying() 
 
-获取当前正在播放的播放列表。返回结构同 `getActive()`。
+Returns the playing playlist as `PlaylistInfo | null`.
 
 ```javascript
 const playing = await fb.playlist.getPlaying();
@@ -95,7 +95,7 @@ const playing = await fb.playlist.getPlaying();
 
 ## getCount(index) 
 
-获取播放列表曲目数量。返回 `{count}`。
+Returns the playlist's track count as `{ count }`.
 
 ```javascript
 const r = await fb.playlist.getCount(0);
@@ -104,29 +104,30 @@ console.log(r.count);
 
 ## create(name?) 
 
-创建新播放列表。返回 `{success, index}`。
+Creates a playlist and returns `{ index }`. The SDK requires a name; optional native creation fields may be passed as the second argument.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| name | string | 播放列表名称（默认 "New Playlist"） |
+| `name` | `string` | Playlist name |
+| `options` | `Omit<PlaylistCreateParams, 'name'>?` | Optional native creation fields |
 
 ```javascript
 const r = await fb.playlist.create('Rock');
-console.log(`新播放列表索引: ${r.index}`);
+console.log(`New playlist index: ${r.index}`);
 ```
 
 ## remove(index) / clear(index) 
 
-删除播放列表 / 清空曲目。返回 `{success}`。
+Removes a playlist or clears all of its tracks.
 
 ```javascript
 await fb.playlist.remove(2);
-await fb.playlist.clear(0);  // 清空但保留列表
+await fb.playlist.clear(0);  // Keep the playlist, remove its tracks
 ```
 
 ## rename(index, name) 
 
-重命名播放列表。返回 `{success}`。
+Renames a playlist. Returns a `BaseResponse`.
 
 ```javascript
 await fb.playlist.rename(0, 'Favorites');
@@ -134,35 +135,35 @@ await fb.playlist.rename(0, 'Favorites');
 
 ## duplicate(index) 
 
-复制播放列表。返回 `{success, index, sourcePlaylist, newPlaylist, name, trackCount}`。
+Duplicates a playlist and returns the new `{ index }`.
 
 ```javascript
 const r = await fb.playlist.duplicate(0);
-console.log(`复制到索引 ${r.newPlaylist}`);
+console.log(`Duplicate index: ${r.index}`);
 ```
 
 ## addAsync(index, paths) / addSequential(index, paths) 
 
-异步添加文件（不阻塞 UI）/ 顺序添加（保证文件顺序）。返回 `{success, addedCount}`。
+Adds paths asynchronously or sequentially. The asynchronous form has operation metadata; the sequential form preserves one-by-one insertion order. The 2048-character path/URL limit also applies.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| paths | string[] | 文件路径数组 |
+| `index` | `number` | Playlist index |
+| `paths` | `string[]` | Paths or URLs |
 
 ```javascript
 await fb.playlist.addAsync(0, ['E:\\\\Music\\\\*.flac']);
-await fb.playlist.addSequential(0, paths); // 保证文件顺序
+await fb.playlist.addSequential(0, paths); // Preserve insertion order
 ```
 
 ## addHandles(index, handles) 
 
-精确添加轨道，不自动展开 CUE。
+Adds metadb-handle-like objects without automatic CUE expansion.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| handles | object[] | handle 对象数组，每个包含 {path, subsong?} |
+| `index` | `number` | Playlist index |
+| `handles` | `unknown[]` | Handle objects accepted by the native API |
 
 ```javascript
 await fb.playlist.addHandles(0, [
@@ -173,13 +174,13 @@ await fb.playlist.addHandles(0, [
 
 ## insertTracks(index, insertIndex, handles) 
 
-在指定位置插入轨道。返回 `{success, addedCount}`。
+Inserts handle objects at a playlist position.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| insertIndex | number | 插入位置 |
-| handles | object[] | handle 对象数组 |
+| `index` | `number` | Playlist index |
+| `insertIndex` | `number` | Insertion position |
+| `handles` | `unknown[]` | Handle objects accepted by the native API |
 
 ```javascript
 await fb.playlist.insertTracks(0, 5, handles);
@@ -187,24 +188,24 @@ await fb.playlist.insertTracks(0, 5, handles);
 
 ## removeSelectedTracks(index) 
 
-移除播放列表中已选中的曲目。返回 `{success}`。
+Removes the currently selected tracks. Returns a `BaseResponse`.
 
 ## getFocused(index) / setFocused(index, trackIndex) 
 
-获取/设置焦点曲目（光标位置）。`getFocused` 返回 `{index}`，`setFocused` 返回 `{success}`。
+Gets or sets the focused playlist item. `getFocused()` returns `{ index, track? }`; `setFocused()` returns a `BaseResponse`.
 
 ```javascript
 const r = await fb.playlist.getFocused(0);
-console.log(`焦点在第 ${r.index} 首`);
+console.log(`Focused index: ${r.index}`);
 await fb.playlist.setFocused(0, 10);
 ```
 
 ## getSelection(index) / getSelectedTracks(index) 
 
-获取选中曲目索引/详细信息。
+Gets selected indices or selected track details.
 
-- `getSelection` 返回 `{items: number[], count}`
-- `getSelectedTracks` 返回 `{tracks: [{title, artist, ...}]}`
+- `getSelection()` returns `{ items: number[], count, playlist? }`.
+- `getSelectedTracks()` unwraps the native envelope and returns `PlaylistTrack[]` directly.
 
 ```javascript
 const sel = await fb.playlist.getSelection(0); // {items: [0, 5, 10], count: 3}
@@ -213,13 +214,13 @@ const tracks = await fb.playlist.getSelectedTracks(0);
 
 ## setSelection(index, indices, clearOthers?) / selectAll(index) / deselectAll(index) 
 
-设置/全选/取消选中。返回 `{success}`。
+Sets, selects all, or clears selection. Each method returns a `BaseResponse`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| indices | number[] | 要选中的曲目索引 |
-| clearOthers | boolean | 是否清除其他选中（默认 true） |
+| `index` | `number` | Playlist index |
+| `indices` | `number[]` | Track indices to select |
+| `clearOthers` | `boolean` | Clear existing selection first; defaults to `true` |
 
 ```javascript
 await fb.playlist.setSelection(0, [1, 3, 5]);
@@ -229,75 +230,75 @@ await fb.playlist.deselectAll(0);
 
 ## moveTracks(index, indices, delta) 
 
-移动曲目。返回 `{success}`。
+Moves playlist items by a relative delta.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| indices | number[] | 要移动的曲目索引 |
-| delta | number | 移动偏移量（正=下移，负=上移） |
+| `index` | `number` | Playlist index |
+| `indices` | `number[]` | Item indices to move |
+| `delta` | `number` | Relative offset; positive moves down, negative moves up |
 
 ```javascript
-await fb.playlist.moveTracks(0, [0, 1], 3);  // 向下 3 位
-await fb.playlist.moveTracks(0, [5, 6], -2); // 向上 2 位
+await fb.playlist.moveTracks(0, [0, 1], 3);  // Down three slots
+await fb.playlist.moveTracks(0, [5, 6], -2); // Up two slots
 ```
 
 ## sort(index, pattern, descending?, selectedOnly?) 
 
-按 Title Formatting 模式排序。返回 `{success}`。
+Sorts tracks using a Title Formatting expression.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| index | number | 播放列表索引 |
-| pattern | string | 排序模式（Title Formatting） |
-| descending | boolean | 是否降序（默认 false） |
-| selectedOnly | boolean | 是否只排序选中项（默认 false） |
+| `index` | `number` | Playlist index |
+| `pattern` | `string` | Title Formatting expression |
+| `descending` | `boolean` | Descending order; defaults to `false` |
+| `selectedOnly` | `boolean` | Sort selected items only; defaults to `false` |
 
 ```javascript
 await fb.playlist.sort(0, '%artist%');
-await fb.playlist.sort(0, '%date%', true); // 按日期降序
+await fb.playlist.sort(0, '%date%', true); // Descending by date
 ```
 
 ## reorder(index, order) / shuffle(index) / reverse(index) 
 
-自定义顺序 / 随机打乱 / 反转。返回 `{success}`。
+Applies an explicit item order, shuffles tracks, or reverses the playlist.
 
 ```javascript
-await fb.playlist.reorder(0, [3, 1, 0, 2]); // 自定义顺序
+await fb.playlist.reorder(0, [3, 1, 0, 2]);
 await fb.playlist.shuffle(0);
 await fb.playlist.reverse(0);
 ```
 
 ## undo(index) / redo(index) 
 
-撤销/重做播放列表操作。返回 `{success}`。
+Undoes or redoes a playlist operation.
 
 ```javascript
 await fb.playlist.undo(0);
 await fb.playlist.redo(0);
 ```
 
-## 智能播放列表 
+## Autoplaylists
 
 ### isAutoplaylist(index) 
 
-检查是否为智能播放列表。返回 `{isAutoplaylist}`。
+Returns `{ isAutoplaylist }`.
 
 ```javascript
 const r = await fb.playlist.isAutoplaylist(0);
-if (r.isAutoplaylist) console.log('这是智能播放列表');
+if (r.isAutoplaylist) console.log('This is an autoplaylist');
 ```
 
 ### createAutoplaylist(name, query, sort?, keepSorted?) 
 
-创建智能播放列表。返回 `{success, index, playlist, name, query}`。
+Creates an autoplaylist and returns `{ index }`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| name | string | 播放列表名称 |
-| query | string | 搜索查询表达式 |
-| sort | string | 排序模式（可选） |
-| keepSorted | boolean | 是否保持排序（默认 false） |
+| `name` | `string` | Playlist name |
+| `query` | `string` | foobar2000 query expression |
+| `sort` | `string?` | Optional Title Formatting sort expression |
+| `keepSorted` | `boolean?` | Keep the list sorted; defaults to `false` |
 
 ```javascript
 await fb.playlist.createAutoplaylist(
@@ -310,10 +311,10 @@ await fb.playlist.createAutoplaylist(
 
 ### getAutoplaylistInfo(index) 
 
-获取智能播放列表信息。返回 `{isAutoplaylist, playlist, keepSorted, source}`。
+Returns autoplaylist metadata.
 
-- `source` — `"sdk"`（SDK 创建）或 `"dui"`（DUI 创建）
-- 非智能播放列表时返回 `{isAutoplaylist: false, playlist}`
+- `source` identifies the creation source when the host can determine it.
+- A normal playlist returns `isAutoplaylist: false`.
 
 ```javascript
 const info = await fb.playlist.getAutoplaylistInfo(0);
@@ -324,13 +325,11 @@ if (info.isAutoplaylist) {
 
 ### getAutoplaylistQuery(index) 
 
-获取智能播放列表的查询表达式。返回 `{isAutoplaylist, playlist, query, keepSorted, source, note}`。
-
-> ⚠️ 由于 foobar2000 SDK 限制，`query` 始终为 `null`。
+Returns the native `{ query }` result. The wrapper currently types `query` as `string`; consult host-version behavior before assuming every autoplaylist source exposes its original query.
 
 ### convertToAutoplaylist(index, query, sort?, keepSorted?) 
 
-将普通播放列表转换为智能播放列表。参数同 `createAutoplaylist`。返回 `{success}`。
+Converts a normal playlist to an autoplaylist. Parameters mirror `createAutoplaylist()` plus the playlist index.
 
 ```javascript
 await fb.playlist.convertToAutoplaylist(0, '%rating% GREATER 3', '%rating%', true);
@@ -338,11 +337,11 @@ await fb.playlist.convertToAutoplaylist(0, '%rating% GREATER 3', '%rating%', tru
 
 ### removeAutoplaylist(index) 
 
-移除智能播放列表属性（转为普通列表）。返回 `{success}`。
+Removes autoplaylist behavior and returns the operation result.
 
 ## isLocked(index) / getLockInfo(index) 
 
-获取播放列表锁定状态。
+Gets playlist lock state or lock details.
 
 ```javascript
 const locked = await fb.playlist.isLocked(0);   // {isLocked}
@@ -351,15 +350,15 @@ const info = await fb.playlist.getLockInfo(0);   // {isLocked, lockName, ...}
 
 ## replaceAllAndPlay(options) 
 
-原子操作：清空 + 添加 + 播放。返回 `{success, addedCount}`。
+Atomically clears a playlist, adds paths, and optionally starts playback.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| options.playlist | number | 播放列表索引 |
-| options.paths | string[] | 文件路径数组 |
-| options.playIndex | number | 播放起始索引（默认 0） |
-| options.stopFirst | boolean | 是否先停止当前播放（默认 true） |
-| options.autoPlay | boolean | 是否自动播放（默认 true），false 只装载不播放 |
+| `options.playlist` | `number` | Playlist index |
+| `options.paths` | `string[]` | Paths to load |
+| `options.playIndex` | `number?` | Start index; host default is `0` |
+| `options.stopFirst` | `boolean?` | Stop current playback first; host default is `true` |
+| `options.autoPlay` | `boolean?` | Start playback; host default is `true` |
 
 ```javascript
 await fb.playlist.replaceAllAndPlay({
@@ -369,24 +368,26 @@ await fb.playlist.replaceAllAndPlay({
 });
 ```
 
-重新排序播放列表。`order` 为新顺序的索引数组。
+## reorderPlaylists(order)
+
+Reorders all playlists. `order` is the new sequence of existing playlist indices.
 
 ```javascript
-await fb.playlist.reorderPlaylists([2, 0, 1]); // 将第3个移到最前
+await fb.playlist.reorderPlaylists([2, 0, 1]);
 ```
 
-## 补全方法参考
+## Supplemental method reference
 
 ### focusTrack(playlistIndex, trackIndex)
 
-签名：`fb.playlist.focusTrack(playlistIndex: number, trackIndex: number): Promise<BaseResponse>`
+Signature: `fb.playlist.focusTrack(playlistIndex: number, trackIndex: number): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| playlistIndex | number | 是 | 播放列表索引 |
-| trackIndex | number | 是 | 曲目索引 |
+| `playlistIndex` | `number` | Yes | Playlist index |
+| `trackIndex` | `number` | Yes | Track index |
 
-返回值：设置焦点曲目的操作结果。
+Returns the focus operation result.
 
 ```javascript
 await fb.playlist.focusTrack(0, 12);
@@ -394,13 +395,13 @@ await fb.playlist.focusTrack(0, 12);
 
 ### getAutoplaylistQuery(index)
 
-签名：`fb.playlist.getAutoplaylistQuery(index: number): Promise<AutoplaylistQueryResponse>`
+Signature: `fb.playlist.getAutoplaylistQuery(index: number): Promise<{ query: string }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| index | number | 是 | 播放列表索引 |
+| `index` | `number` | Yes | Playlist index |
 
-返回值：智能播放列表查询信息；受 foobar2000 SDK 限制，部分来源的 `query` 可能为 `null`。
+Returns the autoplaylist query exposed by the host.
 
 ```javascript
 const query = await fb.playlist.getAutoplaylistQuery(0);
@@ -408,13 +409,13 @@ const query = await fb.playlist.getAutoplaylistQuery(0);
 
 ### getAvailableColumns()
 
-签名：`fb.playlist.getAvailableColumns(): Promise<PlaylistColumnsResponse>`
+Signature: `fb.playlist.getAvailableColumns(): Promise<PlaylistAvailableColumnsResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| - | - | - | 无参数 |
+| - | - | - | No parameters |
 
-返回值：可用于播放列表显示或排序的列定义。
+Returns available DUI playlist column definitions.
 
 ```javascript
 const columns = await fb.playlist.getAvailableColumns();
@@ -422,13 +423,13 @@ const columns = await fb.playlist.getAvailableColumns();
 
 ### getFocusTrack(index)
 
-签名：`fb.playlist.getFocusTrack(index: number): Promise<PlaylistFocusTrackResponse>`
+Signature: `fb.playlist.getFocusTrack(index: number): Promise<{ index: number; track?: TrackInfo }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| index | number | 是 | 播放列表索引 |
+| `index` | `number` | Yes | Playlist index |
 
-返回值：当前焦点曲目的索引或曲目信息。
+Returns the focused index and optional track snapshot.
 
 ```javascript
 const focus = await fb.playlist.getFocusTrack(0);
@@ -436,13 +437,13 @@ const focus = await fb.playlist.getFocusTrack(0);
 
 ### getPlaylistCount()
 
-签名：`fb.playlist.getPlaylistCount(): Promise<{ count: number }>`
+Signature: `fb.playlist.getPlaylistCount(): Promise<{ count: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| - | - | - | 无参数 |
+| - | - | - | No parameters |
 
-返回值：播放列表总数。
+Returns the total playlist count.
 
 ```javascript
 const { count } = await fb.playlist.getPlaylistCount();
@@ -450,13 +451,13 @@ const { count } = await fb.playlist.getPlaylistCount();
 
 ### removeAutoplaylist(index)
 
-签名：`fb.playlist.removeAutoplaylist(index: number): Promise<BaseResponse>`
+Signature: `fb.playlist.removeAutoplaylist(index: number): Promise<PlaylistRemoveAutoplaylistResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| index | number | 是 | 播放列表索引 |
+| `index` | `number` | Yes | Playlist index |
 
-返回值：移除智能播放列表属性后的操作结果。
+Returns the conversion-to-normal-playlist result.
 
 ```javascript
 await fb.playlist.removeAutoplaylist(0);
@@ -464,13 +465,13 @@ await fb.playlist.removeAutoplaylist(0);
 
 ### removeSelectedTracks(index)
 
-签名：`fb.playlist.removeSelectedTracks(index: number): Promise<BaseResponse>`
+Signature: `fb.playlist.removeSelectedTracks(index: number): Promise<BaseResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| index | number | 是 | 播放列表索引 |
+| `index` | `number` | Yes | Playlist index |
 
-返回值：移除所选曲目的操作结果。
+Returns the remove operation result.
 
 ```javascript
 await fb.playlist.removeSelectedTracks(0);

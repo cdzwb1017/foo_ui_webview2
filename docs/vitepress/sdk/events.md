@@ -1,18 +1,20 @@
-# SDK 事件系统 
+# SDK event system
 
-## 订阅事件 
+Event names use colon notation, such as `playback:trackChanged`. Method invocations use dot notation, such as `playback.play`.
+
+## Subscribe
 
 ```javascript
-// 订阅事件，返回取消订阅函数
+// Subscribe and retain the returned unsubscribe function.
 const unsubscribe = fb.on('playback:trackChanged', (track) => {
     console.log('Now playing:', track.title);
 });
 
-// 取消订阅
+// Unsubscribe.
 unsubscribe();
 ```
 
-## 一次性事件 
+## Subscribe once
 
 ```javascript
 fb.once('playback:trackChanged', (track) => {
@@ -20,138 +22,158 @@ fb.once('playback:trackChanged', (track) => {
 });
 ```
 
-## 取消订阅 
+## Unsubscribe
 
 ```javascript
-// 方式一：使用返回的 unsubscribe 函数（推荐）
+// Preferred: call the function returned by fb.on().
 const unsub = fb.on('playback:time', handler);
 unsub();
 
-// 方式二：手动 off
+// Alternatively, remove the same handler explicitly.
 fb.on('playback:time', handler);
 fb.off('playback:time', handler);
 ```
 
-## 播放事件 
+## Playback events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| playback:trackChanged | 曲目切换 | {title, artist, album, duration, path, id, absolutePath} |
-| playback:stateChanged | 播放状态变化 | {state, position, duration} (state: "playing" / "paused" / "stopped") |
-| playback:paused | 播放/暂停切换 | {paused} |
-| playback:stopped | 播放停止 | {reason} ("user" / "eof" / "starting_another" / "shutting_down") |
-| playback:starting | 播放即将开始 | {command, paused} (command: "play" / "next" / "previous" / "random") |
-| playback:seeked | 播放位置跳转 | {position} |
-| playback:volumeChanged | 音量变化 | {volume, volumeDb, muted, isMuted} |
-| playback:time | 播放时间更新（~1秒/次，整数秒） | {position} |
-| playback:timeHighRes | 高精度时间更新（~100ms，小数秒，C++ 定时器轮询真实位置） | {position} |
-| playback:orderChanged | 播放顺序变化 | {orderIndex, order} |
-| playback:queueChanged | 播放队列变化 | {origin} ("user_added" / "user_removed" / "playback_advance") |
-| playback:edited | 当前曲目元数据被编辑 | {title, artist, album, duration, path, ...} |
-| playback:dynamicInfo | 动态信息变化（网络流） | {bitrate, streamTitle?} |
-| playback:dynamicInfoTrack | 动态曲目信息变化 | {artist?, title?} |
-| playback:itemPlayed | 曲目播放完成 | {title, artist, album, duration, path, ...} (完整 track info) |
-| playback:stopAfterCurrentChanged | "当前曲目后停止"状态变化 | {enabled} |
-| playback:followCursorChanged | "播放跟随光标"变化 | {enabled} |
-| playback:cursorFollowChanged | "光标跟随播放"变化 | {enabled} |
+| `playback:trackChanged` | The current track changes | `PlaybackTrackChangedPayload` |
+| `playback:stateChanged` | Playback state changes | `{ state, position?, duration? }` |
+| `playback:paused` | Pause state changes | `{ paused }` |
+| `playback:stopped` | Playback stops | `{ reason }` |
+| `playback:starting` | Playback is about to start | `{ command, paused? }` |
+| `playback:seeked` | Playback position is changed | `{ position }` |
+| `playback:volumeChanged` | Volume or mute state changes | `{ volume, volumeDb, muted, isMuted }` |
+| `playback:time` | The normal-resolution position updates | `{ position }` |
+| `playback:timeHighRes` | The high-resolution position updates | `{ position }` |
+| `playback:orderChanged` | Playback order changes | `{ orderIndex, order }` |
+| `playback:queueChanged` | Playback queue changes | `{ origin }` |
+| `playback:edited` | Current-track metadata changes | `PlaybackEditedPayload` |
+| `playback:dynamicInfo` | Stream information changes | `{ bitrate, streamTitle? }` |
+| `playback:dynamicInfoTrack` | Dynamic stream-track metadata changes | `{ artist?, title? }` |
+| `playback:itemPlayed` | A track finishes playing | `PlaybackItemPlayedPayload` |
+| `playback:stopAfterCurrentChanged` | Stop-after-current changes | `{ enabled }` |
+| `playback:followCursorChanged` | Playback-follow-cursor changes | `{ enabled }` |
+| `playback:cursorFollowChanged` | Cursor-follow-playback changes | `{ enabled }` |
 
-## 播放列表事件 
+## Playlist events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| playlist:activated | 活动播放列表切换 | {oldIndex, newIndex} |
-| playlist:created | 播放列表创建 | {index, name} |
-| playlist:removed | 播放列表删除 | {oldCount, newCount} |
-| playlist:renamed | 播放列表重命名 | {index, name} |
-| playlist:reordered | 播放列表顺序变化 | {count} |
-| playlist:lockChanged | 锁定状态变化 | {playlist, locked} |
-| playlist:itemsAdded | 曲目添加 | {playlist, start, count} |
-| playlist:itemsRemoved | 曲目移除 | {playlist, oldCount, newCount} |
-| playlist:itemsReordered | 曲目重新排序 | {playlist, count} |
-| playlist:itemsReplaced | 曲目替换 | {playlist, count} |
-| playlist:selectionChanged | 选中项变化 | {playlist} |
-| playlist:focusChanged | 焦点曲目变化 | {playlist, from, to} |
-| playlist:defaultFormatChanged | 默认格式变化 | - |
-| playlist:addComplete | 异步添加完成（广播） | {operationId, success, addedCount, totalCount} |
+| `playlist:activated` | Active playlist changes | `{ oldIndex, newIndex }` |
+| `playlist:created` | A playlist is created | `{ index, name }` |
+| `playlist:removed` | A playlist is removed | `{ oldCount, newCount }` |
+| `playlist:renamed` | A playlist is renamed | `{ index, name }` |
+| `playlist:reordered` | Playlist order changes | `{ count }` |
+| `playlist:lockChanged` | Playlist lock state changes | `{ playlist, locked }` |
+| `playlist:itemsAdded` | Items are added | `{ playlist, start, count }` |
+| `playlist:itemsRemoved` | Items are removed | `{ playlist, oldCount, newCount }` |
+| `playlist:itemsReordered` | Items are reordered | `{ playlist, count }` |
+| `playlist:itemsReplaced` | Items are replaced | `{ playlist, count }` |
+| `playlist:selectionChanged` | Selection changes | `{ playlist }` |
+| `playlist:focusChanged` | Focused item changes | `{ playlist, from, to }` |
+| `playlist:defaultFormatChanged` | Default formatting changes | Empty object |
+| `playlist:addComplete` | An asynchronous add completes | `{ operationId, success, addedCount, totalCount }` |
 
-## 媒体库 / 元数据事件 
+## Library, metadata, and selection events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| library:itemsAdded | 媒体库新增项目 | {count, timestamp} |
-| library:itemsRemoved | 媒体库移除项目 | {count, timestamp} |
-| library:itemsModified | 媒体库项目修改 | {count, timestamp} |
-| library:initialized | 媒体库初始化完成 | {timestamp} |
-| metadb:changed | 元数据变化 | {tracks, count, fromHook, timestamp} |
-| selection:changed | 全局选择变化（50ms 节流） | {count, type, handles, truncated, track?, nowPlaying?} |
+| `library:itemsAdded` | Library items are added | `{ count, timestamp }` |
+| `library:itemsRemoved` | Library items are removed | `{ count, timestamp }` |
+| `library:itemsModified` | Library items are modified | `{ count, timestamp }` |
+| `library:initialized` | Library initialization completes | `{ timestamp }` |
+| `library:getAllResult` | An asynchronous `library.getAll` result is ready | `LibraryGetAllResultPayload` |
+| `metadata:writeComplete` | An asynchronous metadata write completes | `MetadataWriteCompletePayload` |
+| `metadb:changed` | Metadata changes | `{ tracks, count, fromHook, timestamp }` |
+| `selection:changed` | Global selection changes | `{ count, type, handles, truncated, track, nowPlaying }` |
 
-## 音频事件 
+## Audio events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| audio:spectrum | 频谱数据更新（需订阅） | {spectrum} |
-| audio:stream | 音频流数据更新（需调用 subscribeStream 订阅） | 音频流数据 |
-| audio:dspPresetChanged | DSP 预设变化 | - |
-| audio:outputDeviceChanged | 输出设备变化 | - |
-| audio:replaygainModeChanged | ReplayGain 模式变化 | {mode} |
-| audio:fullWaveformReady | 完整波形生成完成 | {taskId, path, waveform, duration, ...} |
-| audio:fullWaveformFailed | 完整波形生成失败 | {taskId, path, error, code} |
+| `audio:spectrum` | Subscribed spectrum data updates | `{ spectrum, fftSize?, bands? }` |
+| `audio:stream` | Subscribed audio-stream data updates | Currently typed as an empty object |
+| `audio:dspPresetChanged` | DSP preset changes | Empty object |
+| `audio:outputDeviceChanged` | Output device changes | Empty object |
+| `audio:replaygainModeChanged` | ReplayGain mode changes | `{ mode }` |
+| `audio:fullWaveformReady` | Full-waveform generation completes | `AudioFullWaveformReadyPayload` |
+| `audio:fullWaveformFailed` | Full-waveform generation fails | `{ taskId, path, error, code }` |
 
-## 窗口 / 面板 / UI 事件 
+## Window, panel, UI, and desktop events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| window:alwaysOnTopChanged | 置顶状态变化 | {enabled} |
-| window:stateChanged | 窗口状态变化 | 规范字段 {isMaximized, isMinimized}（运行时暂兼容 maximized / minimized） |
-| window:popupOpened | 弹出窗口打开 | {windowId, title, url} |
-| window:popupClosed | 弹出窗口关闭 | {windowId} |
-| window:beforeClose | 窗口关闭前确认 | {windowId} |
-| window:message | 跨窗口消息接收 | {sourceWindowId, message} |
-| window:behaviorChanged | 弹窗行为策略变更 | {windowId, profile, behavior, resolvedBehavior} |
-| window:minimizeSuppressed | 抑制最小化（Win+D 策略） | {windowId, reason} |
-| window:backdropStateChanged | 主窗口 / popup 的 DWM 激活/失焦策略生效 | {windowId, active, mode, effect} |
-| panel:initialized | 面板初始化完成 | {mode, panelMode, windowId} |
-| panel:focus | 面板获得焦点 | - |
-| panel:blur | 面板失去焦点 | - |
-| panel:visibilityChanged | DUI 面板可见性变化 | {visible} |
-| panel:configChanged | 面板配置变化 | {panelName, templateName, edgeStyle, transparentBackground, grabFocus, enableDragDrop, enableDevTools, urlOverride} |
-| ui:coloursChanged | 颜色主题变化 | - |
-| ui:fontChanged | 字体变化 | - |
-| ui:menuItemClicked | 菜单项点击 | {id, label} |
-| ui:toast | 通知消息 | {message, duration, type, position} |
-| system:themeChanged | 系统主题变化 | {darkMode} |
+| `window:alwaysOnTopChanged` | Always-on-top changes | `{ enabled }` |
+| `window:stateChanged` | Window state changes | Canonical `isMaximized`, `isMinimized`, `isActive`, and `isFullscreen` fields plus compatibility aliases |
+| `window:popupOpened` | A popup opens | `{ windowId, title, url }` |
+| `window:popupClosed` | A popup closes | `{ windowId }` |
+| `window:beforeClose` | Close confirmation is requested | `{ windowId }` |
+| `window:message` | A cross-window message arrives | `{ sourceWindowId, message }` |
+| `window:behaviorChanged` | Popup behavior changes | `{ windowId, profile, behavior, resolvedBehavior }` |
+| `window:minimizeSuppressed` | A minimize action is suppressed | `{ windowId, reason }` |
+| `window:backdropStateChanged` | A backdrop activation policy is applied | `{ windowId, active, mode, effect }` |
+| `window:hoverStateChanged` | Window hover state changes | `{ windowId, reason?, hovering? }` |
+| `panel:initialized` | Panel initialization completes | `PanelInitializedPayload` |
+| `panel:focus` / `panel:blur` | Panel focus changes | Empty object |
+| `panel:visibilityChanged` | DUI panel visibility changes | `{ visible }` |
+| `panel:configChanged` | Panel configuration changes | `PanelConfigChangedPayload` |
+| `ui:coloursChanged` / `ui:fontChanged` | UI colors or fonts change | Unspecified object |
+| `ui:menuItemClicked` | A UI menu item is clicked | `{ id, label }` |
+| `ui:toast` | A toast is requested | `{ message, duration, type, position }` |
+| `system:themeChanged` | System theme changes | `{ darkMode }` |
+| `cursor:hiddenChanged` | Cursor hidden state changes | `CursorHiddenChangedPayload` |
+| `taskbar:buttonClicked` | A taskbar button is clicked | `{ id }` |
+| `webview:processFailed` | A WebView process fails or recovers | `{ kind, kindRaw, recovered, recoveryAction }` |
 
-## 其他事件 
+## Tray events
 
-| 事件名 | 触发时机 | 数据 |
+The tray icon is application-scoped and has no source window. Its events are broadcast to all windows.
+
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| app:beforeQuit | foobar2000 即将退出 | - |
-| keyboard:hotkey | 键盘快捷键 | {action, key} |
+| `tray:click` | The tray icon is clicked | `{ button, x, y }` |
+| `tray:doubleClick` | The tray icon is double-clicked | `{ x, y }` |
+| `tray:beforeContextMenu` | Before the context menu opens | `{ x, y }` |
+| `tray:menuItemClicked` | A tray item is selected or a rich value changes | `{ id, value? }` |
 
-## 跨窗口通信事件 
+Ordinary items and now-playing cards report `{ id }` and close the menu. Rich value controls report `{ id, value }` and keep it open: ratings use `0..5`, sliders use an integer in `[min, max]`, and segmented controls use the selected zero-based index.
 
-| 事件名 | 触发时机 | 数据 |
+## Application, keyboard, and menu events
+
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| port:connected | 命名通道连接 | {portId, name, windowId} |
-| port:disconnected | 命名通道断开 | {portId, name, windowId} |
-| port:message | 收到跨窗口消息 | {portId, sourcePortId, sourceWindowId, message} |
-| state:changed | 共享状态变更 | {key, value, sourceWindowId} |
-| state:deleted | 共享状态删除 | {key, sourceWindowId} |
+| `app:beforeQuit` | foobar2000 is about to quit | Empty object |
+| `keyboard:hotkey` | A registered hotkey fires | `{ id, key, action }` |
+| `menu:show` | A custom menu opens | `{ menuId }` |
+| `menu:select` | A custom-menu item is selected | `{ menuId, itemId }` |
+| `menu:dismiss` | A custom menu closes | `{ menuId, reason }` |
 
-## 插件事件 
+## Cross-window events
 
-| 事件名 | 触发时机 | 数据 |
+| Event | Emitted when | Payload |
 | --- | --- | --- |
-| plugin:registered | 外部插件注册 | {namespace, name, version} |
-| plugin:unregistered | 外部插件注销 | {namespace} |
-| api:registered | 外部 API 注册 | {namespace, method} |
-| api:unregistered | 外部 API 注销 | {namespace, method} |
-| http:response | 异步 HTTP 请求完成 | {requestId, success, status, body, headers} |
-| jitQueue:needNext | 后端请求下一首 | {currentTrackId, reason} (reason: "trackChange" / "prefetch") |
-| jitQueue:trackChanged | 播放曲目变化 | {trackId, title} |
-| jitQueue:listExhausted | 缓冲区耗尽 | {lastTrackId} |
-| jitQueue:error | 错误 | {trackId, error, url} |
+| `port:connected` | A named port connects | `{ portId, name, windowId }` |
+| `port:disconnected` | A named port disconnects | `{ portId, name, windowId }` |
+| `port:message` | A port message arrives | `{ portId, sourcePortId, sourceWindowId, message }` |
+| `state:changed` | Shared state changes | `{ key, value, previousValue, sourceWindowId, expiresAt? }` |
+| `state:deleted` | Shared state is removed or expires | `{ key, sourceWindowId, reason }` |
 
-所有事件同时派发为 `fb2k:*` DOM 事件（CustomEvent）。
+## Plugin, HTTP, and JIT queue events
 
-完整事件参考及字段说明见 [事件系统参考](/reference/events)。 SMP 事件名映射见 [SMP 兼容层](/reference/smp-compat#事件系统)。
+| Event | Emitted when | Payload |
+| --- | --- | --- |
+| `plugin:registered` / `plugin:unregistered` | An external plugin is registered or removed | `PluginRegisteredPayload` / `PluginUnregisteredPayload` |
+| `api:registered` / `api:unregistered` | An external API is registered or removed | `ApiRegisteredPayload` / `ApiUnregisteredPayload` |
+| `http:response` | An asynchronous HTTP request completes | `HttpResponsePayload` |
+| `http:downloadComplete` | A download completes | `HttpDownloadCompletePayload` |
+| `jitQueue:needNext` | The host requests the next item | `{ currentTrackId, reason }` |
+| `jitQueue:trackChanged` | The JIT queue's current track changes | `{ trackId, title }` |
+| `jitQueue:listExhausted` | The JIT queue buffer is exhausted | `{ lastTrackId }` |
+| `jitQueue:preloadComplete` | JIT preloading completes | `JitQueuePreloadCompletePayload` |
+| `jitQueue:error` | A JIT queue item fails | `{ trackId, error, url? or path? }` |
+
+Host events are also dispatched as `fb2k:*` DOM `CustomEvent` instances.
+
+See the [event-system reference](/reference/events) for the complete payload reference. SMP event-name mappings are documented in the [SMP compatibility layer](/reference/smp-compat#smp-events).

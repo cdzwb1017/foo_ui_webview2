@@ -1,246 +1,255 @@
-# 文件与网络
+# Files, Networking, and Native I/O
 
-涵盖 `fb.file`、`fb.http`、`fb.dialog`、`fb.clipboard` 四个命名空间。
+This page summarizes the `fb.file`, `fb.http`, `fb.dialog`, and `fb.clipboard` namespaces. See each namespace page for the complete typed contract.
 
-## fb.file 文件系统 
+## fb.file File System
 
-### read(path, options?) 
+### read(path, options?)
 
-读取文件内容。
+Reads a text file and resolves with `{ content }`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 文件路径 |
-| options | object | 可选，如 { encoding: 'utf-8' } |
+| `path` | `string` | File path |
+| `options.encoding` | `string` | Optional encoding; defaults to `utf-8` |
 
 ```javascript
-const content = await fb.file.read('E:\\\\config.json');
+const { content } = await fb.file.read('C:\\Config\\settings.json');
 ```
 
-### write(path, content, options?) 
+### write(path, content, options?)
 
-写入文件内容。
+Writes text and returns a response that may include `bytesWritten`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 文件路径 |
-| content | string | 文件内容 |
-| options | object | 可选，如 { encoding: 'utf-8' } |
+| `path` | `string` | File path |
+| `content` | `string` | Text content |
+| `options.encoding` | `string` | Optional encoding; defaults to `utf-8` |
+| `options.append` | `boolean` | Append instead of replacing; defaults to `false` |
 
 ```javascript
-await fb.file.write('E:\\\\output.txt', 'Hello World');
+await fb.file.write('C:\\Logs\\theme.log', 'Ready\n', { append: true });
 ```
 
-### exists(path) 
+### exists(path)
 
-检查文件是否存在。返回 `{exists: boolean}`。
+Checks whether a file-system entry exists and returns `{ exists }`.
 
 ```javascript
-const r = await fb.file.exists('E:\\\\Music\\\\song.flac');
+const r = await fb.file.exists('C:\\Music\\song.flac');
 if (r.exists) { /* ... */ }
 ```
 
-### list(path, options?) 
+### list(path, options?)
 
-列出目录内容。
+Lists files and directories.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 目录路径 |
-| options | object | 可选，如 { recursive: true } |
+| `path` | `string` | Directory path |
+| `options.pattern` | `string` | File-mask pattern; defaults to `*` |
+| `options.recursive` | `boolean` | Recursively enumerate entries; defaults to `false` |
 
 ```javascript
-const r = await fb.file.list('E:\\\\Music');
-// r.files, r.directories
+const r = await fb.file.list('C:\\Music', { pattern: '*.flac', recursive: true });
+// r.files, r.directories, r.items
 ```
 
-### delete(path) 
+### delete(path)
 
-删除文件。
+Deletes an entry. The facade uses the host default of moving it to the Recycle Bin.
 
 ```javascript
-await fb.file.delete('E:\\\\temp\\\\cache.dat');
+await fb.file.delete('C:\\Temp\\cache.dat');
 ```
 
-### mkdir(path) 
+### mkdir(path)
 
-创建目录（含递归创建父目录）。
+Creates a directory and any missing parents.
 
 ```javascript
-await fb.file.mkdir('E:\\\\output\\\\logs');
+await fb.file.mkdir('C:\\Output\\Logs');
 ```
 
-### copy(source, destination) 
+### copy(source, destination)
 
-复制文件。
+Copies a file. The facade does not request overwrite behavior.
 
 ```javascript
-await fb.file.copy('E:\\\\src.txt', 'E:\\\\backup\\\\src.txt');
+await fb.file.copy('C:\\Source\\track.flac', 'C:\\Backup\\track.flac');
 ```
 
-### move(source, destination) 
+### move(source, destination)
 
-移动文件。
+Moves a file-system entry.
 
 ```javascript
-await fb.file.move('E:\\\\old\\\\file.txt', 'E:\\\\new\\\\file.txt');
+await fb.file.move('C:\\Old\\file.txt', 'C:\\New\\file.txt');
 ```
 
-### rename(path, newName) 
+### rename(path, newName)
 
-重命名文件。
+Renames an entry within its current parent directory.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| path | string | 当前路径 |
-| newName | string | 新文件名（仅名称，非完整路径） |
+| `path` | `string` | Current path |
+| `newName` | `string` | New name only, not a destination path |
 
 ```javascript
-await fb.file.rename('E:\\\\Music\\\\old.mp3', 'new.mp3');
+await fb.file.rename('C:\\Music\\old.mp3', 'new.mp3');
 ```
 
-### getInfo(path) 
+### getInfo(path)
 
-获取文件信息（大小、修改时间等）。
+Returns file-system metadata. Available fields include `exists`, `isDirectory`, `isFile`, `size`, `modified`, `name`, `extension`, and `parent`; `modified` is a JavaScript timestamp in milliseconds.
 
 ```javascript
-const info = await fb.file.getInfo('E:\\\\Music\\\\song.flac');
-// info.size, info.lastModified, ...
+const info = await fb.file.getInfo('C:\\Music\\song.flac');
+// info.size, info.modified, ...
 ```
 
-## fb.http HTTP 请求 
+## fb.http HTTP Client
 
-### get(url, options?) 
+### get(url, options?)
 
-发送 GET 请求。
+Dispatches a GET request through the host. Requests are asynchronous by default: the immediate result contains `requestId`, and the final response arrives through `http:response`. Use `{ async: false }` for a direct response or `request()` for an awaited event-driven GET.
 
 ```javascript
-const r = await fb.http.get('https://api.example.com/data');
+const r = await fb.http.get('https://api.example.com/data', { async: false });
 // r.status, r.body, r.headers
 ```
 
-### post(url, body, options?) 
+### post(url, body?, options?)
 
-发送 POST 请求。
+Dispatches a POST request. Non-string JSON bodies are serialized by the host.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| url | string | 请求 URL |
-| body | string/object | 请求体 |
-| options | object | 可选，如 { headers: {...} } |
+| `url` | `string` | Request URL |
+| `body` | `JsonValue` | Optional request body |
+| `options` | `HttpRequestOptions` | Headers, timeout, async mode, redirects, response decoding, and TLS policy |
 
 ```javascript
 await fb.http.post('https://api.example.com/submit', { title: 'test' });
 ```
 
-### head(url, options?) 
+### head(url, options?)
 
-发送 HEAD 请求。仅获取响应头。
+Dispatches a HEAD request. A synchronous response may include `contentLength` parsed from the response headers.
 
 ```javascript
 const r = await fb.http.head('https://example.com/file.zip');
-// r.headers['content-length']
+// Final async result: http:response; direct result when async: false
 ```
 
-### download(url, saveTo, options?) 
+### download(url, saveTo, options?)
 
-下载文件到本地。
+Downloads a URL to a local path. Download mode is synchronous by default; `{ async: true }` reports final completion through `http:downloadComplete`.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| url | string | 下载 URL |
-| saveTo | string | 保存路径 |
-| options | object | 可选配置 |
+| `url` | `string` | Download URL |
+| `saveTo` | `string` | Destination path |
+| `options` | `HttpDownloadOptions` | Optional headers, timeout, redirects, async mode, request ID, and TLS policy |
 
 ```javascript
-await fb.http.download('https://example.com/cover.jpg', 'E:\\\\covers\\\\cover.jpg');
+await fb.http.download('https://example.com/cover.jpg', 'C:\\Covers\\cover.jpg');
 ```
 
-### put(url, body, options?) 
+### put(url, body?, options?)
 
-发送 PUT 请求。参数与 `post` 相同。
+Dispatches a PUT request with the same body and option semantics as `post()`.
 
-### delete(url, body?, options?) 
+### delete(url, body?, options?)
 
-发送 DELETE 请求。
+Dispatches a DELETE request. The optional body is the second positional argument.
 
-### patch(url, body, options?) 
+### patch(url, body?, options?)
 
-发送 PATCH 请求。参数与 `post` 相同。
+Dispatches a PATCH request with the same body and option semantics as `post()`.
 
-### abort(requestId) 
+### request(url, options?)
 
-中止正在进行的 HTTP 请求。`requestId` 由请求方法返回。
+Performs a GET and waits for either a synchronous host reply or the matching `http:response` event. The SDK cleans up its event listener and timeout on every completion path.
 
-## fb.dialog 对话框 
+### abort(requestId)
 
-### openFile(options?) 
+Cancels an in-flight request using the correlation ID returned by an asynchronous dispatch.
 
-打开文件选择对话框。返回用户选择的文件路径。
+## fb.dialog Native Dialogs
+
+### openFile(options?)
+
+Opens the native file picker and returns `{ canceled, filePaths, error? }`.
 
 ```javascript
-const r = await fb.dialog.openFile({ filter: '音频文件|*.flac;*.mp3' });
-// r.path
+const r = await fb.dialog.openFile({
+	multiple: true,
+	filters: ['*.flac', '*.mp3']
+});
+// r.filePaths
 ```
 
-### saveFile(options?) 
+### saveFile(options?)
 
-打开文件保存对话框。
+Opens the native save picker and returns `{ canceled, filePath, error? }`.
 
 ```javascript
 const r = await fb.dialog.saveFile({ defaultName: 'playlist.m3u8' });
-// r.path
+// r.filePath
 ```
 
-### openFolder(options?) 
+### openFolder(options?)
 
-打开文件夹选择对话框。
+Opens the native folder picker and returns `{ canceled, folderPath, error? }`.
 
 ```javascript
-const r = await fb.dialog.openFolder({ title: '选择音乐目录' });
-// r.path
+const r = await fb.dialog.openFolder({ title: 'Choose a music folder' });
+// r.folderPath
 ```
 
-### confirm(options?) 
+### confirm(options?)
 
-显示确认对话框。返回 `{result: boolean}`。
+Displays a native confirmation dialog and returns `{ confirmed }`.
 
 ```javascript
-const r = await fb.dialog.confirm({ title: '确认', message: '是否删除？' });
-if (r.result) { /* 用户点击确认 */ }
+const r = await fb.dialog.confirm({ title: 'Confirm', message: 'Delete this item?' });
+if (r.confirmed) { /* confirmed */ }
 ```
 
-## fb.clipboard 剪贴板 
+## fb.clipboard Clipboard
 
-### read() 
+### read()
 
-读取剪贴板文本。
+Reads clipboard text.
 
 ```javascript
 const r = await fb.clipboard.read();
 console.log(r.text);
 ```
 
-### write(text) 
+### write(text)
 
-写入文本到剪贴板。
+Writes plain text.
 
 ```javascript
-await fb.clipboard.write('复制的内容');
+await fb.clipboard.write('Copied text');
 ```
 
-### writeHTML(html, plainText?) 
+### writeHTML(html, plainText?)
 
-写入 HTML 到剪贴板，可选提供纯文本备选。
+Writes HTML and an optional non-empty plain-text fallback.
 
 ```javascript
-await fb.clipboard.writeHTML('<b>粗体</b>', '粗体');
+await fb.clipboard.writeHTML('<strong>Now playing</strong>', 'Now playing');
 ```
 
-### writeFiles(paths) 
+### writeFiles(paths)
 
-将文件路径列表写入剪贴板（用于粘贴文件）。
+Writes a file-list payload for pasting into file-aware applications.
 
 ```javascript
-await fb.clipboard.writeFiles(['E:\\\\Music\\\\a.flac', 'E:\\\\Music\\\\b.flac']);
+await fb.clipboard.writeFiles(['C:\\Music\\a.flac', 'C:\\Music\\b.flac']);
 ```

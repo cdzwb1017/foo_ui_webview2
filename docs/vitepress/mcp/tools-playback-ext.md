@@ -1,50 +1,26 @@
-# Playback Extended 工具 
+# Playback Extended Tools
 
-播放扩展：静音、播放顺序、路径播放。共 13 个工具。
+Thirteen tools cover mute control, volume steps, playback order, stop-after-current, track location, path playback, and random playback.
 
-## 静音控制 
+## Mute and volume steps
 
-### fb2k_playback_mute 
-
-设置静音状态。
-
-- **Bridge 方法**: `playback.mute`
-
-| 参数 | 类型 | 必填 | 描述 |
+| Tool | Bridge method | Parameters | Description |
 | --- | --- | --- | --- |
-| muted | boolean | ? | 是否静音（默认 true） |
+| `fb2k_playback_mute` | `playback.mute` | optional `muted: boolean`, default `true` | Set mute state |
+| `fb2k_playback_toggle_mute` | `playback.toggleMute` | none | Toggle mute state |
+| `fb2k_playback_volume_up` | `playback.volumeUp` | none | Increase volume by one step |
+| `fb2k_playback_volume_down` | `playback.volumeDown` | none | Decrease volume by one step |
 
-### fb2k_playback_toggle_mute 
+## Playback order
 
-切换静音状态。
+### fb2k_playback_get_playback_order
 
-- **参数**: 无
-- **Bridge 方法**: `playback.toggleMute`
+Gets the current playback-order mode.
 
-### fb2k_playback_volume_up 
+- **Parameters**: none
+- **Bridge method**: `playback.getPlaybackOrder`
 
-音量增加一档。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.volumeUp`
-
-### fb2k_playback_volume_down 
-
-音量减少一档。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.volumeDown`
-
-## 播放顺序 
-
-### fb2k_playback_get_playback_order 
-
-获取当前播放顺序模式。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.getPlaybackOrder`
-
-**返回值**:
+**Example result:**
 
 ```json
 {
@@ -55,78 +31,68 @@
 }
 ```
 
-| 字段 | 类型 | 描述 |
+| Field | Type | Description |
 | --- | --- | --- |
-| order | integer | 播放顺序索引（0–6） |
-| orderName | string | 播放顺序名称 |
-| name | string | orderName 的别名 |
-| orderIndex | integer | order 的别名 |
+| `order` | integer | Playback-order index from `0` to `6` |
+| `orderName` | string | Playback-order name |
+| `name` | string | Alias of `orderName` |
+| `orderIndex` | integer | Alias of `order` |
 
-### fb2k_playback_set_playback_order 
+### fb2k_playback_set_playback_order
 
-设置播放顺序模式。
+Sets the playback-order mode.
 
-- **Bridge 方法**: `playback.setPlaybackOrder`
+- **Bridge method**: `playback.setPlaybackOrder`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Values |
 | --- | --- | --- | --- |
-| order | string | ? | 播放顺序模式 |
+| `order` | string | Yes | `default`, `repeat-playlist`, `repeat-track`, `random`, `shuffle-tracks`, `shuffle-albums`, or `shuffle-folders` |
 
-可选值：
+## Stop after current
 
-| 值 | 说明 |
-| --- | --- |
-| default | 默认顺序 |
-| repeat-playlist | 重复播放列表 |
-| repeat-track | 单曲循环 |
-| random | 随机播放 |
-| shuffle-tracks | 随机曲目 |
-| shuffle-albums | 随机专辑 |
-| shuffle-folders | 随机文件夹 |
+### fb2k_playback_get_stop_after_current
 
-## 停止后当前曲目 
+Gets the stop-after-current state.
 
-### fb2k_playback_get_stop_after_current 
+- **Parameters**: none
+- **Bridge method**: `playback.getStopAfterCurrent`
 
-获取"当前曲目后停止"状态。
-
-- **参数**: 无
-- **Bridge 方法**: `playback.getStopAfterCurrent`**返回值**:
+**Example result:**
 
 ```json
 { "enabled": false }
 ```
 
-### fb2k_playback_set_stop_after_current 
+### fb2k_playback_set_stop_after_current
 
-设置"当前曲目后停止"。
+Sets stop-after-current.
 
-- **Bridge 方法**: `playback.setStopAfterCurrent`
+- **Bridge method**: `playback.setStopAfterCurrent`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| enabled | boolean | ? | 是否启用 |
+| `enabled` | boolean | Yes | Whether stop-after-current is enabled |
 
-### fb2k_playback_toggle_stop_after_current 
+### fb2k_playback_toggle_stop_after_current
 
-切换"当前曲目后停止"。
+Toggles stop-after-current.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.toggleStopAfterCurrent`
+- **Parameters**: none
+- **Bridge method**: `playback.toggleStopAfterCurrent`
 
-## 曲目定位 
+## Track location
 
-### fb2k_playback_get_current_track_index 
+### fb2k_playback_get_current_track_index
 
-获取当前播放曲目的索引。
+Gets the current track's playlist and item indices.
 
-- **Bridge 方法**: `playback.getCurrentTrackIndex`
+- **Bridge method**: `playback.getCurrentTrackIndex`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| includeTrackInfo | boolean | ? | 是否包含曲目详情（默认 false） |
+| `includeTrackInfo` | boolean | No | Include full track details; default `false` |
 
-**返回值**（找到时）:
+**Example result when found:**
 
 ```json
 {
@@ -137,7 +103,7 @@
 }
 ```
 
-**返回值**（未找到时）:
+**Example result when not found:**
 
 ```json
 {
@@ -148,18 +114,18 @@
 }
 ```
 
-::: tip TIP
-设置 `includeTrackInfo: true` 时，返回值会额外包含 `track` 字段，包含完整曲目信息（同 `playback.getCurrentTrack` 的字段）。
+::: tip Track details
+With `includeTrackInfo: true`, the result also contains a `track` field with the same detailed track data exposed by `playback.getCurrentTrack`.
 :::
 
-### fb2k_playback_get_playing_playlist 
+### fb2k_playback_get_playing_playlist
 
-获取正在播放的播放列表索引。
+Gets the playing playlist index and name.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.getPlayingPlaylist`
+- **Parameters**: none
+- **Bridge method**: `playback.getPlayingPlaylist`
 
-**返回值**（有播放列表时）:
+**Example result when found:**
 
 ```json
 {
@@ -170,29 +136,29 @@
 }
 ```
 
-**返回值**（无播放列表时）:
+**Example result when not found:**
 
 ```json
 { "success": true, "found": false, "playlist": null }
 ```
 
-### fb2k_playback_play_path 
+### fb2k_playback_play_path
 
-播放指定文件路径。支持 subsong 格式。
+Plays a file path, including a subsong suffix when needed.
 
-- **Bridge 方法**: `playback.playPath`
+- **Bridge method**: `playback.playPath`
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ? | 文件路径，支持 path\|subsong:N 格式 |
+| `path` | string | Yes | File path, optionally using `path|subsong:N` |
 
-::: tip subsong 格式
-对于 CUE 文件或多曲目容器，可以指定子曲目索引：`C:\\music\\album.flac|subsong:2`
+::: tip Subsong format
+For CUE files or multi-track containers, append a subsong index such as `C:\\music\\album.flac|subsong:2`.
 :::
 
-### fb2k_playback_random 
+### fb2k_playback_random
 
-随机播放一首曲目。
+Starts a random track.
 
-- **参数**: 无
-- **Bridge 方法**: `playback.random`
+- **Parameters**: none
+- **Bridge method**: `playback.random`

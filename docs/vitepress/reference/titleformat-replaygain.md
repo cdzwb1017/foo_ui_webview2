@@ -1,41 +1,70 @@
-# Titleformat & ReplayGain
+# Titleformat and ReplayGain reference
 
-通用标题格式化评估。v1.1.13+
+Cross-page reference for title formatting and ReplayGain helpers. Primary owners remain:
 
-## titleformat.eval 
+- [Titleformat API](/api/titleformat)
+- [Audio / ReplayGain API](/api/audio)
 
-评估单个文件的单个 titleformat 表达式。
+## titleformat.eval
 
-## titleformat.evalBatch 
+Evaluate one titleformat expression for one file.
 
-批量评估多个文件的同一表达式。
+Runtime authority: `src/api/TitleformatApi.cpp` (`titleformat.eval`).
 
-## titleformat.evalFields 
+## titleformat.evalBatch
 
-评估单个文件的多个字段（推荐）。
+Evaluate the same expression across many files.
 
-## titleformat.evalFieldsBatch 
+Runtime authority: `src/api/TitleformatApi.cpp` (`titleformat.evalBatch`).
 
-批量评估多个文件的多个字段（适合自定义列表列）。
+## titleformat.evalFields
 
-## titleformat.getBuiltinFields 
+Evaluate multiple named fields for one file. Preferred for structured UIs.
 
-获取内置字段参考。
+Runtime authority: `src/api/TitleformatApi.cpp` (`titleformat.evalFields`).
 
-**用途场景**:
+## titleformat.evalFieldsBatch
 
-- 自定义列表列（播放次数、评分、添加日期等）
-- 条件显示（如 `$if(%album%,%album%,Unknown)`）
-- 获取 foo_playcount 数据（`%play_count%`, `%rating%`, `%last_played%`）
+Evaluate multiple named fields across many files. Useful for custom list columns.
 
-## replaygain.get 
+Runtime authority: `src/api/TitleformatApi.cpp` (`titleformat.evalFieldsBatch`).
 
-获取文件的 ReplayGain 信息（trackGain, trackPeak, albumGain, albumPeak）。
+## titleformat.getBuiltinFields
 
-## replaygain.scan 
+Returns a convenience map of built-in field expressions.
 
-触发 ReplayGain 扫描（通过上下文菜单）。
+Typical uses:
 
-## replaygain.clear 
+- custom list columns (`%play_count%`, `%rating%`, `%added%`)
+- conditional display such as `$if(%album%,%album%,Unknown)`
+- optional foo_playcount fields when the component is installed
 
-清除文件的 ReplayGain 信息。
+Runtime authority: `src/api/TitleformatApi.cpp` (`titleformat.getBuiltinFields`).
+
+## replaygain.get
+
+Read ReplayGain data for one or more paths (`trackGain`, `trackPeak`, `albumGain`, `albumPeak`, plus per-item status fields from the handler).
+
+Runtime authority: `src/api/ReplayGainApi.cpp` (`replaygain.get`).
+
+## replaygain.scan
+
+Trigger ReplayGain scanning for the provided paths (via the context-menu workflow exposed by the handler).
+
+Runtime authority: `src/api/ReplayGainApi.cpp` (`replaygain.scan`).
+
+## replaygain.clear
+
+Clear ReplayGain data for the provided paths.
+
+Runtime authority: `src/api/ReplayGainApi.cpp` (`replaygain.clear`).
+
+## Related configuration APIs
+
+Mode/preamp helpers live on the Audio owner page:
+
+- `replaygain.getMode`
+- `replaygain.setMode`
+- `replaygain.getPreamp`
+- `replaygain.setPreamp`
+- `replaygain.getSettings`

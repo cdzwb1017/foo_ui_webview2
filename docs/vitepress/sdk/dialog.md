@@ -1,67 +1,64 @@
-# fb.dialog 对话框
+# fb.dialog Native Dialogs
 
-本页是 `fb.dialog` 的 SDK 视角文档入口。
+`fb.dialog` opens host-native file, folder, save, and confirmation dialogs.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### confirm()
+### confirm(options?)
 
-签名：`fb.dialog.confirm(...args): Promise<unknown>`
+Signature: `fb.dialog.confirm(options?: DialogConfirmParams): Promise<{ confirmed: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dialog.confirm` 调用结果。
+| Field | Type | Description |
+| --- | --- | --- |
+| `title` | `string` | Dialog title; defaults to `Confirm` |
+| `message` | `string` | Confirmation message |
+| `type` | `string` | Dialog type; defaults to `question` |
+| `defaultButton` | `number` | Default button index |
+| `buttons` | `string[]` | Custom button labels |
 
 ```javascript
-const result = await fb.dialog.confirm();
+const { confirmed } = await fb.dialog.confirm({
+	title: 'Remove track',
+	message: 'Remove the selected track?'
+});
 ```
 
-### openFile()
+### openFile(options?)
 
-签名：`fb.dialog.openFile(...args): Promise<unknown>`
+Signature: `fb.dialog.openFile(options?: DialogOpenFileParams): Promise<DialogOpenFileResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dialog.openFile` 调用结果。
+Returns `{ canceled, filePaths, error? }`. Set `multiple` to allow multiple selections; other options include `title`, `defaultPath`, `filters`, `name`, and `extensions`.
 
 ```javascript
-const result = await fb.dialog.openFile();
+const result = await fb.dialog.openFile({
+	title: 'Choose audio files',
+	multiple: true,
+	filters: ['*.flac', '*.mp3']
+});
 ```
 
-### openFolder()
+### openFolder(options?)
 
-签名：`fb.dialog.openFolder(...args): Promise<unknown>`
+Signature: `fb.dialog.openFolder(options?: DialogOpenFolderParams): Promise<DialogOpenFolderResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dialog.openFolder` 调用结果。
+Accepts an optional `title` and returns `{ canceled, folderPath, error? }`.
 
 ```javascript
-const result = await fb.dialog.openFolder();
+const result = await fb.dialog.openFolder({ title: 'Choose a music folder' });
 ```
 
-### saveFile()
+### saveFile(options?)
 
-签名：`fb.dialog.saveFile(...args): Promise<unknown>`
+Signature: `fb.dialog.saveFile(options?: DialogSaveFileParams): Promise<DialogSaveFileResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `dialog.saveFile` 调用结果。
+Returns `{ canceled, filePath, error? }`. Options include `title`, `defaultName`, `filters`, `name`, and `extensions`.
 
 ```javascript
-const result = await fb.dialog.saveFile();
+const result = await fb.dialog.saveFile({ defaultName: 'playlist.m3u8' });
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

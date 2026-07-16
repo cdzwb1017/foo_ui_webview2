@@ -1,14 +1,14 @@
-# 错误处理参考 
+# Error reference
 
-> **概述**: 统一错误信封 (ErrorEnvelope) 规范
+> Overview: unified failure envelope (`ErrorEnvelope`) contract from `src/api/ErrorEnvelope.h`.
 
-## 错误结构概述 
+## Error structure
 
-foo_ui_webview2 的所有 API 在失败时遵循统一的错误信封结构。
+All Bridge failures follow a machine-readable envelope. Successful payloads remain endpoint-specific; failures always include a stable `code`.
 
-### 同步 API 错误 
+### Synchronous API failures
 
-通过 `fb2k.invoke()` 调用的 API 在失败时返回：
+`fb2k.invoke()` failures return:
 
 ```json
 {
@@ -18,11 +18,11 @@ foo_ui_webview2 的所有 API 在失败时遵循统一的错误信封结构。
 }
 ```
 
-- `success` — 始终为 `false`
-- `error` — 面向人类的错误描述（string）
-- `code` — 机器可读错误码（string，UPPER_SNAKE_CASE）
+- `success` — always `false`
+- `error` — human-readable message (`string`)
+- `code` — machine-readable code (`string`, `UPPER_SNAKE_CASE`)
 
-部分 API 还可能包含 `details` 对象提供额外上下文：
+Some handlers also attach a `details` object:
 
 ```json
 {
@@ -33,22 +33,22 @@ foo_ui_webview2 的所有 API 在失败时遵循统一的错误信封结构。
 }
 ```
 
-### 异步失败事件 
+### Asynchronous failure events
 
-后台任务或异步操作失败时通过事件推送：
+Background or async work may push a failure event payload:
 
 ```json
 {
   "error": "Failed to open decoder",
   "code": "DECODER_FAILED",
   "taskId": "waveform_42",
-  "path": "E:\\\\Music\\\\song.flac"
+  "path": "E:\\Music\\song.flac"
 }
 ```
 
-### 框架级错误 
+### Framework-level failures
 
-当请求格式无效或方法不存在时，由 BridgeCore 框架直接返回：
+Invalid requests or unknown methods are rejected by BridgeCore before a handler runs:
 
 ```json
 {
@@ -57,97 +57,93 @@ foo_ui_webview2 的所有 API 在失败时遵循统一的错误信封结构。
 }
 ```
 
-## 标准错误码 (ApiErrorCode) 
+## Standard error codes (`ApiErrorCode`)
 
-### 框架级 
+### Framework
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| INVALID_REQUEST | 请求缺少 method 字段 |
-| METHOD_NOT_FOUND | 调用的方法名不存在 |
-| INTERNAL_ERROR | handler 抛出未捕获异常 |
+| `INVALID_REQUEST` | Request is missing the method field |
+| `METHOD_NOT_FOUND` | The method name is not registered |
+| `INTERNAL_ERROR` | Handler threw an uncaught exception |
 
-### 参数错误 
+### Parameter errors
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| REQUIRED_PARAM | 必填参数缺失 |
-| INVALID_PARAMS | 参数值非法 |
-| INVALID_INDEX | 索引越界（播放列表、曲目等） |
+| `REQUIRED_PARAM` | A required parameter is missing |
+| `INVALID_PARAMS` | A parameter value is invalid |
+| `INVALID_INDEX` | An index is out of range |
 
-### 状态/资源错误 
+### State / resource errors
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| NOT_FOUND | 资源不存在 |
-| LOCKED | 播放列表处于锁定状态 |
-| NOT_SUPPORTED | 当前模式不支持此操作（如面板模式） |
-| LIBRARY_DISABLED | 媒体库未启用 |
-| NO_ACTIVE_ITEM | 无活动播放列表或当前无播放曲目 |
+| `NOT_FOUND` | Resource does not exist |
+| `LOCKED` | Playlist or resource is locked |
+| `NOT_SUPPORTED` | Operation is unsupported in the current mode |
+| `LIBRARY_DISABLED` | Media library is disabled |
+| `NO_ACTIVE_ITEM` | No active playlist or now-playing item |
 
-### 操作失败 
+### Operation failures
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| OPERATION_FAILED | 通用操作失败 |
+| `OPERATION_FAILED` | Generic operation failure |
 
-### 安全 
+### Security
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| PERMISSION_DENIED | PathSecuritySpec 路径校验拒绝访问 |
+| `PERMISSION_DENIED` | Path security policy rejected the request |
 
-### 媒体/路径相关 
+### Media / path
 
-| Code | 说明 |
+| Code | Meaning |
 | --- | --- |
-| MISSING_PATH | path 参数未提供 |
-| INVALID_PATH | 路径无效或文件不存在 |
-| INVALID_HANDLE | metadb handle 创建失败 |
-| NO_INFO | 文件技术信息获取失败 |
-| DECODER_FAILED | 音频解码器打开失败 |
-| DECODE_FAILED | 解码过程中发生异常 |
-| UNKNOWN_ERROR | 未知错误 |
-| EXCEPTION | 异常捕获兜底 |
+| `MISSING_PATH` | Path parameter was not provided |
+| `INVALID_PATH` | Path is invalid or the file does not exist |
+| `INVALID_HANDLE` | Metadb handle creation failed |
+| `NO_INFO` | Technical file information is unavailable |
+| `DECODER_FAILED` | Audio decoder open failed |
+| `DECODE_FAILED` | Decoding failed |
+| `UNKNOWN_ERROR` | Unknown error |
+| `EXCEPTION` | Catch-all exception path |
 
-## TypeScript 类型 
+## TypeScript types
 
 ```typescript
 import type { ErrorEnvelope, FailureEventPayload, ApiErrorCode } from 'sdk/index.d.ts';
 ```
 
-- `ErrorEnvelope` — 同步 API 失败的最小结构
-- `FailureEventPayload` — 异步失败事件 data 的最小结构
-- `ApiErrorCode` — 所有标准错误码的联合类型
-- `BaseResponse` — 已扩展，包含可选的 `error` 和 `code` 字段
+- `ErrorEnvelope` — minimum synchronous failure shape
+- `FailureEventPayload` — minimum async failure event data
+- `ApiErrorCode` — union of standard codes
+- `BaseResponse` — shared optional `error` / `code` fields
 
-## 错误处理示例 
+## Handling examples
 
 ```javascript
-// 同步 API 错误处理
 const result = await fb2k.invoke('library.browseTree', { rootId: 'invalid' });
 if (!result.success) {
-    console.error(`错误 [${result.code}]: ${result.error}`);
-    // 错误 [NOT_FOUND]: Unknown rootId
+  console.error(`Error [${result.code}]: ${result.error}`);
 }
 
-// 异步事件错误处理
 fb2k.on('audio:fullWaveformFailed', (event) => {
-    console.error(`波形生成失败 [${event.code}]: ${event.error}`);
-    console.error(`任务 ID: ${event.taskId}, 路径: ${event.path}`);
+  console.error(`Waveform failed [${event.code}]: ${event.error}`);
+  console.error(`taskId=${event.taskId} path=${event.path}`);
 });
 
-// HTTP 异步错误处理
 fb2k.on('http:response', (data) => {
-    if (data.error) {
-        console.error(`HTTP 请求 ${data.requestId} 失败 [${data.code}]: ${data.error}`);
-    }
+  if (data.error) {
+    console.error(`HTTP ${data.requestId} failed [${data.code}]: ${data.error}`);
+  }
 });
 ```
 
-## 向后兼容 
+## Compatibility notes
 
-- 已有 API 中 `{ success: false, error: string }` 结构保持不变
-- `code` 字段为新增，消费方应以 optional 方式读取
-- artwork 系列的 `available` 字段继续保留
-- 框架级错误（SendError）新增 `code` 字段，原有 `error` 字段不变
+- Existing `{ success: false, error: string }` responses remain valid.
+- `code` is additive; consumers should treat it as optional when reading older payloads.
+- Artwork endpoints keep their dedicated availability fields.
+- Framework `SendError` responses include `code` while preserving `error`.

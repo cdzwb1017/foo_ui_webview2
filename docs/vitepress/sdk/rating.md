@@ -1,25 +1,26 @@
-# fb.rating rating
+# fb.rating Track Ratings
 
-本页是 `fb.rating` 的 SDK 视角文档入口。
+`fb.rating` reads and writes integer track ratings on a 0-5 scale.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Method Stub
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block records SDK method coverage and may later be expanded with complete examples and best practices.
 
 ### get()
 
-签名：`fb.rating.get(...args): Promise<unknown>`
+Signature: `fb.rating.get(path: string): Promise<{ rating: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| path | string | Yes | Absolute file path; may include a `\|subsong:N` suffix for a CUE entry |
 
-返回值：底层 `rating.get`, `rating.set` 调用结果。
+Returns `{ rating }`. Use `set(path, rating, { cueIndex? })` to write a rating; `rating` must be an integer from 0 to 5, where 0 clears it. An explicit `cueIndex` takes precedence over a subsong suffix. The set response may identify the `menuPath`, storage backend, or a fallback note.
 
 ```javascript
-const result = await fb.rating.get();
+const result = await fb.rating.get('E:\\Music\\song.flac');
+await fb.rating.set('E:\\Music\\song.flac', 4);
 ```
 
 <!-- END AUTO-GENERATED SDK STUBS -->

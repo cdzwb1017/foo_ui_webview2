@@ -1,109 +1,70 @@
-# Playcount API 
+# Playcount API
 
-foo_playcount 播放统计数据查询。共 4 个 API。
+English API reference for the `playcount` family.
 
-> 需要安装 foo_playcount 组件才能获取完整数据。
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-## 查询 
+## playcount
 
-### playcount.get 
+### playcount.get
 
-获取文件的播放统计数据。
+Public API method. Runtime authority: `src/api/PlaycountApi.cpp:251`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| paths | string[] | ✓ | 文件路径数组（支持 \|subsong:N 格式） |
+| `paths` | `array` | Yes | Required. |
 
-**返回值**:
+**Returns**: `{"count":"...","error":"...","results":"...","success":true}`
 
-```json
-{
-    "success": true,
-    "count": 2,
-    "results": [
-        {
-            "path": "C:\\\\Music\\\\song.flac",
-            "success": true,
-            "playCount": 42,
-            "firstPlayed": "2025-01-15 10:30:00",
-            "lastPlayed": "2026-02-09 12:00:00",
-            "added": "2025-01-10 08:00:00",
-            "rating": 5,
-            "inLibrary": true
-        }
-    ]
-}
+```js
+const result = await fb2k.invoke('playcount.get', { paths: /* value */ });
 ```
 
-| 字段 | 类型 | 描述 |
-| --- | --- | --- |
-| playCount | number | 播放次数 |
-| firstPlayed | string | 首次播放时间 |
-| lastPlayed | string | 最后播放时间 |
-| added | string | 添加到媒体库时间 |
-| rating | number | 评分 (1-5, 省略则未评分) |
-| inLibrary | boolean | 是否在媒体库中 |
+### playcount.getBatch
 
-```javascript
-const result = await fb2k.invoke('playcount.get', {
-    paths: ['C:\\\\Music\\\\song.flac']
-});
-console.log(`播放次数: ${result.results[0].playCount}`);
-```
+Public API method. Runtime authority: `src/api/PlaycountApi.cpp:254`.
 
-### playcount.getBatch 
+Alias of `playcount.get`; the handler forwards the same public payload.
 
-`playcount.get` 的别名，参数和返回值完全相同。
-
-```javascript
-const result = await fb2k.invoke('playcount.getBatch', {
-    paths: ['C:\\\\Music\\\\a.flac', 'C:\\\\Music\\\\b.flac']
-});
-```
-
-### playcount.getStats 
-
-获取媒体库整体播放统计。
-
-- **参数**: 无
-
-**返回值**:
-
-```json
-{
-    "success": true,
-    "totalTracks": 5000,
-    "playedTracks": 3200,
-    "unplayedTracks": 1800,
-    "ratedTracks": 800,
-    "totalPlayCount": 15000,
-    "maxPlayCount": 120,
-    "averagePlayCount": 4.7,
-    "averageRating": 3.8
-}
-```
-
-```javascript
-const stats = await fb2k.invoke('playcount.getStats');
-console.log(`已播放: ${stats.playedTracks}/${stats.totalTracks}`);
-```
-
-## 写入 
-
-### playcount.set 
-
-占位 API。foo_playcount 不提供直接修改接口，评分请使用 `rating.set`。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| path | string | ✓ | 音频文件路径 |
+| `paths` | `array` | Yes | Required file path list. Entries may use `path|subsong:N`. |
 
-**返回值**: `{ "success": false, "error": "Direct playcount modification not supported. Use rating.set for ratings." }`
+**Returns**: `{"count":0,"error":"...","results":[],"success":true}`
 
-> 缺少 `path` 参数时返回 `{ "success": false, "error": "path is required" }`
-
-```javascript
-// 注意：此 API 始终返回失败，评分请使用 rating.set
-const result = await fb2k.invoke('playcount.set', { path: 'E:\\\\Music\\\\song.flac' });
-console.log(result.error); // "Direct playcount modification not supported..."
+```js
+const result = await fb2k.invoke('playcount.getBatch', { paths: ['C:\\Music\\song.flac'] });
 ```
+
+### playcount.getStats
+
+Public API method. Runtime authority: `src/api/PlaycountApi.cpp:260`.
+
+_No parameters._
+
+**Returns**: `{"averagePlayCount":"...","averageRating":"...","error":"...","maxPlayCount":"...","playedTracks":"...","ratedTracks":"...","success":true,"totalPlayCount":"...","totalTracks":"...","unplayedTracks":"..."}`
+
+```js
+const result = await fb2k.invoke('playcount.getStats');
+```
+
+### playcount.set
+
+Public API method. Runtime authority: `src/api/PlaycountApi.cpp:257`.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `path` | `string` | Yes | Required. |
+
+**Returns**: `{"error":"...","success":true}`
+
+```js
+const result = await fb2k.invoke('playcount.set', { path: /* value */ });
+```
+
+## Contract notes
+
+- `playcount.get` and `playcount.getBatch` require a `paths` array. Each valid result contains its original `path`, `success`, `playCount`, and `inLibrary`; `firstPlayed`, `lastPlayed`, `added`, and `rating` are included only when foo_playcount provides usable values.
+- Input paths may use `path|subsong:N`. The handler resolves the file path and subsong separately, then preserves the original path in the corresponding result item.
+- `playcount.set` requires `path` but is intentionally a placeholder: it always returns `success: false` with the instruction to use `rating.set` for ratings. It does not change play counts.
+- `playcount.getStats` has no parameters and returns `{ success, totalTracks, playedTracks, unplayedTracks, ratedTracks, totalPlayCount, maxPlayCount, averagePlayCount, averageRating }`.

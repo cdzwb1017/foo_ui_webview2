@@ -1,81 +1,112 @@
-# fb.http HTTP 请求
+# fb.http HTTP Client
 
-本页是 `fb.http` 的 SDK 视角文档入口。
+`fb.http` routes requests through the host process, allowing access to localhost, `file://` URLs, and origins that would otherwise be blocked by WebView2 CORS rules.
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK Methods
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block provides SDK-level method coverage and may later be expanded with complete examples and best practices.
 
-### abort()
+### get(url, options?)
 
-签名：`fb.http.abort(...args): Promise<unknown>`
+Signature: `fb.http.get(url: string, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `http.abort` 调用结果。
+Dispatches a GET request. Host requests are asynchronous by default, so the immediate result is normally `{ success, requestId, async: true }`; the final response is emitted as `http:response`. Pass `{ async: false }` for a direct full response, or use `request()` to await the event-driven result.
 
 ```javascript
-const result = await fb.http.abort();
+const response = await fb.http.get('https://api.example.com/data', { async: false });
 ```
 
-### delete()
+### post(url, body?, options?)
 
-签名：`fb.http.delete(...args): Promise<unknown>`
+Signature: `fb.http.post(url: string, body?: JsonValue, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Dispatches a POST request. Non-string JSON bodies are serialized by the host.
 
-返回值：底层 `http.delete` 调用结果。
+### put(url, body?, options?)
+
+Signature: `fb.http.put(url: string, body?: JsonValue, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
+
+Dispatches a PUT request using the same body and option semantics as `post()`.
+
+### delete(url, body?, options?)
+
+Signature: `fb.http.delete(url: string, body?: JsonValue, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
+
+Dispatches a DELETE request. The optional body is the second positional argument.
+
+### patch(url, body?, options?)
+
+Signature: `fb.http.patch(url: string, body?: JsonValue, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
+
+Dispatches a PATCH request using the same body and option semantics as `post()`.
+
+### head(url, options?)
+
+Signature: `fb.http.head(url: string, options?: HttpRequestOptions): Promise<HttpResponse>`
+
+Dispatches a HEAD request. A synchronous response may include the parsed `contentLength` convenience field.
+
+### request(url, options?)
+
+Signature: `fb.http.request(url: string, options?: HttpRequestOptions): Promise<HttpResponse | HttpBinaryResponse>`
+
+Performs an event-driven GET and resolves only after the matching `http:response` event arrives. It also handles a synchronous host response. A client-side watchdog defaults to 35 seconds, or to `options.timeout + 5000` when a host timeout is supplied.
 
 ```javascript
-const result = await fb.http.delete();
+const response = await fb.http.request('https://api.example.com/data');
+console.log(response.status, response.body);
 ```
 
-### patch()
+### download(url, saveTo, options?)
 
-签名：`fb.http.patch(...args): Promise<unknown>`
+Signature: `fb.http.download(url: string, saveTo: string, options?: HttpDownloadOptions): Promise<BaseResponse & { requestId?: string; path?: string; bytesWritten?: number; cancelled?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `http.patch` 调用结果。
+Downloads a URL to a local path. Download mode is synchronous by default with a 60-second host timeout. With `{ async: true }`, completion is emitted as `http:downloadComplete` and correlated by `requestId`.
 
 ```javascript
-const result = await fb.http.patch();
+const receipt = await fb.http.download(
+	'https://example.com/cover.jpg',
+	'C:\\Covers\\cover.jpg',
+	{ async: true }
+);
 ```
 
-### put()
+### abort(requestId)
 
-签名：`fb.http.put(...args): Promise<unknown>`
+Signature: `fb.http.abort(requestId: string): Promise<BaseResponse & { cancelled?: boolean }>`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
-
-返回值：底层 `http.put` 调用结果。
+Cancels an in-flight request by correlation ID.
 
 ```javascript
-const result = await fb.http.put();
+if (receipt.requestId) {
+	await fb.http.abort(receipt.requestId);
+}
 ```
 
-### request()
+### disableDefaultDownloadLogger()
 
-签名：`fb.http.request(...args): Promise<unknown>`
+Signature: `fb.http.disableDefaultDownloadLogger(): void`
 
-| 参数 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+Detaches the module-level logger that writes non-cancelled `http:downloadComplete` failures to `console.warn`. The operation is idempotent.
 
-返回值：底层 `http.get` 调用结果。
+## Request Options
 
-```javascript
-const result = await fb.http.request();
-```
+| Field | Type | Description |
+| --- | --- | --- |
+| `headers` | `Record<string, string>` | Request headers |
+| `timeout` | `number` | Host timeout in milliseconds; defaults to `30000` |
+| `async` | `boolean` | Asynchronous dispatch when `true`; defaults to `true` for verbs |
+| `redirect` | `string` | Redirect policy; the host default is `follow` |
+| `responseType` | `'text' \| 'base64' \| 'arraybuffer' \| 'binary'` | Response decoding mode |
+| `insecureTls` | `boolean` | Requests invalid-certificate bypass when the host advanced setting also permits it |
+
+For `arraybuffer` or `binary`, the SDK decodes the host's base64 transport body into an `ArrayBuffer`. Do not enable `insecureTls` for requests carrying credentials or personal data.
+
+## Events
+
+- `http:response` carries `{ requestId, success, status, body, headers, error?, responseType? }`.
+- `http:downloadComplete` carries `{ requestId, success, status?, bytesWritten?, path?, error?, cancelled? }`.
 
 <!-- END AUTO-GENERATED SDK STUBS -->

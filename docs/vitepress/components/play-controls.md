@@ -1,8 +1,8 @@
-# A. 播放控制 
+# A. Playback Controls
 
 ## `<fb-play-button>` {#fb-play-button}
 
-播放/暂停切换按钮。
+Play/pause toggle button.
 
 ```html
 <fb-play-button>
@@ -11,89 +11,89 @@
 </fb-play-button>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| playing | boolean | — | 只读反映：是否正在播放 |
+| `playing` | boolean | — | Read-only reflection of the playing state |
 
 **CSS Parts:** `button`
-**Slots:** `play-icon`（默认 ▶）、`pause-icon`（默认 ⏸）
-**ARIA:** `role=button`，`aria-label` 自动切换 Play/Pause
+**Slots:** `play-icon` (default: ▶), `pause-icon` (default: ⏸)
+**ARIA:** `role="button"`; `aria-label` changes between `Play` and `Pause`
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-play', e => { /* 播放 */ });
-el.addEventListener('fb-pause', e => { /* 暂停 */ });
+el.addEventListener('fb-play', e => { /* entered the playing state */ });
+el.addEventListener('fb-pause', e => { /* entered the paused state */ });
 ```
 
 ## `<fb-stop-button>` {#fb-stop-button}
 
-停止按钮。
+Stops playback.
 
 ```html
 <fb-stop-button>⏹</fb-stop-button>
 ```
 
 **CSS Parts:** `button`
-**Slots:** 默认 slot（默认 ⏹）
+**Slots:** default slot (default: ⏹)
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-stop', e => { /* 停止 */ });
+el.addEventListener('fb-stop', e => { /* playback stopped */ });
 ```
 
 ## `<fb-prev-button>` {#fb-prev-button}
 
-上一首按钮。
+Skips to the previous track.
 
 ```html
 <fb-prev-button>⏮</fb-prev-button>
 ```
 
 **CSS Parts:** `button`
-**Slots:** 默认 slot（默认 ⏮）
+**Slots:** default slot (default: ⏮)
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-prev', e => { /* 上一首 */ });
+el.addEventListener('fb-prev', e => { /* previous track selected */ });
 ```
 
 ## `<fb-next-button>` {#fb-next-button}
 
-下一首按钮。
+Skips to the next track.
 
 ```html
 <fb-next-button>⏭</fb-next-button>
 ```
 
 **CSS Parts:** `button`
-**Slots:** 默认 slot（默认 ⏭）
+**Slots:** default slot (default: ⏭)
 
-**事件：**
+**Events:**
 
 ```js
-el.addEventListener('fb-next', e => { /* 下一首 */ });
+el.addEventListener('fb-next', e => { /* next track selected */ });
 ```
 
 ## `<fb-shuffle-button>` {#fb-shuffle-button}
 
-随机播放切换。点击时在 shuffle (order 4) 和 default (order 0) 之间切换。
+Two-state shuffle control. Activating it from any non-shuffle order selects `shuffle-tracks` (order 4); activating it from any shuffle order (3–6) selects `default` (order 0).
 
 ```html
 <fb-shuffle-button>🔀</fb-shuffle-button>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| active | boolean | — | 只读反映：是否处于 shuffle 模式 |
+| `active` | boolean | — | Read-only reflection; present for playback orders 3–6 |
 
 **CSS Parts:** `button`
-**Slots:** 默认 slot（默认 🔀）
-**ARIA:** `aria-pressed` 自动切换
+**Slots:** default slot (default: 🔀)
+**ARIA:** `aria-pressed` reflects the active state
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-shuffle-toggle', e => {
@@ -103,7 +103,7 @@ el.addEventListener('fb-shuffle-toggle', e => {
 
 ## `<fb-repeat-button>` {#fb-repeat-button}
 
-重复播放三态循环：off → repeat-playlist → repeat-track → off。
+Cycles through `off` → `repeat-playlist` → `repeat-track` → `off`. If the current order is random or a shuffle order, the first activation selects `repeat-playlist`.
 
 ```html
 <fb-repeat-button>
@@ -113,14 +113,14 @@ el.addEventListener('fb-shuffle-toggle', e => {
 </fb-repeat-button>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| mode | `'off' \| 'playlist' \| 'track'` | 'off' | 只读反映：当前模式 |
+| `mode` | `'off' \| 'playlist' \| 'track'` | `'off'` | Read-only reflection of the resolved repeat mode |
 
 **CSS Parts:** `button`
-**Slots:** `off`（默认 🔁）、`playlist`（默认 🔁）、`track`（默认 🔂）
+**Slots:** `off` (default: 🔁), `playlist` (default: 🔁), `track` (default: 🔂)
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-repeat-change', e => {
@@ -130,21 +130,21 @@ el.addEventListener('fb-repeat-change', e => {
 
 ## `<fb-stop-after-current>` {#fb-stop-after-current}
 
-播放完当前曲目后停止。
+Toggles the foobar2000 “stop after current track” setting.
 
 ```html
 <fb-stop-after-current>⏏</fb-stop-after-current>
 ```
 
-| 属性 | 类型 | 默认值 | 说明 |
+| Attribute | Type | Default | Description |
 | --- | --- | --- | --- |
-| active | boolean | — | 只读反映：是否激活 |
+| `active` | boolean | — | Read-only reflection of whether the setting is enabled |
 
 **CSS Parts:** `button`
-**Slots:** 默认 slot（默认 ⏏）
-**ARIA:** `aria-pressed` 自动切换
+**Slots:** default slot (default: ⏏)
+**ARIA:** `aria-pressed` reflects the active state
 
-**事件：**
+**Events:**
 
 ```js
 el.addEventListener('fb-stop-after-current-toggle', e => {

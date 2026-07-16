@@ -1,291 +1,214 @@
-# Port / Event / State API 
+# Port API
 
-跨窗口通信中枢（`PortHub`）提供三类能力：
+English API reference for the `event`, `port`, `state` family.
 
-- `port.*`：命名通道与点对点消息
-- `event.*`：跨窗口事件广播/定向投递
-- `state.*`：共享键值状态（支持 TTL）
+This page is the primary owner for the namespaces listed below. Method names, parameter keys, and return fields follow the C++ `RegisterApi` handlers.
 
-> 方法调用使用 dot 格式（如 `port.connect`），事件监听使用 colon 格式（如 `port:message`、`state:changed`）。
+## event
 
-## Port API 
+### event.emit
 
-### port.connect 
+Public API method. Runtime authority: `src/api/PortApi.cpp:121`.
 
-创建命名端口。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| name | string | ? | 端口通道名 |
+| `event` | `string` | No | Optional; default . |
+| `excludeSelf` | `boolean` | No | Optional; default false. |
+| `payload` | `object` | No | Optional; default {}. |
 
-**返回值（成功）**:
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-```json
-{
-  "portId": "port_00000001",
-  "name": "lyrics",
-  "windowId": "main"
-}
+```js
+const result = await fb2k.invoke('event.emit', { event: /* value */, excludeSelf: /* value */, payload: /* value */ });
 ```
 
-**返回值（失败）**:
+### event.emitTo
 
-```json
-{ "error": "Port name is required", "code": "INVALID_PARAMS" }
-```
+Public API method. Runtime authority: `src/api/PortApi.cpp:133`.
 
-```javascript
-const port = await fb2k.invoke('port.connect', { name: 'lyrics' });
-console.log('端口 ID:', port.portId);
-```
-
-### port.disconnect 
-
-销毁端口。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| portId | string | ? | 端口 ID |
+| `event` | `string` | No | Optional; default . |
+| `payload` | `object` | No | Optional; default {}. |
+| `targetWindowId` | `string` | No | Optional; default . |
 
-**返回值（成功）**: `{ "success": true }`
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-**返回值（失败）**:
-
-```json
-{ "error": "Port not found", "code": "PORT_NOT_FOUND" }
+```js
+const result = await fb2k.invoke('event.emitTo', { event: /* value */, payload: /* value */, targetWindowId: /* value */ });
 ```
 
-```javascript
-await fb2k.invoke('port.disconnect', { portId: 'port_00000001' });
-```
+## port
 
-### port.postMessage 
+### port.connect
 
-向同名通道的其它端口发送消息（不回送给自身）。
+Public API method. Runtime authority: `src/api/PortApi.cpp:58`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| portId | string | ? | 发送方端口 ID |
-| message | any | ? | 消息体 |
+| `name` | `string` | No | Optional; default . |
 
-**返回值（成功）**:
+**Returns**: `{"code":"...","error":"..."}`
 
-```json
-{ "success": true, "recipients": 2 }
+```js
+const result = await fb2k.invoke('port.connect', { name: /* value */ });
 ```
 
-**返回值（失败）**:
+### port.disconnect
 
-```json
-{ "success": false, "error": "Port not found", "code": "PORT_NOT_FOUND" }
-```
+Public API method. Runtime authority: `src/api/PortApi.cpp:68`.
 
-```javascript
-await fb2k.invoke('port.postMessage', {
-    portId: 'port_00000001',
-    message: { text: 'hello' }
-});
-```
-
-### port.postMessageTo 
-
-向指定端口发送消息。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| portId | string | ? | 发送方端口 ID |
-| targetPortId | string | ? | 目标端口 ID |
-| message | any | ? | 消息体 |
+| `portId` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"code":"...","error":"..."}`
 
-```json
-{ "success": true }
+```js
+const result = await fb2k.invoke('port.disconnect', { portId: /* value */ });
 ```
 
-失败时可能返回：`PORT_NOT_FOUND` / `TARGET_NOT_FOUND`。
+### port.getPorts
 
-```javascript
-await fb2k.invoke('port.postMessageTo', {
-    portId: 'port_00000001',
-    targetPortId: 'port_00000002',
-    message: 'sync'
-});
+Public API method. Runtime authority: `src/api/PortApi.cpp:108-114` → `PortHub::GetPorts`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `name` | `string` | No | omitted | Optional channel-name filter; omit to list all ports. |
+
+**Returns**: `{"success":true,"ports":[{"portId":"...","name":"...","windowId":"..."}]}`
+
+```js
+const result = await fb2k.invoke('port.getPorts', { name: /* value */ });
 ```
 
-### port.getPorts 
+### port.postMessage
 
-获取端口列表（可选按 `name` 过滤）。
+Public API method. Runtime authority: `src/api/PortApi.cpp:77`.
 
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| name | string | ? | 仅返回该通道名端口 |
+| `message` | `json` | Yes | Required. |
+| `portId` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-```json
-{
-  "ports": [
-    { "portId": "port_00000001", "name": "lyrics", "windowId": "main" }
-  ]
-}
+```js
+const result = await fb2k.invoke('port.postMessage', { message: /* value */, portId: /* value */ });
 ```
 
-```javascript
-const result = await fb2k.invoke('port.getPorts', { name: 'lyrics' });
-console.log(`找到 ${result.ports.length} 个端口`);
-```
+### port.postMessageTo
 
-## Event API 
+Public API method. Runtime authority: `src/api/PortApi.cpp:92`.
 
-### event.emit 
-
-广播自定义事件到所有窗口。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| event | string | ? | 事件名（建议 namespace:eventName） |
-| payload | object | ? | 事件负载，默认 {} |
-| excludeSelf | boolean | ? | 是否排除发送窗口，默认 false |
+| `message` | `json` | Yes | Required. |
+| `portId` | `string` | No | Optional; default . |
+| `targetPortId` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-```json
-{ "success": true, "recipients": 3 }
+```js
+const result = await fb2k.invoke('port.postMessageTo', { message: /* value */, portId: /* value */, targetPortId: /* value */ });
 ```
 
-> 接收端实际收到的事件 envelope 结构：
+## state
 
-```json
-{ "payload": { ... }, "sourceWindowId": "main" }
-```
+### state.delete
 
-```javascript
-await fb2k.invoke('event.emit', {
-    event: 'ui:themeChanged',
-    payload: { theme: 'dark' }
-});
-```
+Public API method. Runtime authority: `src/api/PortApi.cpp:178`.
 
-### event.emitTo 
-
-定向投递事件到指定窗口。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| event | string | ? | 事件名 |
-| targetWindowId | string | ? | 目标窗口 ID |
-| payload | object | ? | 事件负载，默认 {} |
+| `key` | `string` | No | Optional; default . |
 
-**返回值**:
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-```json
-{ "success": true }
+```js
+const result = await fb2k.invoke('state.delete', { key: /* value */ });
 ```
 
-```javascript
-await fb2k.invoke('event.emitTo', {
-    event: 'lyrics:update',
-    targetWindowId: 'popup_01',
-    payload: { line: 5 }
-});
-```
+### state.get
 
-## State API 
+Public API method. Runtime authority: `src/api/PortApi.cpp:149`.
 
-### state.get 
-
-读取共享状态。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ? | 状态键 |
+| `key` | `string` | No | Optional; default . |
 
-**返回值（存在）**:
+**Returns**: `{"code":"...","error":"..."}`
 
-```json
-{ "key": "lyrics:offset", "value": 120, "exists": true, "expiresAt": 1760000000000 }
+```js
+const result = await fb2k.invoke('state.get', { key: /* value */ });
 ```
 
-**返回值（不存在）**:
+### state.keys
 
-```json
-{ "value": null, "exists": false }
+Public API method. Runtime authority: `src/api/PortApi.cpp:188-191` → `PortHub::GetStateKeys`.
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `pattern` | `string` | No | `*` | Glob-like filter; `*` matches all, trailing `*` is a prefix match. |
+
+**Returns**: `{"success":true,"keys":["..."]}`
+
+```js
+const result = await fb2k.invoke('state.keys', { pattern: /* value */ });
 ```
 
-```javascript
-const result = await fb2k.invoke('state.get', { key: 'lyrics:offset' });
-if (result.exists) console.log('偶移:', result.value);
-```
+### state.set
 
-### state.set 
+Public API method. Runtime authority: `src/api/PortApi.cpp:158`.
 
-设置共享状态。
-
-| 参数 | 类型 | 必填 | 描述 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| key | string | ? | 状态键 |
-| value | any | ? | 状态值 |
-| silent | boolean | ? | 不广播 state:changed，默认 false |
-| ttlMs | number | ? | 生存时间（毫秒），到期自动删除 |
+| `key` | `string` | No | Optional; default . |
+| `silent` | `boolean` | No | Optional; default false. |
+| `ttlMs` | `integer` | No | Optional; default omitted. |
+| `value` | `json` | Yes | Required. |
 
-**返回值**:
+**Returns**: `{"code":"...","error":"...","success":true}`
 
-```json
-{ "success": true, "expiresAt": 1760000000000 }
+```js
+const result = await fb2k.invoke('state.set', { key: /* value */, silent: /* value */, ttlMs: /* value */, value: /* value */ });
 ```
 
-```javascript
-await fb2k.invoke('state.set', {
-    key: 'lyrics:offset',
-    value: 120,
-    ttlMs: 60000
-});
-```
+## Phase 3 contract supplements
 
-### state.delete 
+The sections below close public-contract findings from the strict parameter audit without replacing existing explanations.
 
-删除共享状态。
+<!-- phase3-supplement:state.set -->
+### Contract supplement: `state.set`
 
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| key | string | ? | 状态键 |
+Phase 3 verified contract supplement. Runtime authority: `src/api/PortApi.cpp:158-175`.
 
-**返回值**:
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `key` | `string` | No | `` | Optional; default . |
+| `silent` | `boolean` | No | `false` | Optional; default false. |
+| `ttlMs` | `integer` | No | omitted | Optional; default omitted. |
+| `value` | `json` | Yes | none | Required. |
 
-```json
-{ "success": true, "existed": true }
-```
+#### Return fields
 
-```javascript
-await fb2k.invoke('state.delete', { key: 'lyrics:offset' });
-```
-
-### state.keys 
-
-列出状态键，支持 `*` 通配。
-
-| 参数 | 类型 | 必填 | 描述 |
-| --- | --- | --- | --- |
-| pattern | string | ? | 模式，默认 "*"，如 "lyrics:*" |
-
-**返回值**:
-
-```json
-{ "keys": ["lyrics:offset", "lyrics:theme"] }
-```
-
-```javascript
-const result = await fb2k.invoke('state.keys', { pattern: 'lyrics:*' });
-console.log('状态键:', result.keys);
-```
-
-## 事件列表（PortHub） 
-
-| 事件名 | 触发时机 | 主要字段 |
+| Field | Type | Optional |
 | --- | --- | --- |
-| port:connected | 创建端口 | portId, name, windowId |
-| port:disconnected | 销毁端口/窗口清理 | portId, name, windowId |
-| port:message | 收到端口消息 | portId, sourcePortId, sourceWindowId, message |
-| state:changed | state.set 且非 silent | key, value, previousValue, sourceWindowId, expiresAt? |
-| state:deleted | state.delete 或 TTL 到期 | key, sourceWindowId, reason |
+| `code` | `string` | Yes |
+| `error` | `string` | Yes |
+| `success` | `boolean` | No |
+
+Semantics: omitted optional parameters use handler defaults; failure branches and error fields are defined by this source file.
+
+```js
+const result = await fb2k.invoke('state.set', { key: /* value */, silent: /* value */, ttlMs: /* value */, value: /* value */ });
+```
+
+## Routing, state, and event envelopes
+
+- `port.connect` binds the new port to the invoking window. Only that owner may disconnect it or send through it; `port.postMessage` excludes the sending port and routes `port:message` to peer ports on the same name.
+- `event.emit` broadcasts the requested event name and `event.emitTo` targets one window. Receivers get the envelope `{ payload, sourceWindowId }`; `excludeSelf` affects only `event.emit`. Use the `namespace:eventName` convention for application-defined event names, such as `ui:themeChanged` or `lyrics:update`.
+- State keys are opaque strings; `lyrics:offset` and `lyrics:theme` are ordinary application key examples, not reserved runtime state names.
+- `state.get` returns `exists: false` and `value: null` when a key is absent. `state.set` requires both `key` and `value`; positive `ttlMs` creates an expiration timestamp, and `silent: true` suppresses `state:changed`.
+- `state.delete` returns `existed`. Explicit deletion emits `state:deleted` with `reason: "deleted"`; expiration emits the same event with `reason: "expired"` and an empty `sourceWindowId`.
+- Public PortHub events are `port:connected`, `port:disconnected`, `port:message`, `state:changed`, and `state:deleted`. Their payloads are emitted by `src/api/PortHub.cpp`.

@@ -1,8 +1,8 @@
-# fb.player 播放控制 
+# `fb.player` playback control
 
 ## play() 
 
-开始播放。如果已暂停则恢复播放，已停止则从头开始。返回 `{success}`。
+Starts playback. If playback is paused, it resumes. Returns a `BaseResponse`.
 
 ```javascript
 await fb.player.play();
@@ -10,7 +10,7 @@ await fb.player.play();
 
 ## pause() 
 
-暂停播放。返回 `{success}`。
+Pauses playback. Returns a `BaseResponse`.
 
 ```javascript
 await fb.player.pause();
@@ -18,7 +18,7 @@ await fb.player.pause();
 
 ## stop() 
 
-停止播放。返回 `{success}`。
+Stops playback. Returns a `BaseResponse`.
 
 ```javascript
 await fb.player.stop();
@@ -26,7 +26,7 @@ await fb.player.stop();
 
 ## next() / prev() 
 
-播放下一首/上一首。返回 `{success}`。
+Starts the next or previous track. Both methods return a `BaseResponse`.
 
 ```javascript
 await fb.player.next();
@@ -35,19 +35,19 @@ await fb.player.prev();
 
 ## seek(seconds) 
 
-跳转到指定位置。
+Seeks to a position in the current track.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| seconds | number | 目标位置（秒） |
+| `seconds` | `number` | Target position in seconds |
 
 ```javascript
-await fb.player.seek(90); // 跳转到 1 分 30 秒
+await fb.player.seek(90); // 1 minute 30 seconds
 ```
 
 ## getVolume() 
 
-获取当前音量。返回 `Promise<{volume, volumeDb, muted}>`，其中 `volume` 范围 0-100。
+Returns the current linear volume, decibel volume, and mute state. `volume` is in the range `0..100`.
 
 ```javascript
 const info = await fb.player.getVolume();
@@ -58,20 +58,20 @@ console.log(info.muted);    // boolean
 
 ## setVolume(volume) 
 
-设置音量。
+Sets the linear volume.
 
-| 参数 | 类型 | 说明 |
+| Parameter | Type | Description |
 | --- | --- | --- |
-| volume | number | 音量百分比 (0-100) |
+| `volume` | `number` | Linear volume in the range `0..100` |
 
 ```javascript
 await fb.player.setVolume(80); // 80%
-await fb.player.setVolume(0);  // 静音
+await fb.player.setVolume(0);  // Minimum linear volume
 ```
 
 ## mute() 
 
-静音。已静音时无操作。如需切换静音，请使用底层 API `playback.toggleMute`。
+Mutes playback. Use `fb.player.toggleMute()` when the desired operation is a toggle.
 
 ```javascript
 await fb.player.mute();
@@ -79,16 +79,16 @@ await fb.player.mute();
 
 ## toggle() 
 
-切换播放/暂停。返回 `{success, isPlaying}`。
+Toggles play/pause through `playback.playOrPause`. The response includes the post-toggle `isPlaying` state.
 
 ```javascript
 const r = await fb.player.toggle();
-console.log(r.isPlaying ? '正在播放' : '已暂停');
+console.log(r.isPlaying ? 'Playing' : 'Paused');
 ```
 
 ## random() 
 
-随机播放一曲。返回 `{success}`。
+Starts a random track. Returns a `BaseResponse`.
 
 ```javascript
 await fb.player.random();
@@ -96,7 +96,7 @@ await fb.player.random();
 
 ## getState() 
 
-获取播放状态。返回 `{state, canSeek, canPause}`。
+Returns `{ state, canSeek, canPause }`.
 
 ```javascript
 const state = await fb.player.getState();
@@ -105,53 +105,47 @@ const state = await fb.player.getState();
 
 ## getCurrentTrack() 
 
-获取当前播放曲目信息。无正在播放时返回 `{success: true, found: false, playing: false}`。
+Returns the current `TrackInfo`, or `null` when no track is loaded.
 
-| 返回字段 | 类型 | 说明 |
+| Field | Type | Description |
 | --- | --- | --- |
-| title | string | 曲目标题 |
-| artist | string | 艺术家 |
-| album | string | 专辑 |
-| albumArtist | string | 专辑艺术家 |
-| genre | string | 流派 |
-| date | string | 日期 |
-| trackNumber | number | 曲目序号 |
-| discNumber | number | 光盘序号 |
-| duration | number | 时长（秒） |
-| path | string | foobar 原始路径 |
-| absolutePath | string | 规范化本地文件路径（不含 subsong 后缀） |
-| fullPath | string | 完整路径（含 subsong 后缀，如 file.cue//1） |
-| id | string | 唯一标识符（path + subsong 组合） |
-| subsong | number | 子曲目索引（0 = 普通文件） |
-| fileSize | number | 文件大小（字节） |
-| bitrate | number | 比特率 (kbps) |
-| sampleRate | number | 采样率 (Hz) |
-| channels | number | 声道数 |
-| codec | string | 编码格式 |
+| `title`, `artist`, `album` | `string` | Core metadata |
+| `duration` | `number` | Duration in seconds |
+| `path` | `string` | Original foobar2000 path |
+| `absolutePath` | `string?` | Native absolute path when available |
+| `id` | `string?` | Canonical track identifier when available |
+| `subsong` | `number?` | Subsong index |
+| `albumArtist`, `genre`, `date` | `string?` | Optional metadata |
+| `trackNumber`, `discNumber` | `number?` | Optional track/disc numbers |
+| `fileSize` | `number?` | File size in bytes |
+| `bitrate` | `number?` | Bitrate in kbps |
+| `sampleRate` | `number?` | Sample rate in Hz |
+| `channels` | `number?` | Channel count |
+| `codec` | `string?` | Codec identifier |
 
 ```javascript
 const track = await fb.player.getCurrentTrack();
-if (track.found !== false) {
+if (track) {
     console.log(`${track.artist} - ${track.title} [${track.codec} ${track.bitrate}kbps]`);
 }
 ```
 
 ## getPosition() 
 
-获取当前播放位置。返回 `{position, duration, subsong, path}`。
+Returns the current position and duration in seconds, plus path/subsong information when exposed by the host.
 
 ```javascript
 const pos = await fb.player.getPosition();
 console.log(`${pos.position} / ${pos.duration}`);
-// pos.subsong — 子曲目索引
-// pos.path — 当前播放文件路径
+// pos.subsong — subsong index
+// pos.path — current source path
 ```
 
 ## getOrder() / setOrder(order) 
 
-获取/设置播放顺序。
+Gets or sets the playback order. `setOrder()` accepts either a numeric host order or a canonical `PlaybackOrder` string.
 
-| 值 | 名称 |
+| Value | Name |
 | --- | --- |
 | 0 | Default |
 | 1 | Repeat (playlist) |
@@ -164,12 +158,13 @@ console.log(`${pos.position} / ${pos.duration}`);
 ```javascript
 const r = await fb.player.getOrder();
 console.log(r.order, r.name); // 0, 'Default'
-await fb.player.setOrder(2);  // 单曲循环
+await fb.player.setOrder(2);  // Repeat track
+await fb.player.setOrder('shuffle-albums');
 ```
 
 ## getStopAfterCurrent() / setStopAfterCurrent(enabled) 
 
-获取/设置“当前曲目后停止”状态。
+Gets or sets stop-after-current.
 
 ```javascript
 const r = await fb.player.getStopAfterCurrent();
@@ -177,27 +172,39 @@ console.log(r.enabled); // false
 await fb.player.setStopAfterCurrent(true);
 ```
 
-获取当前播放曲目在播放列表中的索引。返回 `{playlist, index, ...}`。
+## getCurrentTrackIndex(includeTrackInfo?)
+
+Returns `{ index, track? }`. Pass `true` to request the optional `track` snapshot.
 
 ```javascript
 const r = await fb.player.getCurrentTrackIndex();
-console.log(`播放列表 ${r.playlist}，曲目 ${r.index}`);
+console.log(`Current item index: ${r.index}`);
 ```
 
-直接播放指定路径的文件。支持 CUE subsong 格式。
+## playPath(path)
+
+Starts playback from a path. CUE entries may use the host's subsong suffix format.
 
 ```javascript
 await fb.player.playPath('E:\\Music\\song.flac');
 ```
 
-播放多个文件路径。
+## playPaths(paths, options?)
 
-| 参数 | 类型 | 说明 |
+Adds and plays multiple paths. The second argument may be a numeric `startIndex` or `{ startIndex?, replace? }`; `replace: true` clears the active playlist before insertion, while the default appends.
+
+| Parameter | Type | Description |
 | --- | --- | --- |
-| paths | string[] | 文件路径数组 |
-| startIndex | number | 从第几首开始播放（默认 0） |
+| `paths` | `string[]` | Absolute paths; entries may carry a `|subsong:N` suffix |
+| `options` | `number \| { startIndex?: number; replace?: boolean }` | Start offset or extended options |
 
-音量增大/减小一档。
+```javascript
+await fb.player.playPaths(paths, { startIndex: 2, replace: true });
+```
+
+## volumeUp() / volumeDown()
+
+Moves the volume up or down by one host-defined step.
 
 ```javascript
 await fb.player.volumeUp();
@@ -206,19 +213,19 @@ await fb.player.volumeDown();
 
 <!-- BEGIN AUTO-GENERATED SDK STUBS -->
 
-## SDK 方法 stub
+## SDK method stubs
 
-> 由 `scripts/gen_vitepress_sdk_doc.mjs` 生成。该区块用于补齐 SDK 视角方法覆盖，后续可人工扩展为完整示例与最佳实践。
+> This block completes SDK method coverage and may later be expanded with richer examples and guidance.
 
 ### getPlayingPlaylist()
 
-签名：`fb.player.getPlayingPlaylist(...args): Promise<unknown>`
+Signature: `fb.player.getPlayingPlaylist(): Promise<{ playlist: number }>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `playback.getPlayingPlaylist` 调用结果。
+Returns the result of `playback.getPlayingPlaylist`.
 
 ```javascript
 const result = await fb.player.getPlayingPlaylist();
@@ -226,13 +233,13 @@ const result = await fb.player.getPlayingPlaylist();
 
 ### playPause()
 
-签名：`fb.player.playPause(...args): Promise<unknown>`
+Signature: `fb.player.playPause(): Promise<PlaybackToggleResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `playback.playPause` 调用结果。
+Returns the result of `playback.playPause`.
 
 ```javascript
 const result = await fb.player.playPause();
@@ -240,13 +247,13 @@ const result = await fb.player.playPause();
 
 ### toggleMute()
 
-签名：`fb.player.toggleMute(...args): Promise<unknown>`
+Signature: `fb.player.toggleMute(): Promise<PlaybackToggleMuteResponse>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `playback.toggleMute` 调用结果。
+Returns the result of `playback.toggleMute`.
 
 ```javascript
 const result = await fb.player.toggleMute();
@@ -254,13 +261,13 @@ const result = await fb.player.toggleMute();
 
 ### toggleStopAfterCurrent()
 
-签名：`fb.player.toggleStopAfterCurrent(...args): Promise<unknown>`
+Signature: `fb.player.toggleStopAfterCurrent(): Promise<PlaybackStopAfterCurrentState>`
 
-| 参数 | 类型 | 必填 | 说明 |
+| Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| ...args | unknown[] | 视方法而定 | 透传给 SDK wrapper；详细类型以 `sdk/src/bridge/namespaces/` 源码和生成类型为准 |
+| - | - | - | No parameters |
 
-返回值：底层 `playback.toggleStopAfterCurrent` 调用结果。
+Returns the result of `playback.toggleStopAfterCurrent`.
 
 ```javascript
 const result = await fb.player.toggleStopAfterCurrent();
