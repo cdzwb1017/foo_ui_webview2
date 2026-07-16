@@ -112,7 +112,12 @@ foo_ui_webview2/
 
 # Package .fb2k-component (x86 + x64)
 .\build-package.ps1
+
+# Package offline documentation (Windows users need no extra runtime)
+.\build-docs-package.ps1
 ```
+
+The documentation ZIP opens through `open-docs.cmd` and uses only Windows 10/11 built-in Windows PowerShell 5.1, .NET Framework, and the default browser. It does not require Node.js, Python, npm, administrator access, or an Internet connection.
 
 ### TypeScript SDK (build from source, for development)
 

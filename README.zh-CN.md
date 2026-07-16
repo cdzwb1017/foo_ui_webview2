@@ -112,7 +112,12 @@ foo_ui_webview2/
 
 # 打包 .fb2k-component (x86 + x64)
 .\build-package.ps1
+
+# 打包离线文档（Windows 用户无需额外运行时）
+.\build-docs-package.ps1
 ```
+
+文档 ZIP 通过 `open-docs.cmd` 打开，仅使用 Windows 10/11 自带的 Windows PowerShell 5.1、.NET Framework 和默认浏览器；无需安装 Node.js、Python、npm，无需管理员权限，也不需要联网。
 
 ### TypeScript SDK（从源码构建，开发用）
 
