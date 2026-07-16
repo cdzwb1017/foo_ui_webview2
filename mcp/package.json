@@ -10,9 +10,13 @@
   "scripts": {
     "clean": "node -e \"require('fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "npm run clean && tsc",
+    "type-check": "tsc --noEmit",
     "dev": "tsc --watch",
     "start": "node dist/index.js",
-    "prepack": "npm run build"
+    "test": "vitest run",
+    "test:ci": "vitest run --reporter=junit --outputFile=test-results.xml",
+    "test:watch": "vitest",
+    "prepack": "npm run type-check && npm run test && npm run build"
   },
   "keywords": [
     "foobar2000",
@@ -40,7 +44,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "vitest": "^3.2.1"
   },
   "engines": {
     "node": ">=18.0.0"
