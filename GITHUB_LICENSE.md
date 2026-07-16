@@ -27,4 +27,5 @@ See [sdk/LICENSE](sdk/LICENSE) for the full license text.
 
 Copyright (c) 2024-2026 NereaFantasia
 
-- GitHub: https://github.com/NereaFantasia/foo_ui_webview2
+- GitHub: https://github.com/nicenick/foo_ui_webview2
+- QQ: 1251094727

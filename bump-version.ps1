@@ -21,7 +21,7 @@
     .\bump-version.ps1 -Bump minor
 
 .AUTHOR
-    NereaFantasia
+    NereaFantasia (QQ: 1251094727)
 #>
 
 param(
@@ -222,4 +222,7 @@ Write-Host "    • sdk/package-lock.json" -ForegroundColor White
 Write-Host "    • docs/vitepress/.vitepress/config.ts" -ForegroundColor White
 Write-Host ""
 Write-Host "  提醒: docs/vitepress/changelog.md 需手动补充本版本条目" -ForegroundColor DarkYellow
+Write-Host ""
+Write-Host "  注意: docs/API_DOCUMENTATION.html 中的 {{VERSION}}" -ForegroundColor Gray
+Write-Host "        将在 build-package.ps1 打包时自动替换为 $NewVersion" -ForegroundColor Gray
 Write-Host ""

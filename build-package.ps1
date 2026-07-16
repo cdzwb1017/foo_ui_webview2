@@ -36,10 +36,10 @@
     输出目录 (默认 dist/)
 
 .AUTHOR
-    NereaFantasia
+    NereaFantasia (QQ: 1251094727)
 
 .LICENSE
-    GPL-3.0-or-later
+    Proprietary / Closed Source
 #>
 
 param(
@@ -286,7 +286,8 @@ $ReadmeContent = @(
     '## API 文档',
     '',
     '完整 API 文档请参考:',
-    '- https://github.com/NereaFantasia/foo_ui_webview2',
+    '- docs/API_DOCUMENTATION.html',
+    '- https://github.com/user/foo_ui_webview2',
     '',
     '## 示例',
     '',
@@ -425,6 +426,33 @@ if ($IncludeSDK) {
 # ============================================
 # 完成
 # ============================================
+
+# ============================================
+# Step 6: Post-build audit (health-audit / A6 / R9)
+# ============================================
+# Validate the produced fb2k-component (and optional SDK ZIP) against the
+# health-audit gate: required files, forbidden artefacts (PDB / debug / test
+# leak), and size regression budget. Default warn-only; CI can re-run with
+# -Strict to harden the gate after the initial baseline stabilises.
+$AuditScript = Join-Path $ScriptDir "scripts\audit_fb2k_component.ps1"
+if (Test-Path $AuditScript) {
+    Write-Host ""
+    Write-Host "[Audit] fb2k-component post-build validation..." -ForegroundColor Yellow
+    $auditArgs = @{ Package = $PackagePath }
+    if ($IncludeSDK -and $SdkZipPath -and (Test-Path $SdkZipPath)) {
+        $auditArgs.SdkZip = $SdkZipPath
+    }
+    try {
+        & $AuditScript @auditArgs
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[Audit] non-zero exit (warn-only mode): $LASTEXITCODE" -ForegroundColor DarkYellow
+        }
+    } catch {
+        Write-Host "[Audit] script error: $($_.Exception.Message)" -ForegroundColor Red
+    }
+} else {
+    Write-Host "[Audit] scripts/audit_fb2k_component.ps1 not found, skip" -ForegroundColor DarkGray
+}
 
 $PackageInfo = Get-Item $PackagePath
 $SizeMB = [math]::Round($PackageInfo.Length / 1MB, 2)
