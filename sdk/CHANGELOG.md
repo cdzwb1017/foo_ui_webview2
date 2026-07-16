@@ -5,6 +5,97 @@ All notable changes to the foo-webview-sdk will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [1.10.0] - 2026-07-16
+
+### Added
+
+- **`TrayMenuItem.orientation`** (`'horizontal' | 'vertical'`) — slider-only
+  axis for the WebView tray menu. Default when omitted: horizontal. Only exact
+  `'vertical'` is vertical (min bottom / max top; Up/Right increase; Down/Left
+  decrease; Home/End edges). Native backends ignore orientation (stepped
+  submenu degrade). Older runtimes ignore the unknown key and keep horizontal
+  interaction. Range normalization is shared (`max<min` swap, `max==min`
+  constant with no value change, initial clamp, IPC out-of-range reject).
+  `getMenuItems()` round-trips orientation. Themes that need vertical sliders
+  should probe `config.getVersionInfo().plugin.version` first (minimum plugin
+  version not finalized — do not hard-code a fake floor). The SDK wrapper
+  passes the field through and does not inject a default.
+- **`TrayMenuConfig.layoutMode`** (`'flat' | 'zones'`) — opt-in WebView tray DOM
+  structure. Default `'flat'` keeps legacy `#menu > .fb-item` direct children.
+  `'zones'` emits `.fb-zone[data-zone]` wrappers for non-empty top / playback /
+  bottom containers. Native backends ignore the field; older runtimes ignore the
+  unknown key without creating wrappers. Public `menu.show` is unaffected.
+  Themes that need zones should probe `config.getVersionInfo().plugin.version`
+  first (minimum plugin version not finalized — do not hard-code a fake floor).
+  Stable CSS hooks: `.fb-menu[data-depth]`, `.fb-zone[data-zone]`,
+  `.fb-item[data-item-id|data-kind|data-depth|data-zone]`. `data-item-token` is
+  internal and not a public CSS contract.
+
+### Changed
+
+- Self-drawn tray menu accessibility: navigation/editor focus modes with roving
+  tabindex and real focus; ARIA for menuitem / menuitemcheckbox / slider /
+  radiogroup; `checked: false` remains checkable; default enter/exit animations
+  honor `prefers-reduced-motion: reduce` (custom CSS is the theme author's
+  responsibility; hide protocol / `closeAnimationMs` unchanged).
+- Self-drawn menu protected CSS no longer forces visible `#menu { display:block
+  !important }`. Themes may set root / zone `display` to flex or grid without
+  specificity hacks; hidden menus still cannot be re-shown by user
+  `display:* !important`.
+
+### Security
+
+- **Tray / self-drawn menu SVG allowlist** — the `'webview'` menu renderer no
+  longer mounts icon markup via raw `innerHTML`. Each `iconSvg` (item and
+  segmented option) is parsed with `DOMParser` and cloned through an element /
+  attribute allowlist; illegal or oversized icons are dropped and the menu
+  continues. There is no “caller already sanitized” bypass. Transform values are
+  parsed strictly (no leading/inter-function junk, required arity); live nodes
+  must be in the SVG namespace (empty namespace rejected).
+- **Tray / self-drawn menu resource preflight** — `tray.setContextMenu`,
+  `tray.appendMenuItems`, and `menu.show` now reject oversized menus before any
+  persistent tray config is replaced or any overlay is opened. Caps: 512 items,
+  `menu.show` depth 8, 64 segmented options, 256 KiB CSS, 256 KiB total SVG
+  content. A single SVG over 32 KiB is dropped (menu continues); other breaches
+  return `INVALID_PARAMS` with `details: { field, limit, actual }`. Oversized /
+  unsafe resource inputs are an intentional incompatibility with previously
+  unbounded payloads.
+- **Tray action routing fix** — built-ins are routed by trusted internal origin
+  metadata instead of public item-id prefixes. The exact, case-sensitive tray
+  ID `_sys_exit` remains the documented 1.9.0 compatibility command and exits
+  foobar2000. Caller-supplied `_pb_playPause`, `_pb_prev`, `_pb_next`, and
+  `_pb_stop` are normal user items and emit `tray:menuItemClicked`; only runtime
+  auto-injected playback controls are privileged, and caller items with the same
+  IDs do not suppress those injected controls. Similar `_sys_*` IDs and the
+  generic `menu.show` API receive no promotion. Selection and rich-value IPC
+  still use per-show opaque tokens and validate caller HWND, current menu ID,
+  enabled state, control kind, and value range before dispatch.
+
+### Changed
+
+- **`TrayMenuItem.icon` documentation** — corrected the JSDoc: the base64 ICO
+  payload is a **reserved field not currently rendered by either backend** (the
+  native `TrackPopupMenu` menu is text-only; the `'webview'` menu draws
+  `iconSvg`, not this field). Use `iconSvg` for a menu-item icon. No behaviour
+  change — the field was already unused by the renderer.
+
+### Fixed
+
+- **`tray:menuItemClicked` for `'segmented'`** — a `'segmented'` pick reports
+  `{ id, value }` (the picked zero-based segment index) through the value channel
+  and keeps the menu open, matching `'rating'` / `'slider'`. The shared keep-open
+  contract and the `TrayMenuItemClickedPayload.value` documentation previously
+  listed only `'rating'` / `'slider'`, so a consumer reading the contract could
+  treat a segmented pick as a closing click. The `'webview'` runtime already kept
+  the menu open; this only aligns the contract and docs with the runtime.
+- **Empty tray-menu zones no longer emit an orphan separator** — a menu zone
+  whose items are all `visible: false` (or empty) used to leave a leading /
+  trailing divider once the hidden items were filtered out downstream. Visible
+  filtering now precedes the separator decision, so both the native and
+  `'webview'` menus drop the stray separator. Default-behaviour correction.
+
 ## [1.9.0] - 2026-06-18
 
 ### Added
