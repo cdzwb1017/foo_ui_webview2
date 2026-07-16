@@ -30,7 +30,7 @@ const COMMON: Pick<
 > = {
     format: ['iife'],
     clean: false,
-    sourcemap: true,
+    sourcemap: false,
     target: 'es2020',
     outDir: 'dist',
     // .d.ts is emitted by the ESM config; suppress here to avoid duplicate

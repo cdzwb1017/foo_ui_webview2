@@ -2942,6 +2942,13 @@ export interface TraySetContextMenuParams {
     showSystemItems?: unknown;
     customPosition?: unknown;
     render?: unknown;
+    autoNowPlaying?: unknown;
+    css?: unknown;
+    cssReplace?: unknown;
+    backdrop?: unknown;
+    backdropDarkMode?: unknown;
+    closeAnimationMs?: unknown;
+    layoutMode?: unknown;
 }
 
 /**

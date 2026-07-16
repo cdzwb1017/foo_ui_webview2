@@ -22,13 +22,14 @@ import type {
 } from '../../types/generated/params.js';
 
 /** Merge optional screen-pixel coordinates into a `menu.show` payload. */
-function withPosition(
-    base: Record<string, unknown>,
+function withPosition<T extends object>(
+    base: T,
     position?: MenuPopupPosition,
-): Record<string, unknown> {
-    if (position?.x !== undefined) base.x = position.x;
-    if (position?.y !== undefined) base.y = position.y;
-    return base;
+): T & { x?: number; y?: number } {
+    const merged: T & { x?: number; y?: number } = { ...base };
+    if (position?.x !== undefined) merged.x = position.x;
+    if (position?.y !== undefined) merged.y = position.y;
+    return merged;
 }
 
 export const menu = {

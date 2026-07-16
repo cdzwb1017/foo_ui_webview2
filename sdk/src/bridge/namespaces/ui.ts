@@ -12,7 +12,6 @@ import type {
     WindowBounds,
     WindowDevServerConfig,
     WindowListResponse,
-    WindowPopupBehaviorPatch,
     WindowPopupBehaviorResponse,
     WindowPopupBehaviorState,
     WindowState,
@@ -21,6 +20,9 @@ import type {
 import type { JsonObject } from '../../types/json.js';
 import type {
     WindowCreatePopupParams,
+    WindowSetPopupBehaviorParams,
+} from '../../types/overrides/window.js';
+import type {
     WindowFlashParams,
     WindowSetAcrylicParams,
     WindowSetBackgroundTransparencyParams,
@@ -208,11 +210,11 @@ export const ui = {
             ...(windowId != null ? { windowId } : {}),
         }),
     setPopupBehavior: (
-        opts: WindowPopupBehaviorPatch & { windowId?: string },
+        opts: WindowSetPopupBehaviorParams,
     ) =>
         bridge.invoke<WindowPopupBehaviorResponse>(
             'window.setPopupBehavior',
-            opts as JsonObject,
+            opts,
         ),
     getBackdropPolicy: (windowId?: string) =>
         bridge.invoke<WindowBackdropPolicyState>('window.getBackdropPolicy', {
@@ -223,7 +225,12 @@ export const ui = {
     ) =>
         bridge.invoke<WindowBackdropPolicyResponse>(
             'window.setBackdropPolicy',
-            opts as JsonObject,
+            {
+                ...(opts.windowId != null ? { windowId: opts.windowId } : {}),
+                backdropPolicy: Object.fromEntries(
+                    Object.entries(opts).filter(([key]) => key !== 'windowId'),
+                ),
+            },
         ),
     setClickThrough: (opts: WindowSetClickThroughParams) =>
         bridge.invoke<BaseResponse & { clickThrough?: boolean }>(

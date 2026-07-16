@@ -1780,6 +1780,8 @@ export interface MenuShowResponse {
     success: boolean;
     error?: string;
     menuId?: string;
+    code: unknown;
+    details: JsonObject;
 }
 
 /**
@@ -3452,6 +3454,8 @@ export interface TrayAppendMenuItemsResponse {
     success: boolean;
     error?: string;
     panelMode: boolean;
+    code: unknown;
+    details: JsonObject;
 }
 
 /**
@@ -3522,6 +3526,8 @@ export interface TraySetContextMenuResponse {
     success: boolean;
     error?: string;
     panelMode: boolean;
+    code: unknown;
+    details: JsonObject;
 }
 
 /**

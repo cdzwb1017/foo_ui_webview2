@@ -20,7 +20,7 @@ const COMMON: Pick<
 > = {
     format: ['esm'],
     dts: true,
-    sourcemap: true,
+    sourcemap: false,
     target: 'es2020',
     outDir: 'dist',
     splitting: false,

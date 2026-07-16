@@ -9,7 +9,18 @@ import type { BaseResponse } from '../../types/responses.js';
 
 /** A single tray context-menu item. */
 export interface TrayMenuItem {
-    /** Stable identifier reported by `tray:menuItemClicked`; omit for separators. */
+    /**
+     * Stable identifier reported by `tray:menuItemClicked`; omit for separators.
+     *
+     * The exact, case-sensitive ID `_sys_exit` is a tray-only compatibility
+     * command: when supplied through this namespace it exits foobar2000 and is
+     * not emitted as a user click. Similar `_sys_*` IDs remain user IDs.
+     * Caller-supplied `_pb_playPause`, `_pb_prev`, `_pb_next`, and `_pb_stop`
+     * also remain user IDs; only playback items auto-injected by the runtime are
+    * privileged. A caller item with the same ID does not suppress the injected
+    * control; each node is distinguished by an opaque per-show token. The
+    * public generic `menu.show` API performs no ID promotion.
+     */
     id?: string;
     /** Display text. */
     label?: string;
@@ -27,23 +38,30 @@ export interface TrayMenuItem {
     enabled?: boolean;
     /** Whether the item is shown (default `true`). */
     visible?: boolean;
-    /** Renders a checkmark when `true` (default `false`). */
+    /**
+     * Checkmark state. Providing this field — including `false` — marks the item
+     * as checkable so the WebView backend maps it to `menuitemcheckbox` and
+     * `getMenuItems()` round-trips the key. Omitting the field leaves a normal
+     * item. `tray.setMenuItemState(id, { checked })` also establishes checkable
+     * identity. Default when omitted: not checkable / no checkmark.
+     */
     checked?: boolean;
     /**
-     * Base64 ICO payload. Rendered by the `'webview'` backend only (the native
-     * backend ignores it).
+     * Reserved base64 ICO payload. **Not currently rendered by either backend** —
+     * the native `TrackPopupMenu` menu is text-only and the `'webview'` menu draws
+     * {@link iconSvg}, not this field. Use {@link iconSvg} for a menu-item icon.
      */
     icon?: string;
     /**
      * Inline monochrome SVG icon, drawn before the label by the `'webview'`
      * backend only (the native backend ignores it). `content` is the SVG inner
-     * markup (e.g. `"<path d=\"...\"/>"`), rendered as
-     * `<svg viewBox=...>content</svg>` with `fill: currentColor` so it follows
-     * the menu text colour. Within a menu layer, if any item supplies an icon,
-     * every normal/submenu item reserves a fixed icon column so labels stay
-     * left-aligned. Keep `content` to trusted shape markup (paths/shapes); it is
-     * injected as-is, so if you source icons from untrusted input, sanitize them
-     * first (strip `<script>` and `on*` handlers).
+     * markup (e.g. `"<path d=\"...\"/>"`). The overlay runtime parses it with
+     * `DOMParser` and clones only an allowlisted set of shape elements /
+     * attributes into the live document (DESIGN 8.4); raw `innerHTML` injection
+     * is not used. Illegal or oversized (>32 KiB) icons are dropped and the
+     * menu row continues without an icon. Within a menu layer, if any item
+     * supplies a renderable icon, every normal/submenu item reserves a fixed
+     * icon column so labels stay left-aligned.
      */
     iconSvg?: { viewBox: string; content: string };
 
@@ -72,6 +90,24 @@ export interface TrayMenuItem {
     /** `type: 'slider'` range maximum (default `100`). */
     max?: number;
     /**
+     * `type: 'slider'` axis only (`'horizontal'` | `'vertical'`). Default when
+     * omitted: `'horizontal'`. Only the exact value `'vertical'` is vertical;
+     * unknown strings fall back to horizontal. Non-slider types ignore this
+     * field. The native backend ignores orientation and keeps the stepped-level
+     * submenu degrade. Older plugin runtimes ignore the unknown key (no crash)
+     * and keep horizontal pointer/paint/keyboard — themes that need vertical
+     * sliders must probe `config.getVersionInfo().plugin.version` before
+     * enabling them. The SDK wrapper passes the field through as supplied and
+     * does **not** inject a default.
+     *
+     * Vertical semantics (WebView): min at bottom, max at top; pointer uses
+     * `clientY` / height; fill height from bottom; thumb bottom; ArrowUp /
+     * ArrowRight increase, ArrowDown / ArrowLeft decrease, Home=min, End=max.
+     * Horizontal keeps min-left / max-right. Constant sliders (`min === max`
+     * after normalization) display the value and never emit value changes.
+     */
+    orientation?: 'horizontal' | 'vertical';
+    /**
      * `type: 'segmented'` segments — an inline single-select control (one row of
      * mutually exclusive options). Rendered by the `'webview'` backend only; the
      * native backend degrades the row to a plain text item. The selected segment
@@ -81,8 +117,8 @@ export interface TrayMenuItem {
      * `tray:menuItemClicked` as `{ id, value: index }` and **keeps the menu
      * open** (Left/Right also move the selection); mapping an index to its
      * meaning (e.g. a playback mode) is the frontend's job, so this contract
-     * stays generic. `iconSvg.content` is injected as-is, so sanitize segment
-     * icons sourced from untrusted input (strip `<script>` / `on*`).
+     * stays generic. Segment `iconSvg` goes through the same runtime allowlist
+     * sanitizer as item icons; illegal icons are dropped per-segment.
      */
     segments?: { label?: string; iconSvg?: { viewBox: string; content: string }; enabled?: boolean }[];
     /** Child items; requires `type: 'submenu'`. */
@@ -141,6 +177,26 @@ export interface TrayMenuConfig {
     autoNowPlaying?: boolean;
 
     /**
+     * Opt-in WebView DOM layout mode for the self-drawn tray menu
+     * (`render: 'webview'` only; ignored by the native backend).
+     *
+    * - `'flat'` (default): root keeps the direct-child `.fb-item` /
+     *   `.fb-sep` structure so existing `#menu > .fb-item` selectors keep working.
+     *   Items still receive stable `data-zone` / `data-kind` / `data-depth` hooks.
+     * - `'zones'`: emits `.fb-zone[data-zone]` wrappers for non-empty
+     *   `top` / `playback` / `bottom` containers so themes can lay out each zone
+     *   with flex/grid. Public `menu.show` is unaffected and never emits zones.
+     *
+     * Older plugin runtimes ignore the unknown key (no crash) but do **not**
+     * create zone wrappers — themes that need zones must probe
+     * `config.getVersionInfo().plugin.version` before opting in. The minimum
+     * plugin version that ships zones is not finalized yet; do not hard-code a
+     * fake floor. `data-item-token` is an internal single-show identity and is
+     * **not** a public CSS contract.
+     */
+    layoutMode?: 'flat' | 'zones';
+
+    /**
      * Frontend style takeover for the self-drawn tray menu (**`render: 'webview'`
      * only**; ignored by the native backend). The CSS string is injected into the
      * overlay's dedicated `<style>` layer and applied on every open.
@@ -148,17 +204,19 @@ export interface TrayMenuConfig {
      * By default this is **override / append** mode: your rules sit on top of the
      * built-in styles, so target the menu's stable class names — `.fb-menu`,
      * `.fb-item` (with `.nrm` / `.disabled` / `.active` / `.checked` / `.has-sub`),
-     * `.fb-item-ico`, `.fb-arrow`, `.fb-sep`, the now-playing `.fb-np*`, rating
-     * `.fb-rating*` / `.fb-star`, slider `.fb-slider*`, and segmented
-     * `.fb-seg*` (`.fb-seg-label` / `.fb-seg-group` / `.fb-seg-btn` with `.on` /
-     * `.disabled`) — and win by source order or `!important`. (The overlay is an
-     * isolated top-level document, so a
-     * host page's `::part()` cannot reach it; the stable class names are the
-     * supported hook — see STYLING_TAKEOVER_DESIGN §12.3 D-B.)
+     * `.fb-item-ico`, `.fb-arrow`, `.fb-sep`, `.fb-zone[data-zone]`, the now-playing
+     * `.fb-np*`, rating `.fb-rating*` / `.fb-star`, slider `.fb-slider*`, and
+     * segmented `.fb-seg*` (`.fb-seg-label` / `.fb-seg-group` / `.fb-seg-btn` with
+     * `.on` / `.disabled`) — and win by source order or `!important`. (The
+     * overlay is an isolated top-level document, so a host page's `::part()`
+     * cannot reach it; the stable class / data-attribute hooks are the supported
+     * contract — see STYLING_TAKEOVER_DESIGN §12.3 D-B and DESIGN §5.4.)
      *
-     * A small protected structural layer (root box-sizing / overflow / fixed
-     * positioning / root display) is always force-applied last to keep the
-     * content-sized window measurement stable; it is not overridable.
+     * A small protected structural layer (`#viewport`, menu box-sizing / fixed
+     * positioning / overflow, and the hidden-state fallback) is always
+     * force-applied last. Visible display (`block` / `flex` / `grid`) is **not**
+     * forced by protected CSS, so themes can lay out the root without specificity
+    * workarounds; hidden menus still cannot be re-shown by user `display:* !important`.
      */
     css?: string;
 
@@ -181,6 +239,12 @@ export interface TrayMenuConfig {
      * main-window / tabbed-window backgrounds and may look off on a transient
      * menu; `'none'` disables the backdrop. Re-applied on every open, so it can
      * follow the current theme per right-click.
+    *
+    * The content-sized root and its first-level submenu use separate, tightly
+    * sized popup windows. Each window receives the configured backdrop only
+    * across its actual panel, so a closed submenu does not leave an invisible
+    * native slot or blank DWM material rectangle. The runtime never replaces
+    * the requested backdrop with `'none'` merely because a submenu exists.
      *
      * ⚠️ The DWM backdrop is a window-level, all-or-nothing effect: it appears /
      * disappears the instant the window is shown / hidden and **cannot fade with
@@ -288,6 +352,10 @@ export const tray = {
      * is searched across all zones and recursively into submenus. At least one
      * of `checked` / `enabled` must be supplied. This is a granular alternative
      * to {@link setContextMenu}, which performs a full-zone replace.
+     *
+     * Providing `checked` (true or false) marks the item checkable so subsequent
+     * `getMenuItems()` and the WebView overlay keep checkbox semantics even when
+     * the value is `false`.
      *
      * The native tray menu is rebuilt from stored data each time it is opened,
      * so the new state takes effect on the **next** open rather than mutating a

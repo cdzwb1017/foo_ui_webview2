@@ -613,15 +613,19 @@ export type AppBeforeQuitPayload = Record<string, never>;
  * Payload for `tray:menuItemClicked`.
  *
  * Ordinary items and the now-playing card report `{ id }` and close the menu.
- * Rich controls report `{ id, value }` and keep the menu open: a `'rating'`
- * change reports `0..5`; a `'slider'` change reports the new integer value
- * within `[min, max]`.
+ * Rich value controls report `{ id, value }` and keep the menu open: a
+ * `'rating'` change reports `0..5`; a `'slider'` change reports the new integer
+ * value within `[min, max]`; a `'segmented'` change reports the zero-based index
+ * of the picked segment.
  *
  * @codegen-override event:tray:menuItemClicked
- * @codegen-snapshot id:primitive
+ * @codegen-snapshot id:primitive,value:primitive
  */
 export interface TrayMenuItemClickedPayload {
     id: string;
-    /** Present only for rich `'rating'` / `'slider'` controls (see above). */
+    /**
+     * Present only for the rich value controls `'rating'` / `'slider'` /
+     * `'segmented'` (see above); absent for ordinary and now-playing items.
+     */
     value?: number;
 }
