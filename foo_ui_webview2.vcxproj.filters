@@ -74,6 +74,9 @@
     <ClInclude Include="src\core\UserInterface.h">
       <Filter>src\core</Filter>
     </ClInclude>
+    <ClInclude Include="src\window\BackgroundSuspendPolicy.h">
+      <Filter>src\window</Filter>
+    </ClInclude>
     <ClInclude Include="src\window\MainWindow.h">
       <Filter>src\window</Filter>
     </ClInclude>
@@ -81,6 +84,12 @@
       <Filter>src\window</Filter>
     </ClInclude>
     <ClInclude Include="src\window\MenuOverlayHost.h">
+      <Filter>src\window</Filter>
+    </ClInclude>
+    <ClInclude Include="src\window\MenuOverlayGeometry.h">
+      <Filter>src\window</Filter>
+    </ClInclude>
+    <ClInclude Include="src\window\MenuResourceLimits.h">
       <Filter>src\window</Filter>
     </ClInclude>
     <ClInclude Include="src\window\PopupWindow.h">

@@ -7,6 +7,7 @@
 #include <shellapi.h>
 #include <foobar2000/SDK/playback_control.h>
 #include <foobar2000/SDK/core_api.h>
+#include <foobar2000/SDK/menu_helpers.h>  // standard_commands::run_main / guid_main_exit
 #include <algorithm>
 #include <unordered_map>
 #include <unordered_set>
@@ -307,6 +308,43 @@ void TrayIcon::SetContextMenu(const std::vector<TrayMenuItem>& items) {
     m_zones[zone] = items;
 }
 
+const std::vector<TrayMenuItem>& TrayIcon::GetZoneItems(TrayMenuPosition position) const {
+    int zone = static_cast<int>(position);
+    if (zone < 0 || zone > 2) zone = 0;
+    return m_zones[zone];
+}
+
+menu_limits::CheckResult TrayIcon::TrySetContextMenu(
+    std::vector<TrayMenuItem> items, const std::optional<TrayMenuConfig>& config) {
+    TrayMenuStorage storage;
+    storage.zones[0] = m_zones[0];
+    storage.zones[1] = m_zones[1];
+    storage.zones[2] = m_zones[2];
+    storage.config = m_menuConfig;
+    auto breach = TryReplaceContextMenuZone(storage, std::move(items), config);
+    if (!breach.ok) return breach;
+    m_menuConfig = storage.config;
+    m_zones[0] = std::move(storage.zones[0]);
+    m_zones[1] = std::move(storage.zones[1]);
+    m_zones[2] = std::move(storage.zones[2]);
+    return menu_limits::CheckResult::Ok();
+}
+
+menu_limits::CheckResult TrayIcon::TryAppendMenuItems(
+    std::vector<TrayMenuItem> items, TrayMenuPosition position) {
+    TrayMenuStorage storage;
+    storage.zones[0] = m_zones[0];
+    storage.zones[1] = m_zones[1];
+    storage.zones[2] = m_zones[2];
+    storage.config = m_menuConfig;
+    auto breach = TryAppendMenuItemsToStorage(storage, std::move(items), position);
+    if (!breach.ok) return breach;
+    m_zones[0] = std::move(storage.zones[0]);
+    m_zones[1] = std::move(storage.zones[1]);
+    m_zones[2] = std::move(storage.zones[2]);
+    return menu_limits::CheckResult::Ok();
+}
+
 void TrayIcon::AppendMenuItems(const std::vector<TrayMenuItem>& items, TrayMenuPosition position) {
     int zone = static_cast<int>(position);
     if (zone < 0 || zone > 2) zone = 0;
@@ -352,7 +390,12 @@ static bool TraySetItemStateRecursive(std::vector<TrayMenuItem>& items,
                                       std::optional<bool> enabled) {
     for (auto& it : items) {
         if (it.id == id) {
-            if (checked.has_value()) it.checked = *checked;
+            // Providing checked (true or false) establishes checkable identity
+            // so getMenuItems / overlay keep menuitemcheckbox semantics.
+            if (checked.has_value()) {
+                it.checked = *checked;
+                it.checkable = true;
+            }
             if (enabled.has_value()) it.enabled = *enabled;
             return true;
         }
@@ -375,34 +418,11 @@ bool TrayIcon::SetMenuItemState(const std::string& id,
 }
 
 std::vector<TrayMenuItem> TrayIcon::BuildPlaybackDefaults() const {
-    // Built-in playback controls when TrayMenuConfig.showPlaybackControls=true.
-    // ids prefixed with "_pb_" so dispatch can short-circuit straight to
-    // playback_control without leaving the C++ side (mirrors taskbar defaults).
-    std::vector<TrayMenuItem> items;
-    auto add = [&](const char* id, const char* label) {
-        TrayMenuItem m;
-        m.id = id;
-        m.label = label;
-        m.type = "normal";
-        m.enabled = true;
-        m.visible = true;
-        items.push_back(std::move(m));
-    };
-    add("_pb_playPause", "Play / Pause");
-    add("_pb_prev",      "Previous Track");
-    add("_pb_next",      "Next Track");
-    add("_pb_stop",      "Stop");
-    return items;
+    return BuildPlaybackDefaultItems();
 }
 
 std::vector<TrayMenuItem> TrayIcon::BuildSystemDefaults() const {
-    std::vector<TrayMenuItem> items;
-    TrayMenuItem exitItem;
-    exitItem.id = "_sys_exit";
-    exitItem.label = "Exit foobar2000";
-    exitItem.type = "normal";
-    items.push_back(std::move(exitItem));
-    return items;
+    return BuildSystemDefaultItems();
 }
 
 HMENU TrayIcon::BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId) {
@@ -443,19 +463,31 @@ HMENU TrayIcon::BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId) {
                 Utf8ToWide(plabel).c_str());
         } else if (item.type == "slider") {
             // Native degrade: a quantised "level" submenu (endpoints inclusive);
-            // each pick reports a value.
+            // each pick reports a value. Orientation is ignored (DESIGN §6.2).
+            // Constant slider (min==max) emits a single greyed display value and
+            // no selectable duplicates / no value map entries.
             HMENU hSub = CreatePopupMenu();
             int mn = item.minValue, mx = item.maxValue;
             if (mx < mn) std::swap(mn, mx);
-            const int stops = taskbar_tray_contracts::SliderNativeStopCount();
-            const int span = stops > 1 ? stops - 1 : 1;
-            for (int s = 0; s < stops; ++s) {
-                int val = mn + (mx - mn) * s / span;
-                UINT flags = MF_STRING;
-                if (val == item.value) flags |= MF_CHECKED;
-                int id = cmdId++;
-                m_menuValueMap[id] = { item.id, val };
-                AppendMenuW(hSub, flags, id, std::to_wstring(val).c_str());
+            if (mx == mn) {
+                // Constant: one disabled display row, no value map / no picks.
+                AppendMenuW(hSub, MF_STRING | MF_GRAYED, 0, std::to_wstring(mn).c_str());
+            } else {
+                const int stops = taskbar_tray_contracts::SliderNativeStopCount();
+                const int span = stops > 1 ? stops - 1 : 1;
+                // Deduplicate stop values so a narrow range never emits the same
+                // selectable value twice (e.g. min=0 max=2 with 5 stops).
+                int lastVal = mn - 1;
+                for (int s = 0; s < stops; ++s) {
+                    int val = mn + (mx - mn) * s / span;
+                    if (s > 0 && val == lastVal) continue;
+                    lastVal = val;
+                    UINT flags = MF_STRING;
+                    if (val == item.value) flags |= MF_CHECKED;
+                    int id = cmdId++;
+                    m_menuValueMap[id] = { item.id, val };
+                    AppendMenuW(hSub, flags, id, std::to_wstring(val).c_str());
+                }
             }
             UINT pflags = MF_POPUP;
             if (!item.enabled) pflags |= MF_GRAYED;
@@ -464,8 +496,19 @@ HMENU TrayIcon::BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId) {
                 Utf8ToWide(plabel).c_str());
         } else if (item.type == "submenu" && !item.submenu.empty()) {
             HMENU hSub = BuildMenu(item.submenu, cmdId);
-            AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hSub),
-                Utf8ToWide(item.label).c_str());
+            // Defense: if every child was filtered out, do not attach an empty popup.
+            if (GetMenuItemCount(hSub) <= 0) {
+                DestroyMenu(hSub);
+                UINT flags = MF_STRING;
+                if (!item.enabled) flags |= MF_GRAYED;
+                if (item.checked) flags |= MF_CHECKED;
+                int id = cmdId++;
+                m_menuIdMap[id] = ResolveTrayMenuItemAction(item);
+                AppendMenuW(hMenu, flags, id, Utf8ToWide(item.label).c_str());
+            } else {
+                AppendMenuW(hMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(hSub),
+                    Utf8ToWide(item.label).c_str());
+            }
         } else {
             // Plain item path. The "segmented" rich kind has no TrackPopupMenu
             // equivalent, so it intentionally lands here too and degrades to a
@@ -476,7 +519,7 @@ HMENU TrayIcon::BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId) {
             if (!item.enabled) flags |= MF_GRAYED;
             if (item.checked) flags |= MF_CHECKED;
             int id = cmdId++;
-            m_menuIdMap[id] = item.id;
+            m_menuIdMap[id] = ResolveTrayMenuItemAction(item);
             AppendMenuW(hMenu, flags, id, Utf8ToWide(item.label).c_str());
         }
     }
@@ -486,28 +529,26 @@ HMENU TrayIcon::BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId) {
 namespace {
 // TrayMenuItem -> menu.* item JSON 转换器（webview 分支用）。与原生 BuildMenu 语义对齐：
 // 过滤 visible=false；submenu 仅 type=="submenu" && 非空；渲染器靠 checked 打勾、
-// enabled===false 置灰、id 用于 select、label 显示。富类型（nowplaying/rating/slider）
-// 透传 type 及其字段（cover/title/subtitle/value/min/max），并放行 icon/cover —— 仅
-// webview 分支渲染；native 分支由 BuildMenu 降级处理。富类型判定走 TaskbarTrayContracts
+// enabled===false 置灰、label 显示；选中身份改由 MenuOverlayHost 分配的 opaque token
+// 承担（渲染器只回 token，不回 public id）。富类型（nowplaying/rating/slider/segmented）
+// 透传 type 及其字段（cover/title/subtitle/value/min/max/segments），并放行 icon/cover ——
+// 仅 webview 分支渲染；native 分支由 BuildMenu 降级处理。富类型判定走 TaskbarTrayContracts
 // 的共享契约 taskbar_tray_contracts::IsRichTrayItemType（与 native 降级 / 契约测试同源）。
-void CollectRealIds(const std::vector<TrayMenuItem>& items, std::unordered_set<std::string>& out) {
-    for (const auto& it : items) {
-        if (!it.id.empty()) out.insert(it.id);
-        if (!it.submenu.empty()) CollectRealIds(it.submenu, out);
-    }
-}
-
-json TrayItemToMenuJson(const TrayMenuItem& m,
-                        const std::unordered_set<std::string>& realIds,
-                        std::unordered_map<std::string, std::string>& syntheticToEmpty,
-                        int& synthSeq) {
+// 内置项额外携带内部 _origin / _builtinAction，供 overlay 建立 token 索引并按可信 origin
+// 路由（渲染器忽略这些字段；用户项永不携带）。
+json TrayItemToMenuJson(const TrayMenuItem& m, const char* zone = nullptr) {
     if (m.type == "separator") {
-        return json{ {"type", "separator"} };
+        json j = json{ {"type", "separator"} };
+        if (zone && *zone) j["_zone"] = zone;
+        return j;
     }
     json j;
     j["label"] = m.label;
     j["enabled"] = m.enabled;
-    if (m.checked) j["checked"] = true;
+    // Preserve checkable field existence (including checked:false) for ARIA
+    // menuitemcheckbox mapping in the overlay (DESIGN §9.2).
+    if (m.checkable || m.checked || m.type == "checkbox") j["checked"] = m.checked;
+    if (zone && *zone) j["_zone"] = zone;
 
     // Rich types carry their kind + payload so the self-drawn renderer can
     // branch. icon/cover are passed through here (webview backend only).
@@ -528,10 +569,13 @@ json TrayItemToMenuJson(const TrayMenuItem& m,
         j["value"] = m.value;
         j["min"] = m.minValue;
         j["max"] = m.maxValue;
+        // Orientation: emit only when vertical so the renderer can set
+        // data-orientation; missing/horizontal = horizontal default.
+        if (m.orientation == "vertical") j["orientation"] = "vertical";
     } else if (m.type == "segmented") {
         // segmented：发选中段索引 value + 各段（label / 可渲染 iconSvg / enabled）。
-        // 渲染器据 it.segments 渲控件；点击段经 menu.__valueChanged 走现有 value 通道
-        // → tray:menuItemClicked{id,value} 且不关菜单（与 rating/slider 同源）。
+        // 点击段经 menu.__valueChanged 走现有 value 通道 → tray:menuItemClicked{id,value}
+        // 且不关菜单（与 rating/slider 同源）。
         j["value"] = m.value;
         json segs = json::array();
         for (const auto& s : m.segments) {
@@ -545,100 +589,109 @@ json TrayItemToMenuJson(const TrayMenuItem& m,
         j["segments"] = segs;
     }
 
+    // Public id echoed to the frontend on select; empty stays empty. An id-less
+    // item still gets an opaque token from MenuOverlayHost and routes to
+    // tray:menuItemClicked{id:""} (native m_menuItemCb("") parity) — no synthetic
+    // id required. Routing NEVER re-derives origin from this id.
+    if (!m.id.empty()) j["id"] = m.id;
+    // Internal routing identity for the overlay token index (renderer ignores
+    // it; present only for built-ins). A user item never carries _origin, so a
+    // user public id spelled "_pb_next" stays Origin::User and does not suppress
+    // the separately injected trusted playback control with the same public id.
+    const auto actionFields = TrayMenuItemActionFields(m);
+    if (actionFields.IsStamped()) {
+        j["_origin"] = *actionFields.origin;
+        j["_builtinAction"] = *actionFields.builtin;
+    }
+
     if (m.type == "submenu" && !m.submenu.empty()) {
         json sub = json::array();
         for (const auto& s : m.submenu) {
             if (!s.visible) continue;
-            sub.push_back(TrayItemToMenuJson(s, realIds, syntheticToEmpty, synthSeq));
+            sub.push_back(TrayItemToMenuJson(s, zone));  // submenu inherits entry zone
         }
         j["submenu"] = sub;
-        if (!m.id.empty()) j["id"] = m.id;
-        return j;
-    }
-
-    // leaf：必须带 id 才能被渲染器判为可导航。无 id 时合成不碰撞占位 id，并精确映射回
-    // 空 id（与 native m_menuItemCb("") 等价）。禁止用前缀判断还原——仅凭映射命中。
-    if (!m.id.empty()) {
-        j["id"] = m.id;
-    } else {
-        std::string synth;
-        do {
-            synth = "__trayidx_" + std::to_string(synthSeq++);
-        } while (realIds.contains(synth) || syntheticToEmpty.contains(synth));
-        syntheticToEmpty[synth] = std::string();
-        j["id"] = synth;
     }
     return j;
 }
 
-json TrayItemsToMenuJson(const std::vector<TrayMenuItem>& items,
-                         std::unordered_map<std::string, std::string>& syntheticToEmpty) {
-    std::unordered_set<std::string> realIds;
-    CollectRealIds(items, realIds);
-    int synthSeq = 0;
+json TrayItemsToMenuJson(const std::vector<TrayMenuItem>& items, const char* zone = nullptr) {
     json arr = json::array();
     for (const auto& it : items) {
         if (!it.visible) continue;
-        arr.push_back(TrayItemToMenuJson(it, realIds, syntheticToEmpty, synthSeq));
+        arr.push_back(TrayItemToMenuJson(it, zone));
     }
     return arr;
+}
+
+// Flat WebView payload: effective zones flattened with `_zone` stamps.
+// Separator attribution uses FlattenEffectiveZonesTagged (last emitted zone).
+json TrayEffectiveZonesToFlatJson(const EffectiveTrayZones& z) {
+    json arr = json::array();
+    for (const auto& tagged : FlattenEffectiveZonesTagged(z)) {
+        arr.push_back(TrayItemToMenuJson(tagged.item, tagged.zone.c_str()));
+    }
+    return arr;
+}
+
+// Zones WebView payload: only non-empty (visible) zones.
+json TrayEffectiveZonesToZonesJson(const EffectiveTrayZones& z) {
+    json zones = json::array();
+    auto pushZone = [&](const char* id, const std::vector<TrayMenuItem>& items) {
+        json arr = TrayItemsToMenuJson(items, id);
+        if (arr.empty()) return;
+        zones.push_back(json{ {"id", id}, {"items", std::move(arr)} });
+    };
+    pushZone("top", z.top);
+    pushZone("playback", z.playback);
+    pushZone("bottom", z.bottom);
+    return zones;
 }
 }  // namespace
 
 std::vector<TrayMenuItem> TrayIcon::ComposeMenu() const {
-    // Compose: [top] [playback (defaults + user)] [bottom (user + system defaults)].
-    // Separators inserted only between non-empty zones. Shared by native + webview.
-    std::vector<TrayMenuItem> composed;
-    auto appendZone = [&](const std::vector<TrayMenuItem>& items, bool addLeadingSeparator) {
-        if (items.empty()) return;
-        if (addLeadingSeparator && !composed.empty()) {
-            TrayMenuItem sep; sep.type = "separator";
-            composed.push_back(sep);
-        }
-        composed.insert(composed.end(), items.begin(), items.end());
-    };
-
-    appendZone(m_zones[(int)TrayMenuPosition::Top], false);
-
-    std::vector<TrayMenuItem> playback = m_zones[(int)TrayMenuPosition::Playback];
-    if (m_menuConfig.showPlaybackControls) {
-        auto defaults = BuildPlaybackDefaults();
-        playback.insert(playback.begin(), defaults.begin(), defaults.end());
-    }
-    appendZone(playback, true);
-
-    std::vector<TrayMenuItem> bottom = m_zones[(int)TrayMenuPosition::Bottom];
-    if (m_menuConfig.showSystemItems) {
-        auto defaults = BuildSystemDefaults();
-        bottom.insert(bottom.end(), defaults.begin(), defaults.end());
-    }
-    appendZone(bottom, true);
-
-    return composed;
+    // Single effective-zone authority shared by native + webview (DESIGN §5.2).
+    return FlattenEffectiveZones(BuildEffectiveTrayZones(
+        m_zones[(int)TrayMenuPosition::Top],
+        m_zones[(int)TrayMenuPosition::Playback],
+        m_zones[(int)TrayMenuPosition::Bottom],
+        m_menuConfig));
 }
 
-void TrayIcon::RouteSelectedId(const std::string& id) {
-    // Built-in id routing for default playback / system items. Shared by the
-    // native (sync, after TrackPopupMenu) and webview (async, via select sink) paths.
-    if (id.starts_with("_pb_")) {
-        try {
-            auto pc = playback_control::get();
-            if      (id == "_pb_playPause") pc->play_or_pause();
-            else if (id == "_pb_prev")      pc->previous();
-            else if (id == "_pb_next")      pc->next();
-            else if (id == "_pb_stop")      pc->stop();
-        } catch (...) {}
-        return;
+void TrayIcon::RouteResolvedAction(const menu_action::ResolvedAction& action) {
+    // Route by TRUSTED origin, never by a public-id prefix. Effective-menu
+    // composition stamps defaults and the exact historical reserved-id
+    // allowlist; arbitrary `_pb_*` / `_sys_*` ids remain user callbacks. Shared
+    // by native (sync) and WebView (opaque-token resolved) paths. Normalize at
+    // the routing boundary as a final fail-closed guard for any future caller.
+    const auto normalized = menu_action::NormalizeResolvedAction(action);
+    switch (menu_action::DecideRoute(normalized)) {
+        case menu_action::RouteDecision::ExecutePlayback:
+            try {
+                auto pc = playback_control::get();
+                switch (normalized.builtin) {
+                    case menu_action::Builtin::PlayPause: pc->play_or_pause(); break;
+                    case menu_action::Builtin::Previous:  pc->previous();      break;
+                    case menu_action::Builtin::Next:      pc->next();          break;
+                    case menu_action::Builtin::Stop:      pc->stop();          break;
+                    default: break;
+                }
+            } catch (...) {}
+            return;
+        case menu_action::RouteDecision::ExecuteSystem:
+            if (normalized.builtin == menu_action::Builtin::Exit) {
+                // 托盘"退出"必须真正退出 foobar2000，绕开 closeToTray 隐藏逻辑。
+                // 直接执行标准退出命令（等价 MainWindow::OnClose 的退出路径）；
+                // 不再 PostMessage(WM_CLOSE)——否则在 closeToTray 开启时会被拦成隐藏到托盘。
+                try {
+                    standard_commands::run_main(standard_commands::guid_main_exit);
+                } catch (...) {}
+            }
+            return;
+        case menu_action::RouteDecision::FireUserCallback:
+            if (m_menuItemCb) m_menuItemCb(normalized.publicId);
+            return;
     }
-    if (id == "_sys_exit") {
-        try {
-            HWND mainWnd = core_api::get_main_window();
-            if (mainWnd) PostMessage(mainWnd, WM_CLOSE, 0, 0);
-        } catch (...) {}
-        return;
-    }
-
-    if (m_menuItemCb) m_menuItemCb(id);
 }
 
 void TrayIcon::RouteValueChanged(const std::string& id, int value) {
@@ -661,54 +714,69 @@ void TrayIcon::ShowContextMenu() {
         try { m_beforeMenuCb(pt.x, pt.y); } catch (...) {}
     }
 
-    std::vector<TrayMenuItem> composed = ComposeMenu();
-    if (composed.empty()) return;
+    EffectiveTrayZones effective = BuildEffectiveTrayZones(
+        m_zones[(int)TrayMenuPosition::Top],
+        m_zones[(int)TrayMenuPosition::Playback],
+        m_zones[(int)TrayMenuPosition::Bottom],
+        m_menuConfig);
+    // All-hidden / empty: do not create overlay or enter measure timeout (DESIGN §5.2).
+    if (!effective.HasAnyVisible()) return;
 
     // Now-playing smart fallback (generic): when config.autoNowPlaying is on, fill
     // any nowplaying field the frontend left empty (frontend-first, backend-fallback).
     // cover auto-fill is webview-only; the native degrade fills text (title/artist) only.
-    AutoFillNowPlaying(composed, m_menuConfig.autoNowPlaying,
-                       m_menuConfig.render == TrayMenuRender::WebView);
+    // Apply on effective zones first so flat/zones/native share one filled source.
+    const bool webview = m_menuConfig.render == TrayMenuRender::WebView;
+    AutoFillNowPlaying(effective.top, m_menuConfig.autoNowPlaying, webview);
+    AutoFillNowPlaying(effective.playback, m_menuConfig.autoNowPlaying, webview);
+    AutoFillNowPlaying(effective.bottom, m_menuConfig.autoNowPlaying, webview);
+
+    std::vector<TrayMenuItem> composed = FlattenEffectiveZones(effective);
 
     // render:'webview': drive the self-drawn overlay instead of
     // TrackPopupMenu. Selection routes back through tray:menuItemClicked via the
-    // owner-mode select sink; id-less leaves use a per-show synthetic-id map that
-    // restores the empty id (native parity). No menu:select / menu:dismiss leak.
-    if (m_menuConfig.render == TrayMenuRender::WebView) {
+    // owner-mode select sink, which now receives a token-resolved ResolvedAction
+    // (public id + trusted origin) — id-less items resolve to publicId "" (native
+    // parity) and built-ins route by origin, not id prefix. No menu:select /
+    // menu:dismiss leak.
+    if (webview) {
         PFC_ASSERT(core_api::is_main_thread());
-        std::unordered_map<std::string, std::string> syntheticToEmpty;
-        json items = TrayItemsToMenuJson(composed, syntheticToEmpty);
-        // 用 shared_ptr 承载本次 show 的 synthetic 映射：lambda 捕获为 nothrow，
-        // 避免每次 std::function 拷贝都复制整张表（亦消解 bugprone-exception-escape）。
-        auto synthMap = std::make_shared<const std::unordered_map<std::string, std::string>>(
-            std::move(syntheticToEmpty));
+        const bool useZones = m_menuConfig.layoutMode == TrayMenuLayoutMode::Zones;
+        json payload = useZones
+            ? TrayEffectiveZonesToZonesJson(effective)
+            : TrayEffectiveZonesToFlatJson(effective);
+        if (payload.empty()) return;
+
+        MenuShowOptions opts{};
+        opts.windowModel = MenuWindowModel::ContentSized;
+        opts.overlayModel = useZones ? MenuOverlayModel::TrayZones : MenuOverlayModel::LegacyItems;
+        opts.css = m_menuConfig.css;
+        opts.cssReplace = m_menuConfig.cssReplace;
+        opts.backdrop = m_menuConfig.backdrop;
+        opts.backdropDarkMode = m_menuConfig.backdropDarkMode;
+        opts.closeAnimationMs = m_menuConfig.closeAnimationMs;
+
         MenuOverlayHost::GetInstance().Show(
-            items, pt.x, pt.y,
-            [this, synthMap](const std::string& id) {
-                try {
-                    auto it = synthMap->find(id);
-                    RouteSelectedId(it != synthMap->end() ? it->second : id);
-                } catch (...) {}
+            payload, pt.x, pt.y,
+            [this](const menu_action::ResolvedAction& action) {
+                try { RouteResolvedAction(action); } catch (...) {}
             },
             nullptr,
-            // 字段顺序须与 MenuShowOptions 一致：windowModel, css, cssReplace, backdrop, backdropDarkMode, closeAnimationMs。
-            MenuShowOptions{ MenuWindowModel::ContentSized, m_menuConfig.css, m_menuConfig.cssReplace, m_menuConfig.backdrop, m_menuConfig.backdropDarkMode, m_menuConfig.closeAnimationMs },   // tray 用内容尺寸窗，浮于任务栏之上；透传前端样式接管 + DWM 背景 + 退场动画时长
-            // value sink: rich items (rating/slider) report value WITHOUT closing.
-            // rating/slider always carry a real id, so the synthetic remap is a
-            // no-op for them, but we resolve through it for consistency.
-            [this, synthMap](const std::string& id, int value) {
-                try {
-                    auto it = synthMap->find(id);
-                    RouteValueChanged(it != synthMap->end() ? it->second : id, value);
-                } catch (...) {}
+            opts,
+            // value sink: rich items (rating/slider/segmented) report value WITHOUT
+            // closing. MenuOverlayHost resolves the opaque token to the item's
+            // public id (empty stays empty) and validates the value before calling.
+            [this](const std::string& id, int value) {
+                try { RouteValueChanged(id, value); } catch (...) {}
             });
         return;
     }
 
-    // render:'native' (default): existing Win32 TrackPopupMenu path. Own the menu
-    // with our hidden top-level window (m_hwnd), NOT the main window, so the
-    // mandatory SetForegroundWindow does not pull fb2k to the foreground (tray
-    // bug 5). The trailing PostMessage(WM_NULL) is the documented MSDN workaround.
+    // render:'native' (default): existing Win32 TrackPopupMenu path. layoutMode is
+    // ignored — native always flattens from effective zones. Own the menu with our
+    // hidden top-level window (m_hwnd), NOT the main window, so the mandatory
+    // SetForegroundWindow does not pull fb2k to the foreground (tray bug 5). The
+    // trailing PostMessage(WM_NULL) is the documented MSDN workaround.
     m_menuIdMap.clear();
     m_menuValueMap.clear();
     int cmdId = 1;
@@ -729,7 +797,7 @@ void TrayIcon::ShowContextMenu() {
     }
     auto it = m_menuIdMap.find(result);
     if (it == m_menuIdMap.end()) return;
-    RouteSelectedId(it->second);
+    RouteResolvedAction(it->second);
 }
 
 LRESULT TrayIcon::HandleTrayCallback(WPARAM /*wParam*/, LPARAM lParam) {

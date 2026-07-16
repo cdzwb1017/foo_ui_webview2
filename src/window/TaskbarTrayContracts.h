@@ -68,11 +68,13 @@ inline bool TrayShouldAutoFillField(bool autoNowPlaying, bool frontendValuePrese
     return autoNowPlaying && !frontendValuePresent;
 }
 
-// Rich value controls (rating / slider) report value changes WITHOUT closing
-// the menu; everything else (normal items and the now-playing card) selects
-// and closes like an ordinary click.
+// Rich value controls (rating / slider / segmented) report value changes WITHOUT
+// closing the menu; everything else (normal items and the now-playing card)
+// selects and closes like an ordinary click. segmented reports the picked index
+// through the same value channel (menu.__valueChanged -> tray:menuItemClicked
+// {id,value}) and stays open, so it belongs here (DESIGN 8.3 / 10.6).
 inline bool RichTrayItemKeepsMenuOpen(const std::string& type) {
-    return type == "rating" || type == "slider";
+    return type == "rating" || type == "slider" || type == "segmented";
 }
 
 // Native degrade: a rating item becomes a "★1..N" submenu.

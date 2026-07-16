@@ -2,8 +2,10 @@
 #include "pch.h"
 #include "api/TrayApi.h"
 #include "api/BridgeCore.h"
+#include "api/ErrorEnvelope.h"
 #include "window/TrayIcon.h"
 #include "window/TaskbarTrayContracts.h"
+#include "window/MenuResourceLimits.h"
 #include "utils/IconLoader.h"
 #include "core/UserInterface.h"
 #include "core/WebViewContext.h"
@@ -105,7 +107,17 @@ static TrayMenuItem ParseMenuItem(const json& item) {
     m.type = item.value("type", "normal");
     m.enabled = item.value("enabled", true);
     m.visible = item.value("visible", true);
-    m.checked = item.value("checked", false);
+    // Explicit `checked` presence (including false) marks the item checkable so
+    // checked:false is not lost as "not a checkbox" (DESIGN §9.2 Phase 3).
+    if (item.contains("checked") && item["checked"].is_boolean()) {
+        m.checked = item["checked"].get<bool>();
+        m.checkable = true;
+    } else {
+        m.checked = false;
+        m.checkable = false;
+    }
+    // type:"checkbox" is also an explicit checkable identity (legacy callers).
+    if (m.type == "checkbox") m.checkable = true;
     m.icon = item.value("icon", "");
     // Inline monochrome SVG icon { viewBox, content } (webview backend only).
     if (item.contains("iconSvg") && item["iconSvg"].is_object()) {
@@ -120,6 +132,11 @@ static TrayMenuItem ParseMenuItem(const json& item) {
     m.value = item.value("value", 0);
     m.minValue = item.value("min", 0);
     m.maxValue = item.value("max", 100);
+    // Slider orientation: only exact "vertical" is kept; "horizontal"/unknown
+    // clear to empty (horizontal default). Non-slider types ignore the field.
+    if (item.contains("orientation") && item["orientation"].is_string()) {
+        m.orientation = item["orientation"].get<std::string>();
+    }
     // Segmented rich item: inline single-select options (webview backend only).
     // Each segment carries an optional label / inline SVG icon / enabled flag.
     if (item.contains("segments") && item["segments"].is_array()) {
@@ -138,6 +155,19 @@ static TrayMenuItem ParseMenuItem(const json& item) {
     }
     if (item.contains("submenu") && item["submenu"].is_array())
         m.submenu = ParseMenuItemsVec(item["submenu"]);
+    // Shared recursive slider normalization (range + orientation + value clamp).
+    // Applied once per item here so submenu children are already normalized by
+    // their own ParseMenuItem returns; still normalize self fields above.
+    if (m.type == "slider") {
+        if (m.maxValue < m.minValue) std::swap(m.minValue, m.maxValue);
+        if (m.value < m.minValue) m.value = m.minValue;
+        if (m.value > m.maxValue) m.value = m.maxValue;
+        if (m.orientation != "vertical" && m.orientation != "horizontal") {
+            m.orientation.clear();
+        }
+    } else {
+        m.orientation.clear();
+    }
     return m;
 }
 static std::vector<TrayMenuItem> ParseMenuItemsVec(const json& arr) {
@@ -171,7 +201,10 @@ static json TraySetContextMenu(const json& params) {
 
     auto& tray = TrayIcon::GetInstance();
 
-    // Apply optional config first, so SetContextMenu writes into the configured zone.
+    // Build the would-be config first; do NOT write until resource preflight
+    // passes (transactional: failed validation must not partially mutate the
+    // previous tray config / zone — DESIGN 8.5).
+    std::optional<TrayMenuConfig> newConf;
     if (params.contains("config") && params["config"].is_object()) {
         const auto& cfg = params["config"];
         TrayMenuConfig conf = tray.GetContextMenuConfig();
@@ -186,29 +219,35 @@ static json TraySetContextMenu(const json& params) {
                 ? TrayMenuRender::WebView : TrayMenuRender::Native;
         if (cfg.contains("autoNowPlaying") && cfg["autoNowPlaying"].is_boolean())
             conf.autoNowPlaying = cfg["autoNowPlaying"].get<bool>();
-        // Frontend style takeover (webview backend only, STYLING_TAKEOVER_DESIGN S-CSS).
         if (cfg.contains("css") && cfg["css"].is_string())
             conf.css = cfg["css"].get<std::string>();
         if (cfg.contains("cssReplace") && cfg["cssReplace"].is_boolean())
             conf.cssReplace = cfg["cssReplace"].get<bool>();
-        // DWM system backdrop for the self-drawn (webview) tray menu. Illegal
-        // values are ignored, keeping the "acrylic" default.
         if (cfg.contains("backdrop") && cfg["backdrop"].is_string()) {
             auto b = cfg["backdrop"].get<std::string>();
             if (b == "acrylic" || b == "mica" || b == "mica-alt" || b == "none") conf.backdrop = b;
         }
         if (cfg.contains("backdropDarkMode") && cfg["backdropDarkMode"].is_boolean())
             conf.backdropDarkMode = cfg["backdropDarkMode"].get<bool>();
-        // Exit (fade-out) animation duration for the self-drawn (webview) tray
-        // menu (opt-in; 0 = immediate hide). Clamped to 0..1000 ms.
         if (cfg.contains("closeAnimationMs") && cfg["closeAnimationMs"].is_number_integer()) {
             int v = cfg["closeAnimationMs"].get<int>();
             conf.closeAnimationMs = v < 0 ? 0 : (v > 1000 ? 1000 : v);
         }
-        tray.SetContextMenuConfig(conf);
+        // layoutMode: default flat; only exact "zones" opts in. Unknown → flat
+        // (lenient parse for older callers / typos). Native ignores the field.
+        if (cfg.contains("layoutMode") && cfg["layoutMode"].is_string()) {
+            conf.layoutMode = (cfg["layoutMode"].get<std::string>() == "zones")
+                ? TrayMenuLayoutMode::Zones : TrayMenuLayoutMode::Flat;
+        }
+        newConf = conf;
     }
 
-    tray.SetContextMenu(ParseMenuItemsVec(params["items"]));
+    auto breach = tray.TrySetContextMenu(ParseMenuItemsVec(params["items"]), newConf);
+    if (!breach.ok) {
+        return ApiEnvelope::MakeError("tray menu resource limit exceeded",
+                                      ApiErrorCode::INVALID_PARAMS,
+                                      menu_limits::DetailsJson(breach));
+    }
     return {{"success", true}};
 }
 
@@ -222,7 +261,13 @@ static json TrayAppendMenuItems(const json& params) {
     TrayMenuPosition pos = TrayMenuPosition::Top;
     if (params.contains("position") && params["position"].is_string())
         pos = ParsePosition(params["position"].get<std::string>());
-    TrayIcon::GetInstance().AppendMenuItems(ParseMenuItemsVec(params["items"]), pos);
+    auto breach = TrayIcon::GetInstance().TryAppendMenuItems(
+        ParseMenuItemsVec(params["items"]), pos);
+    if (!breach.ok) {
+        return ApiEnvelope::MakeError("tray menu resource limit exceeded",
+                                      ApiErrorCode::INVALID_PARAMS,
+                                      menu_limits::DetailsJson(breach));
+    }
     return {{"success", true}};
 }
 
@@ -256,7 +301,11 @@ static json MenuItemToJson(const TrayMenuItem& m) {
     out["type"] = m.type.empty() ? "normal" : m.type;
     out["enabled"] = m.enabled;
     out["visible"] = m.visible;
-    out["checked"] = m.checked;
+    // Preserve checkable field existence: emit checked when the item is
+    // checkable (including checked:false), not only when true.
+    if (m.checkable || m.checked || m.type == "checkbox") {
+        out["checked"] = m.checked;
+    }
     if (!m.icon.empty()) out["icon"] = m.icon;
     if (taskbar_tray_contracts::TrayItemHasRenderableIconSvg(m.iconSvgViewBox, m.iconSvgContent))
         out["iconSvg"] = { {"viewBox", m.iconSvgViewBox}, {"content", m.iconSvgContent} };
@@ -265,7 +314,14 @@ static json MenuItemToJson(const TrayMenuItem& m) {
     if (!m.title.empty()) out["title"] = m.title;
     if (!m.subtitle.empty()) out["subtitle"] = m.subtitle;
     if (m.type == "rating" || m.type == "slider" || m.type == "segmented") out["value"] = m.value;
-    if (m.type == "slider") { out["min"] = m.minValue; out["max"] = m.maxValue; }
+    if (m.type == "slider") {
+        out["min"] = m.minValue;
+        out["max"] = m.maxValue;
+        // Round-trip orientation: only emit when vertical; horizontal default
+        // may be omitted (callers treat missing as horizontal).
+        if (m.orientation == "vertical") out["orientation"] = "vertical";
+        else if (m.orientation == "horizontal") out["orientation"] = "horizontal";
+    }
     // Segmented: round-trip the inline single-select options so getMenuItems
     // echoes what was set (label / inline SVG icon / enabled per segment).
     if (m.type == "segmented" && !m.segments.empty()) {

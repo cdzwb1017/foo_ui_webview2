@@ -1,9 +1,14 @@
 ﻿#pragma once
 #include "pch.h"
 #include "window/PopupWindow.h"
+#include "window/MenuActionContract.h"
+#include "window/MenuOverlayGeometry.h"
+#include "window/MenuTokenTable.h"
 #include <functional>
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 // ============================================
 // 自绘菜单覆盖面宿主（Self-Drawn Menu：自包含渲染器，不依赖 sdk/tsup/floating-ui）//
@@ -18,12 +23,14 @@
 class MenuOverlayWindow : public PopupWindow {
 public:
     void SetReadyHtml(std::wstring html) { readyHtml_ = std::move(html); }
+    void SetWebViewReadyCallback(std::function<void()> callback) { webViewReadyCallback_ = std::move(callback); }
 
 protected:
     void OnWebViewReady() override;
 
 private:
     std::wstring readyHtml_;
+    std::function<void()> webViewReadyCallback_;
 };
 
 // 窗口几何模型：与 owner-mode 事件路由【正交】，禁止由 ownerMode_ 隐式推导。
@@ -31,23 +38,28 @@ private:
 //   ContentSized      = 内容尺寸窗，按光标定位、rcMonitor 边界、可浮于任务栏之上（tray 用）。
 enum class MenuWindowModel { FullscreenOverlay, ContentSized };
 
+// Overlay DOM input model（DESIGN §5.2 Phase 2）：与 windowModel / ownerMode 正交。
+//   LegacyItems = menu.show 与 tray layoutMode:'flat' — 扁平 items，根直接子 DOM。
+//   TrayZones   = tray layoutMode:'zones' — 结构化 zones 数组。
+enum class MenuOverlayModel { LegacyItems, TrayZones };
+
 // Show 选项（显式参数）。与 sink（事件路由）正交。
+// Prefer designated initializers at call sites when adding fields (C++20).
 struct MenuShowOptions {
     MenuWindowModel windowModel = MenuWindowModel::FullscreenOverlay;  // 默认=现状，零回归
+    MenuOverlayModel overlayModel = MenuOverlayModel::LegacyItems;     // 默认=legacy flat items
     // 前端样式接管（S-CSS，STYLING_TAKEOVER_DESIGN §12）：css = 前端注入样式字符串；
     // cssReplace = true 时 replace 模式（禁用默认样式，仅留受保护结构层），false（默认）= override 叠加。
-    // 注意：ShowContextMenu 用聚合初始化 MenuShowOptions{...}，新增字段顺序须与此处一致。
     std::string css;
     bool cssReplace = false;
     // DWM 系统背景（webview tray 菜单）：backdrop 词表与主窗口一致（none/mica/mica-alt/acrylic
     // → DWMSBT 1/2/4/3），默认 acrylic（瞬态面，菜单语义正确）；backdropDarkMode = 背景暗色调。
-    // 每次 show 经 PopupWindow::UpdateBackdropPolicy 运行时应用。聚合初始化字段顺序须与此一致。
+    // 每次 show 经 PopupWindow::UpdateBackdropPolicy 运行时应用。
     std::string backdrop = "acrylic";
     bool backdropDarkMode = true;
     // 退场动画（opt-in，仅 webview 自绘菜单）：0（默认）= 关闭即立即隐藏（零回归）；
     // >0 = 关闭前延迟该毫秒数播退场动画再隐藏（C++ 端已 clamp 到 0..1000）。前端应让该值
-    // ≈ 自身 #menu.out 的 transition 时长。注意：ShowContextMenu 用聚合初始化 MenuShowOptions{...}，
-    // 新增字段顺序须与此处一致。
+    // ≈ 自身 #menu.out 的 transition 时长。
     int closeAnimationMs = 0;
 };
 
@@ -62,9 +74,12 @@ public:
     // owner-mode sink：tray 适配层发起 show 时提供。
     // 提供后 select/dismiss 改走 sink（→ tray:menuItemClicked），不向公共
     // menu:select / menu:dismiss 泄漏；不提供 = menu.* 普通模式（维持现状）。
-    using SelectSink  = std::function<void(const std::string& itemId)>;
+    // select sink 收到 token 解析出的 ResolvedAction（public id + 可信 origin/builtin），
+    // 不再是裸 public id 字符串：内置动作按 origin 路由，杜绝 public id 前缀伪造（DESIGN 8.3）。
+    using SelectSink  = std::function<void(const menu_action::ResolvedAction& action)>;
     using DismissSink = std::function<void(const std::string& reason)>;
-    // 富控件（rating/slider）值变更 sink：值改变但【不关闭菜单】。仅 owner-mode 用。
+    // 富控件（rating/slider/segmented）值变更 sink：值改变但【不关闭菜单】。仅 owner-mode 用。
+    // token 解析出的 public id + 已按控件类型/范围校验过的 value。
     using ValueSink   = std::function<void(const std::string& itemId, int value)>;
 
     // 在屏幕物理像素 (screenX, screenY) 所在显示器显示菜单，渲染 items。
@@ -80,29 +95,56 @@ public:
     // 隐藏（池化保留 WebView）。reason 进入 menu:dismiss。
     void Hide(const std::string& reason);
 
-    // 菜单项被选中：发射 menu:select + 关闭。
-    void OnSelect(const std::string& itemId);
+    // Internal renderer dismiss. Escape in the independent submenu returns to
+    // the root panel; other reasons preserve the existing whole-menu behavior.
+    void OnDismissRequested(HWND caller, const std::string& reason);
 
-    // 富控件值变更（menu.__valueChanged 内部 IPC → 此方法）：经 valueSink_ 回报
-    // （→ tray:menuItemClicked {id,value}），【不关闭菜单】。无 sink 时静默忽略。
-    void OnValueChanged(const std::string& itemId, int value);
+    // 菜单项被选中（menu.__select 内部 IPC → 此方法）：入参是渲染器回传的 opaque token。
+    // 解析 token → 校验存在 + enabled + canSelect → owner-mode 走 selectSink_(ResolvedAction)，
+    // 否则发公共 menu:select（仅 token 索引里的 publicId）+ 关闭。未知/过期 token 或非法项静默拒绝。
+    void OnSelect(const std::string& token);
+
+    // 富控件值变更（menu.__valueChanged 内部 IPC → 此方法）：入参是 opaque token + 值。
+    // 解析 token → 仅接受 rating/slider/segmented 且值在合法范围（rating 0..5 / slider [min,max]
+    // / segmented 存在且 enabled 的段索引）→ 经 valueSink_ 回报（→ tray:menuItemClicked {id,value}），
+    // 【不关闭菜单】。无 sink / 非法 token / 越界值静默忽略。
+    void OnValueChanged(const std::string& token, int value);
 
     // ContentSized 测量回报（menu.__ready 内部 IPC → 此方法）：
-    // 渲染器测得【根菜单】物理像素后，按 rcMonitor 定位并把窗口一次定为「根 + 子菜单预留」固定
-    // 尺寸（全程不再 resize；子菜单纯 CSS 在窗内右展），再发内部事件 menu:__placed 触发入场动画。
-    // 仅 ContentSized 且测量期（awaitingMeasure_）生效；物理像素入参；originXPhysical 在固定窗设计下未用；仅 UI 线程。
-    // hasSubmenu = 根菜单是否含子菜单：true 才把窗口宽 ×2 预留右侧展开区；false 则窗口=精确根宽
-    // （避免空预留区在亚克力/云母背景下露出空白半透明面板）。
-    void OnContentMeasured(int wPhysical, int hPhysical, int originXPhysical, bool hasSubmenu);
+    // renderer 回报根菜单与所有一级子菜单的真实最大物理像素尺寸。host 从当前
+    // normalized model 判断是否存在一级 submenu，不信任 renderer boolean；经 64 位
+    // 槽位计算后只执行一次可见 SetWindowPos。根菜单保持紧凑 HWND；展开时一级
+    // submenu 使用独立的紧凑 HWND，因此 DWM backdrop 不会合成到预留 slot。
+    bool OnContentMeasured(const menu_overlay_geometry::MeasureReport& report);
+
+    // renderer 在一级 submenu 展开/收起时上报当前可见 panel 的物理像素矩形。
+    // 可见 submenu 由独立 PopupWindow 承载；收起时仅隐藏该窗口。参数 parentToken
+    // 必须定位当前根层真实 submenu，不能让 renderer 自行选择子菜单内容。
+    bool OnSubmenuPanelChanged(const menu_overlay_geometry::SubmenuPanelRequest& request,
+                               const std::string& parentToken = {});
+
+    // The independent submenu renderer has pulled and rendered its current
+    // token-scoped state while still hidden. Only then may its tight HWND be
+    // shown with a DWM backdrop.
+    bool OnSubmenuSurfaceReady(HWND caller, const std::string& parentToken);
 
     // 当前菜单状态（供前端 pull 渲染）：{visible, menuId, items, anchorX, anchorY}。
-    json GetMenuStateJson() const;
+    json GetMenuStateJson(HWND caller = nullptr) const;
 
     // fb2k on_quit / WindowManager::Shutdown 钩子。
     void Shutdown();
 
     bool IsVisible() const { return visible_; }
     const std::string& CurrentMenuId() const { return currentMenuId_; }
+
+    // 内部 IPC 边界校验（menu.__* handler 用；校验逻辑集中于此窄接口，不在各 handler
+    // 复制散落的 HWND / menuId 判断）：
+    //   IsOverlayCaller — caller 必须是当前 overlay 窗口（_callerHwnd == overlayHwnd_）。
+    //   ValidateMenuId  — menuId 必须等于当前可见菜单，挡掉旧页面回报 / 其它窗口伪造。
+    bool IsOverlayCaller(HWND caller) const;
+    bool IsRootOverlayCaller(HWND caller) const;
+    bool ValidateMenuId(const std::string& menuId) const;
+    bool HasFirstLevelSubmenu() const;
 
     static constexpr const char* kOverlayWindowId = "__menu_overlay__";
 
@@ -133,11 +175,36 @@ private:
     // Show 取消挂起关闭复用：绕过 animate 判定直接强制立即收尾（淡出期 visible_&&closing_，
     // 新 Hide("replaced") 会被 if(closing_) return 挡掉，故 Show 不能依赖 Hide("replaced")）。
     void ForceHideImmediate();
+    bool ApplyRootContentWindow(const menu_overlay_geometry::Placement& placement);
+    bool EnsureSubmenuCreated();
+    bool ShowSubmenuWindow(const menu_overlay_geometry::Rect& virtualRect,
+                           const std::string& parentToken);
+    void HideSubmenuWindow(bool restoreRootFocus, bool notifyRoot = false,
+                           bool clearState = true);
+    void OnSubmenuWebViewReady();
+    void OnRootDismissRequested(const std::string& reason);
+    void OnSubmenuDismissRequested(const std::string& reason);
+    void SyncWebViewToClient(MenuOverlayWindow* window, HWND hwnd) const;
+    json BuildRootGeometryJson(const menu_overlay_geometry::Placement& placement) const;
+    std::optional<json> FindSubmenuItems(const std::string& parentToken) const;
 
     std::unique_ptr<MenuOverlayWindow> overlay_;
     HWND overlayHwnd_ = nullptr;
+    std::unique_ptr<MenuOverlayWindow> submenuOverlay_;
+    HWND submenuHwnd_ = nullptr;
     std::string currentMenuId_;
-    json currentItems_ = json::array();   // 当前根菜单 items
+    json currentItems_ = json::array();   // LegacyItems: 扁平根 items（已注入 _token）
+    json currentZones_ = json::array();   // TrayZones: [{id, items:[...]}]（items 已注入 _token）
+    MenuOverlayModel overlayModel_ = MenuOverlayModel::LegacyItems;
+
+    // Per-show opaque token state machine (DESIGN 8.3): assigns an unpredictable
+    // single-use token (CoCreateGuid) per actionable node, resolves select/value
+    // through the index, and invalidates the whole set on the first accepted
+    // select. Rebuilt every Show, cleared on Hide/ForceHide/Shutdown, so a token
+    // is valid only within the current menu. A user public id (even "_pb_next")
+    // can never drive a built-in; unknown/expired token, disabled item and
+    // out-of-range value are rejected. Extracted (MenuTokenTable.h) for tests.
+    MenuTokenTable tokenTable_;
     std::string currentCss_;              // 前端样式接管（S-CSS）：本次 show 的前端 CSS（下发渲染器 fb-user）
     bool currentCssReplace_ = false;      // replace 模式开关（true=禁用默认样式，仅留 fb-user+fb-protected）
     int anchorClientX_ = 0;               // 锚点相对覆盖面客户区坐标
@@ -156,8 +223,20 @@ private:
 
     // 窗口几何模型（与 ownerMode_ 正交）。
     MenuWindowModel windowModel_ = MenuWindowModel::FullscreenOverlay;
-    bool  awaitingMeasure_ = false;       // ContentSized：是否等待 menu.__ready 测量回报
+    // Overlay DOM 输入模型（与 windowModel_ / ownerMode_ 正交）。
+    // 注意：成员 overlayModel_ 与 opts.overlayModel 在 Show 时同步。
+    menu_overlay_geometry::MeasureGate measureGate_;  // invalid report does not consume state
     POINT pendingAnchor_{};               // ContentSized：待定位的光标屏幕物理坐标
+    std::optional<menu_overlay_geometry::Placement> placedGeometry_;
+    POINT contentVirtualOrigin_{};        // measured virtual root/submenu canvas in screen pixels
+    std::optional<menu_overlay_geometry::Rect> openSubmenuVirtualRect_;
+    std::string openSubmenuParentToken_;
+    std::string currentBackdrop_ = "acrylic";
+    bool currentBackdropDarkMode_ = true;
+    bool suppressSubmenuDismiss_ = false;
+    bool openingSubmenu_ = false;
+    std::uint64_t lastSubmenuPanelSequence_ = 0;
+    std::optional<std::uint64_t> pendingSubmenuPanelSequence_;
 
     static constexpr UINT_PTR kWatchdogTimerId = 0xFACE01;
     static constexpr UINT kWatchdogTimeoutMs = 30000;  // 默认 30s

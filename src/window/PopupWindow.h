@@ -87,9 +87,14 @@ public:
     // 抑制 window:popupOpened / window:popupClosed 生命周期广播（菜单覆盖面专用，
     // 避免污染用户窗口事件流；普通 popup 默认 false，零影响）。
     void SetSuppressLifecycleBroadcast(bool v) { suppressLifecycleBroadcast_ = v; }
-    // 设置 dismiss 回调（菜单覆盖面专用）：失焦(WM_ACTIVATEAPP)/Esc 时触发请求关闭。
+    // 设置 dismiss 回调（菜单覆盖面专用）：失焦(WM_ACTIVATEAPP)或 Esc 时触发请求关闭。
     // 默认空 -> 普通 popup 行为不变（显式接口，不依赖 profile 字符串隐式分支）。
     void SetMenuDismissCallback(std::function<void(const std::string&)> cb) { menuDismissCallback_ = std::move(cb); }
+    // Apply a client-area input/clipping region from physical-pixel rectangles.
+    // This generic popup capability does not define system-backdrop visual
+    // correctness; callers requiring isolated DWM material use tight HWNDs.
+    bool SetContentRegionRects(const std::vector<RECT>& rects);
+    bool ClearContentRegion();
     bool UpdateCompatibilityBackdropEffect(const std::optional<std::string>& effect,
                                            const std::optional<bool>& darkMode,
                                            bool clearBlur, bool forceRefresh = true);

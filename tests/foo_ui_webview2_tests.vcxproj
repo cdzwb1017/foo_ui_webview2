@@ -124,6 +124,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="compat\fb2k_types.h" />
     <ClInclude Include="harness\BridgeDispatchSimulator.h" />
+    <ClInclude Include="..\src\window\BackgroundSuspendPolicy.h" />
     <ClInclude Include="..\src\window\TaskbarTrayContracts.h" />
   </ItemGroup>
 

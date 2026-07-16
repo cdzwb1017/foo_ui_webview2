@@ -1,5 +1,7 @@
 ﻿#pragma once
 #include "pch.h"
+#include "window/MenuActionContract.h"
+#include "window/MenuResourceLimits.h"
 #include <string>
 #include <vector>
 #include <map>
@@ -27,6 +29,11 @@ struct TrayMenuItem {
     bool enabled = true;
     bool visible = true;
     bool checked = false;
+    // True when the caller explicitly supplied `checked` (including false), set
+    // type to "checkbox", or later called setMenuItemState with checked. Preserves
+    // checkable identity so checked:false is not lost as "not a checkbox"
+    // (DESIGN §9.2 Phase 3).
+    bool checkable = false;
     std::string icon;   // base64 or empty
 
     // Inline monochrome SVG icon (webview backend only): viewBox + inner markup
@@ -45,12 +52,37 @@ struct TrayMenuItem {
                              // segmented: zero-based index of the selected segment
     int minValue = 0;        // slider: range minimum
     int maxValue = 100;      // slider: range maximum
+    // Slider-only axis (DESIGN §6.2). Exact "vertical" is vertical; missing /
+    // "horizontal" / unknown → horizontal. Non-slider types ignore this field.
+    // Native backend ignores orientation and keeps the stepped-submenu degrade.
+    std::string orientation;
 
     // segmented: the inline single-select options (webview backend only).
     std::vector<TraySegment> segments;
 
     std::vector<TrayMenuItem> submenu;
+
+    // Internal routing identity (NOT a public API field): never parsed from
+    // setContextMenu JSON and never serialized by getMenuItems / any event. A
+    // frontend item starts as Origin::User; effective-menu composition may
+    // promote only the exact tray compatibility id `_sys_exit`. Playback ids
+    // supplied by a frontend remain user actions. Routing never uses a prefix.
+    menu_action::Origin origin = menu_action::Origin::User;
+    menu_action::Builtin builtinAction = menu_action::Builtin::None;
 };
+
+// Single action authority for the native command map and the WebView token
+// transport. Effective-zone composition may stamp the exact `_sys_exit`
+// compatibility item; malformed metadata always falls back to a user action.
+inline menu_action::ResolvedAction ResolveTrayMenuItemAction(const TrayMenuItem& item) {
+    return menu_action::NormalizeResolvedAction({
+        item.id, item.origin, item.builtinAction
+    });
+}
+
+inline menu_action::InternalActionFields TrayMenuItemActionFields(const TrayMenuItem& item) {
+    return menu_action::MakeInternalActionFields(ResolveTrayMenuItemAction(item));
+}
 
 // Menu zones for customPosition.
 enum class TrayMenuPosition {
@@ -65,6 +97,15 @@ enum class TrayMenuPosition {
 enum class TrayMenuRender {
     Native = 0,
     WebView = 1,
+};
+
+// WebView tray DOM structure mode (DESIGN §5.2 / §6.1 Phase 2).
+// Flat  = default; root keeps direct-child .fb-item / separator DOM (legacy selectors).
+// Zones = opt-in; emits .fb-zone[data-zone] wrappers for top/playback/bottom.
+// Native backends ignore this field and always flatten from effective zones.
+enum class TrayMenuLayoutMode {
+    Flat = 0,
+    Zones = 1,
 };
 
 struct TrayMenuConfig {
@@ -103,7 +144,416 @@ struct TrayMenuConfig {
     // `#menu.out` transition duration. Ignored by the native backend; the
     // replaced / timeout close paths always hide immediately regardless.
     int closeAnimationMs = 0;
+
+    // Opt-in WebView DOM layout mode. Default Flat preserves `#menu > .fb-item`.
+    // Zones is WebView-only; native ignores it. Unknown JSON values coerce to Flat.
+    TrayMenuLayoutMode layoutMode = TrayMenuLayoutMode::Flat;
 };
+
+// Compose the three tray zones (top / playback / bottom, each already carrying
+// any injected built-in items) into one flat list, inserting a separator only
+// between zones that have at least one VISIBLE item. A zone whose items are all
+// hidden contributes neither a separator nor content, so no orphan separator
+// survives: visible filtering precedes the separator decision (DESIGN 7.7 / 8.2).
+// Both backends drop !visible items downstream (native BuildMenu skips them,
+// webview TrayItemsToMenuJson filters them), so the separator gate must match to
+// avoid a leading / trailing / doubled divider. Header-only (inline) so the
+// separator contract is unit-testable without linking the Win32 TrayIcon.cpp.
+inline std::vector<TrayMenuItem> ComposeTrayZones(const std::vector<TrayMenuItem>& top,
+                                                  const std::vector<TrayMenuItem>& playback,
+                                                  const std::vector<TrayMenuItem>& bottom) {
+    std::vector<TrayMenuItem> composed;
+    auto hasVisible = [](const std::vector<TrayMenuItem>& items) {
+        for (const auto& it : items) if (it.visible) return true;
+        return false;
+    };
+    auto appendZone = [&](const std::vector<TrayMenuItem>& items, bool addLeadingSeparator) {
+        if (!hasVisible(items)) return;
+        if (addLeadingSeparator && !composed.empty()) {
+            TrayMenuItem sep; sep.type = "separator";
+            composed.push_back(sep);
+        }
+        composed.insert(composed.end(), items.begin(), items.end());
+    };
+    appendZone(top, false);
+    appendZone(playback, true);
+    appendZone(bottom, true);
+    return composed;
+}
+
+// Single effective-zone authority (DESIGN §5.2 Phase 2):
+//   top
+//   playback = builtin playback + user playback
+//   bottom   = user bottom + builtin system
+// Native / WebView flat / WebView zones all consume this structure.
+struct EffectiveTrayZones {
+    std::vector<TrayMenuItem> top;
+    std::vector<TrayMenuItem> playback;
+    std::vector<TrayMenuItem> bottom;
+
+    // After BuildEffectiveTrayZones normalization, zones contain only visible
+    // nodes (hidden descendants stripped; empty submenus degraded to leaves).
+    bool HasAnyVisible() const {
+        return !top.empty() || !playback.empty() || !bottom.empty();
+    }
+};
+
+// Recursively drop !visible nodes before any backend consumes the tree
+// (DESIGN §5.2). A visible submenu parent whose children are all hidden is
+// degraded to a normal leaf so native does not open an empty popup and the
+// WebView does not keep an empty submenu array that would still look like a
+// parent row.
+inline std::vector<TrayMenuItem> NormalizeVisibleMenuItems(std::vector<TrayMenuItem> items) {
+    std::vector<TrayMenuItem> out;
+    out.reserve(items.size());
+    for (auto& it : items) {
+        if (!it.visible) continue;
+        if (!it.submenu.empty()) {
+            it.submenu = NormalizeVisibleMenuItems(std::move(it.submenu));
+        }
+        if (it.type == "submenu" && it.submenu.empty()) {
+            it.type = "normal";
+        }
+        out.push_back(std::move(it));
+    }
+    return out;
+}
+
+// Single recursive slider normalization shared by storage / WebView / native /
+// token index / getMenuItems (DESIGN §6.2–6.3 Phase 3):
+//   - max < min → swap
+//   - max == min → constant slider (display only; no value change)
+//   - value clamped into the normalized range
+//   - orientation: only exact "vertical" kept; else cleared (horizontal default)
+//   - non-slider types drop orientation
+//   - recurses into submenu
+inline void NormalizeSliderMenuItems(std::vector<TrayMenuItem>& items) {
+    for (auto& it : items) {
+        if (it.type == "slider") {
+            if (it.maxValue < it.minValue) {
+                std::swap(it.minValue, it.maxValue);
+            }
+            if (it.value < it.minValue) it.value = it.minValue;
+            if (it.value > it.maxValue) it.value = it.maxValue;
+            if (it.orientation != "vertical") {
+                // Keep explicit "horizontal"; unknown / empty → empty (horizontal).
+                if (it.orientation != "horizontal") it.orientation.clear();
+            }
+        } else {
+            it.orientation.clear();
+        }
+        if (!it.submenu.empty()) {
+            NormalizeSliderMenuItems(it.submenu);
+        }
+    }
+}
+
+// Exact "vertical" only; everything else (including empty / horizontal / unknown)
+// is horizontal. Non-slider callers should not rely on this.
+inline bool TraySliderIsVertical(const TrayMenuItem& item) {
+    return item.type == "slider" && item.orientation == "vertical";
+}
+
+// Constant slider: normalized max == min. Display the value; never emit changes.
+inline bool TraySliderIsConstant(const TrayMenuItem& item) {
+    return item.type == "slider" && item.maxValue == item.minValue;
+}
+
+// Built-in playback controls injected when TrayMenuConfig.showPlaybackControls
+// is on. Each carries Origin::BuiltinPlayback + its Builtin action so routing is
+// by trusted origin, not by the "_pb_" id prefix. The ids keep the historical
+// "_pb_*" spelling for backward compatibility only — a user item with the same
+// id is still Origin::User and never runs a built-in. Header-only so the origin
+// stamping is unit-testable.
+inline std::vector<TrayMenuItem> BuildPlaybackDefaultItems() {
+    std::vector<TrayMenuItem> items;
+    auto add = [&](const char* id, const char* label, menu_action::Builtin action) {
+        TrayMenuItem m;
+        m.id = id;
+        m.label = label;
+        m.type = "normal";
+        m.enabled = true;
+        m.visible = true;
+        m.origin = menu_action::Origin::BuiltinPlayback;
+        m.builtinAction = action;
+        items.push_back(std::move(m));
+    };
+    add("_pb_playPause", "Play / Pause",   menu_action::Builtin::PlayPause);
+    add("_pb_prev",      "Previous Track",  menu_action::Builtin::Previous);
+    add("_pb_next",      "Next Track",      menu_action::Builtin::Next);
+    add("_pb_stop",      "Stop",            menu_action::Builtin::Stop);
+    return items;
+}
+
+// Built-in system items injected when TrayMenuConfig.showSystemItems is on.
+// Origin::BuiltinSystem + Builtin::Exit; the exact "_sys_exit" spelling is also
+// the tray-only public compatibility command handled by promotion above.
+inline std::vector<TrayMenuItem> BuildSystemDefaultItems() {
+    std::vector<TrayMenuItem> items;
+    TrayMenuItem exitItem;
+    exitItem.id = "_sys_exit";
+    exitItem.label = "Exit foobar2000";
+    exitItem.type = "normal";
+    exitItem.origin = menu_action::Origin::BuiltinSystem;
+    exitItem.builtinAction = menu_action::Builtin::Exit;
+    items.push_back(std::move(exitItem));
+    return items;
+}
+
+// Apply the exact tray reserved-id compatibility contract recursively. Public
+// JSON cannot provide an origin or action; this function derives both from the
+// fixed `_sys_exit` allowlist. Similar ids and all caller-supplied `_pb_*` ids
+// remain Origin::User.
+inline void PromoteReservedBuiltinItems(std::vector<TrayMenuItem>& items) {
+    for (auto& item : items) {
+        if (auto reserved = menu_action::ReservedBuiltinForPublicId(item.id)) {
+            item.origin = reserved->origin;
+            item.builtinAction = reserved->builtin;
+        }
+        if (!item.submenu.empty()) {
+            PromoteReservedBuiltinItems(item.submenu);
+        }
+    }
+}
+
+inline bool TrayMenuContainsPublicId(const std::vector<TrayMenuItem>& items,
+                                     const std::string& publicId) {
+    for (const auto& item : items) {
+        if (item.id == publicId) return true;
+        if (!item.submenu.empty() && TrayMenuContainsPublicId(item.submenu, publicId)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+inline bool EffectiveTrayZonesContainPublicId(const EffectiveTrayZones& zones,
+                                              const std::string& publicId) {
+    return TrayMenuContainsPublicId(zones.top, publicId)
+        || TrayMenuContainsPublicId(zones.playback, publicId)
+        || TrayMenuContainsPublicId(zones.bottom, publicId);
+}
+
+inline EffectiveTrayZones BuildEffectiveTrayZones(
+    const std::vector<TrayMenuItem>& top,
+    const std::vector<TrayMenuItem>& playback,
+    const std::vector<TrayMenuItem>& bottom,
+    const TrayMenuConfig& config) {
+    EffectiveTrayZones z;
+    // Visibility normalization precedes reserved-id promotion and built-in
+    // injection. A hidden user item therefore does not suppress a visible
+    // configured default, while a visible exact reserved item becomes the one
+    // authoritative presentation of that action.
+    z.top = NormalizeVisibleMenuItems(top);
+    z.playback = NormalizeVisibleMenuItems(playback);
+    z.bottom = NormalizeVisibleMenuItems(bottom);
+    PromoteReservedBuiltinItems(z.top);
+    PromoteReservedBuiltinItems(z.playback);
+    PromoteReservedBuiltinItems(z.bottom);
+
+    if (config.showPlaybackControls) {
+        auto defaults = BuildPlaybackDefaultItems();
+        z.playback.insert(z.playback.begin(),
+                          std::make_move_iterator(defaults.begin()),
+                          std::make_move_iterator(defaults.end()));
+    }
+    if (config.showSystemItems) {
+        auto defaults = BuildSystemDefaultItems();
+        for (auto& item : defaults) {
+            if (!EffectiveTrayZonesContainPublicId(z, item.id)) {
+                z.bottom.push_back(std::move(item));
+            }
+        }
+    }
+    return z;
+}
+
+inline std::vector<TrayMenuItem> FlattenEffectiveZones(const EffectiveTrayZones& z) {
+    return ComposeTrayZones(z.top, z.playback, z.bottom);
+}
+
+// Flat list with per-node zone stamps for WebView flat DOM / tests.
+// Inter-zone separators inherit the *last emitted* zone id (not a hardcoded
+// neighbour name), so top→bottom with an empty playback zone tags the
+// separator as "top" (DESIGN §5.3).
+struct ZoneTaggedTrayItem {
+    TrayMenuItem item;
+    std::string zone;
+};
+
+inline std::vector<ZoneTaggedTrayItem> FlattenEffectiveZonesTagged(const EffectiveTrayZones& z) {
+    std::vector<ZoneTaggedTrayItem> out;
+    const char* lastEmittedZone = nullptr;
+    auto appendZone = [&](const char* zoneId, const std::vector<TrayMenuItem>& items) {
+        if (items.empty()) return;
+        if (lastEmittedZone != nullptr) {
+            TrayMenuItem sep;
+            sep.type = "separator";
+            sep.visible = true;
+            out.push_back(ZoneTaggedTrayItem{ std::move(sep), lastEmittedZone });
+        }
+        for (const auto& it : items) {
+            out.push_back(ZoneTaggedTrayItem{ it, zoneId });
+        }
+        lastEmittedZone = zoneId;
+    };
+    appendZone("top", z.top);
+    appendZone("playback", z.playback);
+    appendZone("bottom", z.bottom);
+    return out;
+}
+
+// Compose the three storage zones plus built-in injection (same口径 as
+// TrayIcon::ComposeMenu) so resource preflight sees the menu that would open.
+inline std::vector<TrayMenuItem> ComposeTrayMenuSnapshot(
+    const std::vector<TrayMenuItem>& top,
+    const std::vector<TrayMenuItem>& playback,
+    const std::vector<TrayMenuItem>& bottom,
+    const TrayMenuConfig& config) {
+    return FlattenEffectiveZones(BuildEffectiveTrayZones(top, playback, bottom, config));
+}
+
+// Discard any single SVG content > 32 KiB (item icon + segmented option icons,
+// recursive into submenu). Oversized singles do not count toward the 256 KiB
+// total and do not fail the API (DESIGN 8.5).
+inline void StripOversizedSvgInTree(std::vector<TrayMenuItem>& items) {
+    for (auto& m : items) {
+        menu_limits::StripOneSvgIfOversized(m.iconSvgViewBox, m.iconSvgContent);
+        for (auto& s : m.segments) {
+            menu_limits::StripOneSvgIfOversized(s.iconSvgViewBox, s.iconSvgContent);
+        }
+        if (!m.submenu.empty()) StripOversizedSvgInTree(m.submenu);
+    }
+}
+
+namespace detail_tray_limits {
+
+inline void AddSvg(long long& total, const std::string& content, menu_limits::CheckResult& breach) {
+    if (!breach.ok) return;
+    const long long n = static_cast<long long>(content.size());
+    if (n <= 0) return;
+    total += n;
+    if (total > menu_limits::kMaxTotalSvgBytes) {
+        breach = menu_limits::CheckResult::Breach("svgTotal", menu_limits::kMaxTotalSvgBytes, total);
+    }
+}
+
+inline void TallyTrayItem(const TrayMenuItem& item, long long& itemCount, long long& svgTotal,
+                          menu_limits::CheckResult& breach) {
+    if (!breach.ok) return;
+    ++itemCount;
+    if (itemCount > menu_limits::kMaxMenuItems) {
+        breach = menu_limits::CheckResult::Breach("items", menu_limits::kMaxMenuItems, itemCount);
+        return;
+    }
+    if (item.type == "segmented") {
+        const long long segCount = static_cast<long long>(item.segments.size());
+        if (segCount > menu_limits::kMaxSegmentOptions) {
+            breach = menu_limits::CheckResult::Breach(
+                "segments", menu_limits::kMaxSegmentOptions, segCount);
+            return;
+        }
+    }
+    AddSvg(svgTotal, item.iconSvgContent, breach);
+    if (!breach.ok) return;
+    for (const auto& s : item.segments) {
+        AddSvg(svgTotal, s.iconSvgContent, breach);
+        if (!breach.ok) return;
+    }
+    for (const auto& sub : item.submenu) {
+        TallyTrayItem(sub, itemCount, svgTotal, breach);
+        if (!breach.ok) return;
+    }
+}
+
+}  // namespace detail_tray_limits
+
+// Validate a composed tray menu tree + css AFTER StripOversizedSvgInTree.
+// Tray ContentSized expand depth (root+1) is NOT a fail here — deeper nodes are
+// kept but non-expandable at runtime (DESIGN 8.5).
+inline menu_limits::CheckResult ValidateTrayMenuResources(
+    const std::vector<TrayMenuItem>& composed, const std::string& css) {
+    const long long cssBytes = static_cast<long long>(css.size());
+    if (cssBytes > menu_limits::kMaxCssBytes) {
+        return menu_limits::CheckResult::Breach("css", menu_limits::kMaxCssBytes, cssBytes);
+    }
+    menu_limits::CheckResult breach = menu_limits::CheckResult::Ok();
+    long long itemCount = 0;
+    long long svgTotal = 0;
+    for (const auto& it : composed) {
+        detail_tray_limits::TallyTrayItem(it, itemCount, svgTotal, breach);
+        if (!breach.ok) return breach;
+    }
+    return breach;
+}
+
+// Mutable three-zone + config storage used by tray preflight. Header-only so
+// GoogleTest can drive the same transactional writer TrayIcon/TrayApi use
+// without linking TrayIcon.cpp (Win32 / foobar2000).
+struct TrayMenuStorage {
+    std::vector<TrayMenuItem> zones[3];
+    TrayMenuConfig config;
+};
+
+// Strip oversized single SVGs, validate the post-change composed snapshot
+// (other zones + built-in injection + css), and only then mutate storage.
+// On breach the previous zones/config are left untouched (DESIGN 8.5).
+inline menu_limits::CheckResult TryReplaceContextMenuZone(
+    TrayMenuStorage& storage,
+    std::vector<TrayMenuItem> items,
+    const std::optional<TrayMenuConfig>& newConfig) {
+    TrayMenuConfig conf = newConfig.has_value() ? *newConfig : storage.config;
+    StripOversizedSvgInTree(items);
+    // Shared recursive slider normalization before storage / backends share
+    // the same min/max/value/orientation (DESIGN §6.3 Phase 3).
+    NormalizeSliderMenuItems(items);
+
+    std::vector<TrayMenuItem> preview[3] = {
+        storage.zones[0], storage.zones[1], storage.zones[2]
+    };
+    int target = static_cast<int>(conf.customPosition);
+    if (target < 0 || target > 2) target = 0;
+    preview[target] = items;
+
+    auto composed = ComposeTrayMenuSnapshot(preview[0], preview[1], preview[2], conf);
+    auto breach = ValidateTrayMenuResources(composed, conf.css);
+    if (!breach.ok) return breach;
+
+    storage.config = conf;
+    storage.zones[target] = std::move(items);
+    return menu_limits::CheckResult::Ok();
+}
+
+inline menu_limits::CheckResult TryAppendMenuItemsToStorage(
+    TrayMenuStorage& storage,
+    std::vector<TrayMenuItem> items,
+    TrayMenuPosition position) {
+    StripOversizedSvgInTree(items);
+    NormalizeSliderMenuItems(items);
+
+    int zone = static_cast<int>(position);
+    if (zone < 0 || zone > 2) zone = 0;
+
+    std::vector<TrayMenuItem> preview[3] = {
+        storage.zones[0], storage.zones[1], storage.zones[2]
+    };
+    preview[zone].insert(preview[zone].end(), items.begin(), items.end());
+
+    auto composed = ComposeTrayMenuSnapshot(preview[0], preview[1], preview[2], storage.config);
+    auto breach = ValidateTrayMenuResources(composed, storage.config.css);
+    if (!breach.ok) return breach;
+
+    storage.zones[zone].insert(storage.zones[zone].end(), items.begin(), items.end());
+    return menu_limits::CheckResult::Ok();
+}
+
+inline std::vector<TrayMenuItem> FlatZoneItems(const TrayMenuStorage& storage) {
+    std::vector<TrayMenuItem> out;
+    for (const auto& z : storage.zones) {
+        out.insert(out.end(), z.begin(), z.end());
+    }
+    return out;
+}
 
 class TrayIcon {
 public:
@@ -131,6 +581,16 @@ public:
     void SetContextMenu(const std::vector<TrayMenuItem>& items);
     void SetContextMenuConfig(const TrayMenuConfig& config) { m_menuConfig = config; }
     const TrayMenuConfig& GetContextMenuConfig() const { return m_menuConfig; }
+    const std::vector<TrayMenuItem>& GetZoneItems(TrayMenuPosition position) const;
+
+    // Transactional writers used by tray.setContextMenu / tray.appendMenuItems:
+    // strip oversized single SVGs, validate the post-change composed snapshot
+    // (other zones + built-in injection + css), and only then mutate storage.
+    // On breach the previous zones/config are left untouched (DESIGN 8.5).
+    menu_limits::CheckResult TrySetContextMenu(std::vector<TrayMenuItem> items,
+                                               const std::optional<TrayMenuConfig>& config);
+    menu_limits::CheckResult TryAppendMenuItems(std::vector<TrayMenuItem> items,
+                                                TrayMenuPosition position);
 
     // Incremental menu management.
     void AppendMenuItems(const std::vector<TrayMenuItem>& items, TrayMenuPosition position);
@@ -196,10 +656,12 @@ private:
     // Three menu zones: top, playback, bottom.
     std::vector<TrayMenuItem> m_zones[3];
     TrayMenuConfig m_menuConfig;
-    std::map<int, std::string> m_menuIdMap;
+    // Native-backend command id -> resolved action (public id + trusted origin +
+    // built-in). Routing keys off the stored origin, never the id prefix.
+    std::map<int, menu_action::ResolvedAction> m_menuIdMap;
     // Native-backend command id -> (richItemId, value) for the degraded
     // rating/slider submenus. Resolved before m_menuIdMap so a value-bearing
-    // pick routes through RouteValueChanged instead of RouteSelectedId.
+    // pick routes through RouteValueChanged instead of RouteResolvedAction.
     std::map<int, std::pair<std::string, int>> m_menuValueMap;
 
     ClickCallback m_clickCb;
@@ -209,10 +671,17 @@ private:
     BeforeMenuCallback m_beforeMenuCb;
 
     HMENU BuildMenu(const std::vector<TrayMenuItem>& items, int& cmdId);
+    // Thin wrappers over the free BuildPlaybackDefaultItems / BuildSystemDefaultItems
+    // (TrayIcon.h, header-only + unit-testable). Kept as members so ComposeMenu
+    // reads naturally.
     std::vector<TrayMenuItem> BuildPlaybackDefaults() const;
     std::vector<TrayMenuItem> BuildSystemDefaults() const;
     std::vector<TrayMenuItem> ComposeMenu() const;   // 三区组装（native + webview 共用）
-    void RouteSelectedId(const std::string& id);     // 选中路由（_pb_/_sys_/回调，两路共用）
+    // Route a resolved selection by its trusted origin (never the id prefix):
+    // built-in playback/system origins run their fixed command; Origin::User
+    // reaches the frontend callback (-> tray:menuItemClicked). Shared sink for
+    // native (sync) and, once tokenised, the webview (async) paths.
+    void RouteResolvedAction(const menu_action::ResolvedAction& action);
     void RouteValueChanged(const std::string& id, int value);  // 富控件值变更路由（两路共用）
     void ShowContextMenu();
 };

@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "pch.h"
 #include "core/WebViewPanel.h"
+#include "window/BackgroundSuspendPolicy.h"
 #include "window/StartupPresentationCoordinator.h"
 #include "window/WindowChromeApplier.h"
 #include "window/WindowChromeState.h"
@@ -189,18 +190,23 @@ private:
     bool lastBroadcastIsActive_ = true;
     bool lastBroadcastIsFullscreen_ = false;
 
-    // ===== 后台挂起（锁屏 / 被完全覆盖）→ 隐藏 WebView 省内存 =====
-    // 与最小化/托盘各自的可见性管理并行；用位掩码避免多个原因互相误恢复
-    // （例如同时锁屏+被覆盖，解锁后仍被覆盖则保持隐藏）。
+    // ===== 后台降级（锁屏 / 被完全覆盖） =====
+    // 锁屏可隐藏 WebView；完全覆盖只降低内存目标，必须保留供 DWM 任务栏预览
+    // 消费的 DirectComposition surface。位掩码用于正确投影组合状态。
     enum BgSuspendReason : unsigned {
-        kBgSuspendLocked  = 1u << 0,   // 会话锁定（锁屏）
-        kBgSuspendCovered = 1u << 1,   // 被其它窗口完全覆盖（预留，后续实现）
+        kBgSuspendLocked  = background_suspend_policy::kLocked,
+        kBgSuspendCovered = background_suspend_policy::kCovered,
     };
     unsigned bgSuspendReasons_ = 0;
-    // 置位首个原因 → SetVisible(false)+Low；清除最后一个原因 → 经
-    // RestoreSurfaceAfterHidden 复原（SetVisible(true)+nudge+Normal）。
+    // 每次原因变化都分别投影 surface 可见性与内存等级；仅发生 hidden→visible
+    // 转换时经 RestoreSurfaceAfterHidden 执行 SetVisible(true)+nudge。
     // 仅在“普通可见态”（非最小化、非托盘隐藏）下改动可见性。
     void SetBgSuspend(unsigned reason, bool active, const char* why);
+
+    // 隐藏窗口到托盘：SC_MINIMIZE(minimizeToTray) / SC_CLOSE(closeToTray) /
+    // WM_CLOSE(closeToTray) 三条路径共用的"隐藏到托盘"动作
+    //（暂停 WebView 省内存 + 清覆盖记账 + SW_HIDE）。
+    void HideWindowToTray();
 
     // 被完全覆盖（梯度 C）：保守判定 + 轮询恢复
     bool IsMainWindowFullyCovered() const;  // 前台窗口同屏且几何完全包含本窗口（不透明/非 cloaked）

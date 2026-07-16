@@ -97,6 +97,46 @@ void PopupWindow::ClearNoDragRegions() {
     noDragRegions_.clear();
 }
 
+bool PopupWindow::SetContentRegionRects(const std::vector<RECT>& rects) {
+    if (!hwnd_ || !IsWindow(hwnd_)) return false;
+    if (rects.empty()) return ClearContentRegion();
+
+    HRGN combined = CreateRectRgn(0, 0, 0, 0);
+    if (!combined) return false;
+
+    bool hasRect = false;
+    for (const RECT& rect : rects) {
+        if (rect.right <= rect.left || rect.bottom <= rect.top) continue;
+        HRGN part = CreateRectRgn(rect.left, rect.top, rect.right, rect.bottom);
+        if (!part) {
+            DeleteObject(combined);
+            return false;
+        }
+        const int result = CombineRgn(combined, combined, part, RGN_OR);
+        DeleteObject(part);
+        if (result == ERROR) {
+            DeleteObject(combined);
+            return false;
+        }
+        hasRect = true;
+    }
+
+    if (!hasRect) {
+        DeleteObject(combined);
+        return false;
+    }
+    if (!SetWindowRgn(hwnd_, combined, TRUE)) {
+        DeleteObject(combined);
+        return false;
+    }
+    // SetWindowRgn owns the region after success.
+    return true;
+}
+
+bool PopupWindow::ClearContentRegion() {
+    return hwnd_ && IsWindow(hwnd_) && SetWindowRgn(hwnd_, nullptr, TRUE) != FALSE;
+}
+
 bool PopupWindow::RegisterWindowClass() {
     if (classRegistered_) return true;
     

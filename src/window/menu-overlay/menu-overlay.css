@@ -1,0 +1,70 @@
+  html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;background:transparent;font:13px "Segoe UI",sans-serif;}
+  #block{position:fixed;inset:0;}
+  /* Visible display is NOT locked here (Phase 2): default block, or user flex/grid.
+     Hidden state uses .fb-hidden + inline display:none !important (see layout helpers). */
+  .fb-menu{position:fixed;min-width:170px;max-height:100vh;overflow:auto;background:#2b2b2b;color:#eaeaea;border:1px solid #555;border-radius:6px;padding:4px 0;box-shadow:0 6px 20px rgba(0,0,0,.45);z-index:10;}
+  .fb-zone{display:block;}
+  .fb-zone-separator{height:1px;background:#555;margin:4px 0;}
+  .fb-item{display:flex;align-items:center;min-width:0;padding:6px 30px 6px 26px;cursor:default;white-space:nowrap;position:relative;}
+  .fb-item>[part="item-label"]{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .fb-item:hover,.fb-item.active{background:#3d6fd0;color:#fff;}
+  .fb-item.disabled{color:#777;}
+  .fb-item.disabled:hover,.fb-item.disabled.active{background:transparent;color:#777;}
+  .fb-item.checked::before{content:"\2713";position:absolute;left:8px;}
+  .fb-arrow{position:absolute;right:8px;font-size:10px;opacity:.85;}
+  /* Inline monochrome icon column (普通项；仅当本层有项带 iconSvg 时出现，保证文字左缘对齐)。*/
+  .fb-item-ico{flex:0 0 16px;width:16px;height:16px;margin-right:8px;display:inline-flex;align-items:center;justify-content:center;}
+  .fb-item-ico svg{width:16px;height:16px;display:block;fill:currentColor;}
+  .fb-menu.has-icons .fb-item.nrm{padding-left:8px;}
+  /* 勾选项的 ✓ 落在图标列（left:8px）；若该项自带图标则隐藏其图标，避免 ✓ 与图标重叠。*/
+  .fb-menu.has-icons .fb-item.nrm.checked .fb-item-ico{visibility:hidden;}
+  .fb-sep{height:1px;background:#555;margin:4px 0;}
+  #probe{position:fixed;left:8px;top:8px;padding:4px 8px;font-size:11px;color:#fff;background:rgba(0,0,0,.5);border-radius:5px;pointer-events:none;opacity:.5;}
+  /* ContentSized：去全覆盖拦截层；根菜单入场动画（参 QQNT，opacity+transform）。子菜单纯 CSS 在固定窗内右展，窗口全程不 resize。*/
+  body.content-sized #block{display:none;}
+  body.content-sized #probe{display:none;}
+  body.content-sized #menu{opacity:0;transform:translateY(4px) scale(.985);transition:opacity .13s ease-out,transform .13s ease-out;}
+  body.content-sized #menu.in{opacity:1;transform:none;}
+  /* 退场动画（opt-in，镜像入场）：收到 menu:__hide 时 #menu 去 .in 加 .out 播淡出；前端可经 css 覆盖 #menu.out。*/
+  body.content-sized #menu.out{opacity:0;transform:translateY(4px) scale(.985);transition:opacity .13s ease-out,transform .13s ease-out;}
+  /* Phase 3: respect prefers-reduced-motion for default enter/exit only.
+     Hidden protocol / closeAnimationMs are unchanged. Not in protected CSS. */
+  @media (prefers-reduced-motion: reduce){
+    body.content-sized #menu,
+    body.content-sized #menu.in,
+    body.content-sized #menu.out{
+      transition:none !important;
+      transform:none !important;
+    }
+  }
+  /* 富菜单项（仅 webview 自绘）：nowplaying 歌曲卡 / rating 星级 / slider 音量滑块。*/
+  .fb-np{display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:default;}
+  .fb-np-cover{width:40px;height:40px;flex:0 0 auto;border-radius:4px;background:#444 center/cover no-repeat;}
+  .fb-np-text{min-width:0;overflow:hidden;}
+  .fb-np-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;}
+  .fb-np-sub{margin-top:2px;opacity:.65;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px;}
+  .fb-rating,.fb-slider{display:grid;grid-template-columns:minmax(0,auto) minmax(96px,1fr) minmax(26px,auto);align-items:center;gap:8px;min-width:0;}
+  .fb-rating-label,.fb-slider-label{min-width:0;overflow:hidden;text-overflow:ellipsis;opacity:.85;}
+  .fb-stars{margin-left:auto;display:inline-flex;gap:2px;}
+  .fb-star{color:#666;cursor:pointer;font-size:15px;line-height:1;}
+  .fb-star.on{color:#ffcc44;}
+  .fb-slider-track{position:relative;display:block;min-width:96px;height:4px;margin:0 2px;background:#555;border-radius:2px;cursor:pointer;touch-action:none;}
+  .fb-slider-fill{position:absolute;left:0;top:0;height:100%;background:#3d6fd0;border-radius:2px;}
+  .fb-slider-thumb{position:absolute;top:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#fff;transform:translateY(-50%);box-shadow:0 0 2px rgba(0,0,0,.5);}
+  .fb-slider-val{flex:0 0 auto;min-width:26px;text-align:right;opacity:.8;}
+  /* Vertical slider (Phase 3): track grows tall; fill from bottom; thumb on bottom axis. */
+  .fb-slider[data-orientation="vertical"]{display:grid;grid-template-columns:minmax(0,1fr) minmax(20px,auto) minmax(26px,auto);align-items:center;min-height:112px;}
+  .fb-slider[data-orientation="vertical"] .fb-slider-track{--fb-slider-visual-width:4px;justify-self:center;min-width:20px;width:20px;min-height:88px;height:88px;margin:4px 8px;background:linear-gradient(90deg,transparent 8px,#555 8px,#555 12px,transparent 12px);}
+  .fb-slider[data-orientation="vertical"] .fb-slider-control{position:absolute;inset:-6px;}
+  .fb-slider[data-orientation="vertical"] .fb-slider-fill{width:var(--fb-slider-visual-width);left:50%;bottom:0;top:auto;height:0;transform:translateX(-50%);}
+  .fb-slider[data-orientation="vertical"] .fb-slider-thumb{left:50%;top:auto;bottom:0;margin-left:0;margin-bottom:-5px;transform:translateX(-50%);}
+  /* segmented 分段单选（仅 webview 自绘）：一行互斥选项；选中段用强调色高亮。各段可放 svg 图标或文字。*/
+  .fb-seg{display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);align-items:center;gap:10px;min-width:0;}
+  .fb-seg-label{min-width:0;overflow:hidden;text-overflow:ellipsis;opacity:.85;}
+  .fb-seg-group{min-width:0;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px;}
+  .fb-seg-btn{display:inline-flex;min-width:0;max-width:120px;align-items:center;justify-content:center;padding:2px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer;border-radius:4px;color:#cfcfcf;}
+  .fb-seg-btn svg{width:16px;height:16px;display:block;fill:currentColor;}
+  .fb-seg-btn.on{background:#3d6fd0;color:#fff;}
+  .fb-seg-btn.disabled{color:#666;cursor:default;}
+  /* 富项 hover/active 用克制的灰底（覆盖上面 .fb-item 蓝底），保留控件辨识度。*/
+  .fb-np:hover,.fb-np.active,.fb-rating:hover,.fb-rating.active,.fb-slider:hover,.fb-slider.active,.fb-seg:hover,.fb-seg.active{background:#3a3a3a;color:#eaeaea;}

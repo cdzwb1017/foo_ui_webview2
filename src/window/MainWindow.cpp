@@ -767,25 +767,11 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             const UINT cmd = static_cast<UINT>(wParam) & 0xFFF0;
             // 最小化/关闭到托盘
             if (cmd == SC_MINIMIZE && TrayIcon::GetInstance().GetMinimizeToTray()) {
-                // 隐藏到托盘前让 WebView 进入 hidden/暂停态以回收内存（与最小化同理：仅 SW_HIDE
-                // 不会让页面 visibilityState=hidden，因 IsVisible 仍 TRUE + occlusion 已禁用）。
-                // 恢复端由 RestoreSurfaceAfterHidden 兜 SetVisible(true)+nudge + 复原 Normal。
-                if (webView_) {
-                    webView_->SetVisible(false);
-                    webView_->SetMemoryUsageLow(true);
-                }
-                ClearCoverSuspend();
-                ShowWindow(hwnd_, SW_HIDE);
+                HideWindowToTray();
                 return 0;
             }
             if (cmd == SC_CLOSE && TrayIcon::GetInstance().GetCloseToTray()) {
-                // 关闭到托盘：同上，先让页面 hidden/暂停回收内存，恢复端已兜住。
-                if (webView_) {
-                    webView_->SetVisible(false);
-                    webView_->SetMemoryUsageLow(true);
-                }
-                ClearCoverSuspend();
-                ShowWindow(hwnd_, SW_HIDE);
+                HideWindowToTray();
                 return 0;
             }
             if ((cmd == SC_MAXIMIZE || cmd == SC_RESTORE) && IsWindowFullscreen()) {
@@ -817,6 +803,14 @@ LRESULT MainWindow::HandleMessage(UINT msg, WPARAM wParam, LPARAM lParam) {
             return 0;
             
         case WM_CLOSE:
+            // closeToTray 时，任何关闭路径（含任务栏右键"关闭窗口"、缩略图关闭等
+            // 直接发 WM_CLOSE 的来源）都应隐藏到托盘而非退出 foobar2000，与 SC_CLOSE
+            // 分支语义一致。真正的"退出"由托盘 Exit 菜单 / foobar File→Exit 直接执行
+            // guid_main_exit（不经此路），故不会误把退出拦成隐藏。
+            if (TrayIcon::GetInstance().GetCloseToTray()) {
+                HideWindowToTray();
+                return 0;
+            }
             // When window is closed, exit foobar2000 properly
             OnClose();
             return 0;
@@ -1492,12 +1486,24 @@ void MainWindow::OnDestroy() {
 
 void MainWindow::OnClose() {
     LOG("MainWindow closing - saving position and exiting foobar2000");
-    
+
     // 在退出前保存窗口位置
     SaveWindowPosition();
-    
+
     // Use standard command to exit foobar2000 properly
     standard_commands::run_main(standard_commands::guid_main_exit);
+}
+
+void MainWindow::HideWindowToTray() {
+    // 隐藏到托盘前让 WebView 进入 hidden/暂停态以回收内存（仅 SW_HIDE 不会让页面
+    // visibilityState=hidden，因 IsVisible 仍 TRUE + occlusion 已禁用）。
+    // 恢复端由 RestoreSurfaceAfterHidden 兜 SetVisible(true)+nudge + 复原 Normal。
+    if (webView_) {
+        webView_->SetVisible(false);
+        webView_->SetMemoryUsageLow(true);
+    }
+    ClearCoverSuspend();
+    ShowWindow(hwnd_, SW_HIDE);
 }
 
 
@@ -1895,17 +1901,23 @@ void MainWindow::SetBgSuspend(unsigned reason, bool active, const char* why) {
     // 不动可见性，只维护位掩码；待回到普通可见态时各自的恢复路径会重新呈现。
     if (isMinimized_ || !hwnd_ || !IsWindow(hwnd_) || !IsWindowVisible(hwnd_)) return;
 
-    const bool wasSuspended = (prev != 0);
-    const bool nowSuspended = (bgSuspendReasons_ != 0);
-    if (nowSuspended && !wasSuspended) {
-        // 首个挂起原因：让页面进入 hidden/暂停态并 trim 内存。
+    const auto previousProjection = background_suspend_policy::Project(prev);
+    const auto currentProjection = background_suspend_policy::Project(bgSuspendReasons_);
+
+    if (currentProjection.hideSurface && !previousProjection.hideSurface) {
+        // 锁屏是唯一没有可见 surface 消费者的后台原因，可暂停页面并 trim 内存。
         webView_->SetVisible(false);
-        webView_->SetMemoryUsageLow(true);
         LogSurfaceDiagnostics((std::string("BgSuspend.hide/") + (why ? why : "")).c_str());
-    } else if (!nowSuspended && wasSuspended) {
-        // 最后一个原因清除：复原（SetVisible(true)+nudge，RestoreSurfaceAfterHidden 内含 Normal）。
+    }
+
+    if (!currentProjection.hideSurface && previousProjection.hideSurface) {
+        // 即使仍处于 covered/Low，也必须先恢复 surface，供窗口本体与 DWM 预览消费。
         RestoreSurfaceAfterHidden(why ? why : "bg-resume");
     }
+
+    // 覆盖态只降低内存目标，不隐藏 DirectComposition surface。Shell 的任务栏
+    // 预览宿主可能在几何上覆盖本窗口，却仍需要该 surface 持续生成预览。
+    webView_->SetMemoryUsageLow(currentProjection.useLowMemory);
 }
 
 bool MainWindow::IsMainWindowFullyCovered() const {
@@ -1920,6 +1932,19 @@ bool MainWindow::IsMainWindowFullyCovered() const {
     if (!fg || fg == hwnd_) return false;                       // 自己在前台 → 未被覆盖
     if (GetAncestor(fg, GA_ROOTOWNER) == hwnd_) return false;   // 自己的 owned 弹窗/歌词
     if (!IsWindowVisible(fg)) return false;
+
+    // 桌面外壳例外：点击桌面会让 Progman/WorkerW 成为前台，其矩形覆盖整屏，
+    // 下方"前台几何完全包含本窗口"会把"桌面在前台"误判为"本窗口被完全覆盖"，
+    // 进而错误地把 WebView SetVisible(false) 挂起、内容消失（聚焦才恢复）。
+    // 桌面成为前台时本窗口实际仍完全可见，必须在覆盖谓词本身排除（治本）。
+    if (fg == ::GetShellWindow()) return false;
+    {
+        wchar_t fgClass[64] = {};
+        if (GetClassNameW(fg, fgClass, ARRAYSIZE(fgClass)) &&
+            (wcscmp(fgClass, L"Progman") == 0 || wcscmp(fgClass, L"WorkerW") == 0)) {
+            return false;
+        }
+    }
 
     BOOL cloaked = FALSE;
     if (SUCCEEDED(DwmGetWindowAttribute(fg, DWMWA_CLOAKED, &cloaked, sizeof(cloaked))) && cloaked)

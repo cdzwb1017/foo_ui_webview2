@@ -4,6 +4,7 @@
 #include "pch.h"
 #include "api/MenuApi.h"
 #include "api/BridgeCore.h"
+#include "api/ErrorEnvelope.h"
 #include "api/PluginRegistry.h"
 #include <foobar2000/SDK/menu_helpers.h>
 #include <foobar2000/SDK/menu.h>
@@ -16,6 +17,7 @@
 #include "utils/GuidUtils.h"
 #include "utils/PathSecurity.h"
 #include "window/MenuOverlayHost.h"
+#include "window/MenuResourceLimits.h"
 
 namespace {
     using json = nlohmann::json;
@@ -1110,6 +1112,16 @@ json MenuShowNativePopup(const json& params) {
 // menu.show {items, x?, y?}: 在屏幕坐标(缺省取光标)显示自绘菜单，返回 menuId。
 json MenuShow(const json& params) {
     json items = (params.contains("items") && params["items"].is_array()) ? params["items"] : json::array();
+    // Resource preflight before opening the overlay (DESIGN 8.5): strip single
+    // SVGs over 32 KiB, then fail the whole call on item/depth/segment/svgTotal
+    // breaches. Do not open the overlay on failure.
+    menu_limits::StripOversizedSvgInJsonItems(items);
+    auto breach = menu_limits::ValidateShowMenuResources(items);
+    if (!breach.ok) {
+        return ApiEnvelope::MakeError("menu resource limit exceeded",
+                                      ApiErrorCode::INVALID_PARAMS,
+                                      menu_limits::DetailsJson(breach));
+    }
     int x = params.value("x", -1);
     int y = params.value("y", -1);
     if (x < 0 || y < 0) {
@@ -1133,41 +1145,166 @@ json MenuClose(const json& params) {
     return {{"success", true}};
 }
 
-// menu.__getMenuState: 前端 pull 当前菜单状态(内部)。
-json MenuGetMenuState(const json& /*params*/) {
-    return MenuOverlayHost::GetInstance().GetMenuStateJson();
+// ── Internal overlay IPC (menu.__*) ─────────────────────────────────────────
+// Every internal handler validates that the caller is the current overlay
+// window; select/dismiss/ready/valueChanged additionally validate menuId. The
+// validation LOGIC lives in MenuOverlayHost's narrow interface (not copied per
+// handler). An invalid caller / menuId returns an INVALID_PARAMS envelope and
+// must NOT change any menu state (no Hide, no action, no event, no measure
+// consumption). DESIGN 8.1 / 8.2.
+static HWND MenuCallerHwnd(const json& params) {
+    if (params.contains("_callerHwnd") && params["_callerHwnd"].is_number_integer()) {
+        return reinterpret_cast<HWND>(params["_callerHwnd"].get<intptr_t>());
+    }
+    return nullptr;
 }
 
-// menu.__select {itemId}: 前端点击菜单项回报(内部) -> menu:select + 关闭。
+// menu.__getMenuState: 前端 pull 当前菜单状态(内部)。仅当前 overlay 可调。
+json MenuGetMenuState(const json& params) {
+    auto& host = MenuOverlayHost::GetInstance();
+    const HWND caller = MenuCallerHwnd(params);
+    if (!host.IsOverlayCaller(caller)) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    return host.GetMenuStateJson(caller);
+}
+
+// menu.__select {menuId,token}: 前端点击菜单项回报(内部) -> 校验 caller+menuId
+// -> 解析 opaque token -> menu:select + 关闭。
 json MenuSelect(const json& params) {
-    const std::string itemId = params.value("itemId", std::string());
-    MenuOverlayHost::GetInstance().OnSelect(itemId);
+    auto& host = MenuOverlayHost::GetInstance();
+    if (!host.IsOverlayCaller(MenuCallerHwnd(params))) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.ValidateMenuId(params.value("menuId", std::string()))) {
+        return ApiEnvelope::MakeError("menu id mismatch", ApiErrorCode::INVALID_PARAMS);
+    }
+    host.OnSelect(params.value("token", std::string()));
     return {{"success", true}};
 }
 
-// menu.__dismiss {reason?}: 前端外点击/Esc 回报(内部) -> 关闭。
+// menu.__dismiss {menuId,reason?}: 前端外点击/Esc 回报(内部) -> 校验 caller+menuId -> 关闭。
 json MenuDismiss(const json& params) {
-    const std::string reason = params.value("reason", std::string("api"));
-    MenuOverlayHost::GetInstance().Hide(reason);
+    auto& host = MenuOverlayHost::GetInstance();
+    const HWND caller = MenuCallerHwnd(params);
+    if (!host.IsOverlayCaller(caller)) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.ValidateMenuId(params.value("menuId", std::string()))) {
+        return ApiEnvelope::MakeError("menu id mismatch", ApiErrorCode::INVALID_PARAMS);
+    }
+    host.OnDismissRequested(caller, params.value("reason", std::string("api")));
     return {{"success", true}};
 }
 
-// menu.__ready {w,h}: ContentSized 渲染器回报内容物理像素(内部) -> 定位窗口。
+// menu.__ready {menuId,root:{w,h},submenu:{maxW,maxH}}: ContentSized renderer
+// reports physical-pixel root and first-level submenu maxima. The host derives
+// whether a submenu exists from the current normalized model; renderer booleans
+// are ignored. Invalid reports do not consume the measure gate or timer.
 json MenuReady(const json& params) {
-    int w = params.value("w", 0);
-    int h = params.value("h", 0);
-    int ox = params.value("ox", 0);  // 固定窗设计未使用（OnContentMeasured 内 (void)originXPhysical）；保留参数兼容渲染器回报
-    bool hasSub = params.value("hasSub", false);  // 根菜单是否有子菜单：决定窗口是否需 ×2 预留（无则=精确根宽，避免亚克力露出空白面板）
-    MenuOverlayHost::GetInstance().OnContentMeasured(w, h, ox, hasSub);
+    auto& host = MenuOverlayHost::GetInstance();
+    if (!host.IsOverlayCaller(MenuCallerHwnd(params))) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.ValidateMenuId(params.value("menuId", std::string()))) {
+        return ApiEnvelope::MakeError("menu id mismatch", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!params.contains("root") || !params["root"].is_object() ||
+        !params.contains("submenu") || !params["submenu"].is_object()) {
+        return ApiEnvelope::MakeError("invalid measure report", ApiErrorCode::INVALID_PARAMS);
+    }
+    const auto& root = params["root"];
+    const auto& submenu = params["submenu"];
+    if (!root.contains("w") || !root["w"].is_number_integer() ||
+        !root.contains("h") || !root["h"].is_number_integer() ||
+        !submenu.contains("maxW") || !submenu["maxW"].is_number_integer() ||
+        !submenu.contains("maxH") || !submenu["maxH"].is_number_integer()) {
+        return ApiEnvelope::MakeError("invalid measure report", ApiErrorCode::INVALID_PARAMS);
+    }
+    menu_overlay_geometry::MeasureReport report;
+    report.root.w = root["w"].get<long long>();
+    report.root.h = root["h"].get<long long>();
+    report.submenu.w = submenu["maxW"].get<long long>();
+    report.submenu.h = submenu["maxH"].get<long long>();
+    if (!menu_overlay_geometry::IsValidMeasureReport(report, host.HasFirstLevelSubmenu()) ||
+        !host.OnContentMeasured(report)) {
+        return ApiEnvelope::MakeError("invalid measure report", ApiErrorCode::INVALID_PARAMS);
+    }
     return {{"success", true}};
 }
 
-// menu.__valueChanged {itemId,value}: 富控件(rating/slider)值变更回报(内部)
-// -> 经 owner-mode value sink 回报，【不关闭菜单】。
+// Overlay-private internal IPC; the .__ namespace is recorded by Graph but
+// excluded from public SDK wrappers/codegen. Opens or closes the independent,
+// tight submenu HWND; no SetWindowRgn-based backdrop cropping is relied upon.
+json MenuSubmenuPanel(const json& params) {
+    auto& host = MenuOverlayHost::GetInstance();
+    const HWND caller = MenuCallerHwnd(params);
+    if (!host.IsOverlayCaller(caller)) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.ValidateMenuId(params.value("menuId", std::string()))) {
+        return ApiEnvelope::MakeError("menu id mismatch", ApiErrorCode::INVALID_PARAMS);
+    }
+    // The independently hosted submenu reuses this private endpoint to
+    // acknowledge that its hidden DOM has pulled and rendered the child items.
+    // No public API registration is added for this overlay-only handshake.
+    if (params.value("ready", false)) {
+        if (!params.contains("parentToken") || !params["parentToken"].is_string() ||
+            !host.OnSubmenuSurfaceReady(caller, params["parentToken"].get<std::string>())) {
+            return ApiEnvelope::MakeError("submenu surface not ready", ApiErrorCode::INVALID_PARAMS);
+        }
+        return {{"success", true}};
+    }
+    if (!host.IsRootOverlayCaller(caller)) {
+        return ApiEnvelope::MakeError("root menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!params.contains("sequence") || !params["sequence"].is_number_unsigned()) {
+        return ApiEnvelope::MakeError("invalid submenu panel sequence", ApiErrorCode::INVALID_PARAMS);
+    }
+    const auto sequence = params["sequence"].get<std::uint64_t>();
+    const bool visible = params.value("visible", false);
+    if (!visible) {
+        if (!host.OnSubmenuPanelChanged({false, 0, 0, 0, 0, sequence}, {})) {
+            return ApiEnvelope::MakeError("submenu panel update rejected", ApiErrorCode::INVALID_PARAMS);
+        }
+        return {{"success", true}};
+    }
+    if (!params.contains("x") || !params["x"].is_number_integer() ||
+        !params.contains("y") || !params["y"].is_number_integer() ||
+        !params.contains("w") || !params["w"].is_number_integer() ||
+        !params.contains("h") || !params["h"].is_number_integer() ||
+        !params.contains("parentToken") || !params["parentToken"].is_string()) {
+        return ApiEnvelope::MakeError("invalid submenu panel", ApiErrorCode::INVALID_PARAMS);
+    }
+    const auto x64 = params["x"].get<long long>();
+    const auto y64 = params["y"].get<long long>();
+    const auto w64 = params["w"].get<long long>();
+    const auto h64 = params["h"].get<long long>();
+    const menu_overlay_geometry::SubmenuPanelRequest request{
+        true, x64, y64, w64, h64, sequence
+    };
+    if (!menu_overlay_geometry::IsValidSubmenuPanelCoordinates(request)) {
+        return ApiEnvelope::MakeError("invalid submenu panel", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.OnSubmenuPanelChanged(request, params["parentToken"].get<std::string>())) {
+        return ApiEnvelope::MakeError("submenu panel update rejected", ApiErrorCode::INVALID_PARAMS);
+    }
+    return {{"success", true}};
+}
+
+// menu.__valueChanged {menuId,token,value}: 富控件(rating/slider/segmented)值变更
+// 回报(内部) -> 校验 caller+menuId -> 解析 opaque token + 按控件类型校验值 -> 经
+// owner-mode value sink 回报，【不关闭菜单】。
 json MenuValueChanged(const json& params) {
-    const std::string itemId = params.value("itemId", std::string());
+    auto& host = MenuOverlayHost::GetInstance();
+    if (!host.IsOverlayCaller(MenuCallerHwnd(params))) {
+        return ApiEnvelope::MakeError("menu overlay caller required", ApiErrorCode::INVALID_PARAMS);
+    }
+    if (!host.ValidateMenuId(params.value("menuId", std::string()))) {
+        return ApiEnvelope::MakeError("menu id mismatch", ApiErrorCode::INVALID_PARAMS);
+    }
     int value = params.value("value", 0);
-    MenuOverlayHost::GetInstance().OnValueChanged(itemId, value);
+    host.OnValueChanged(params.value("token", std::string()), value);
     return {{"success", true}};
 }
 } // namespace
@@ -1187,5 +1324,6 @@ void RegisterMenuApi() {
     bridge.RegisterApi("menu.__select", MenuSelect);
     bridge.RegisterApi("menu.__dismiss", MenuDismiss);
     bridge.RegisterApi("menu.__ready", MenuReady);
+    bridge.RegisterApi("menu.__submenuPanel", MenuSubmenuPanel);
     bridge.RegisterApi("menu.__valueChanged", MenuValueChanged);
 }

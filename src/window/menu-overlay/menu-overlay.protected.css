@@ -1,0 +1,10 @@
+  /* Protected structural layer (DESIGN §5.4 Phase 2): viewport geometry, menu
+     box model / fixed positioning / overflow, and hidden fallback only.
+     Visible display (block/flex/grid) is owned by default CSS or user CSS. */
+  html,body{margin:0!important;padding:0!important;width:100%!important;height:100%!important;overflow:hidden!important;box-sizing:border-box!important;}
+  #viewport{position:fixed!important;inset:0!important;overflow:hidden!important;}
+  .fb-menu{box-sizing:border-box!important;position:fixed!important;overflow:auto!important;}
+  #menu.fb-hidden,.fb-menu.fb-hidden{display:none!important;}
+  /* Internal infra (debug probe / fullscreen intercept) — content-sized only. */
+  body.content-sized #block{display:none!important;}
+  body.content-sized #probe{display:none!important;}
